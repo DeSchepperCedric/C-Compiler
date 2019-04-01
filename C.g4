@@ -1,10 +1,30 @@
 grammar C;
 
+program : declaration+;
+
+declaration : type_spec init_decl_list ';'
+init_decltr_list : declarator ',' init_decltr_list | declarator;
+
+/// a declarator introduces one identifier into the program
+declarator : var_decltr | func_decltr;
+
+// variable declarator
+var_decltr : ID | ID = simpl_expr;
+
+// function declarator
+func_decltr : ID '(' param_list? ')'
+param_spec : VOID
+           | param_list;
+param_list : param ',' param_list;
+param : type_spec ID;
+
+
 
 if_else: 'if' '(' expression ')' statement ('else' statement)?;
 
 iteration_statement:  WHILE '(' expression ')' statement;
 
+type_spec: INT | FLOAT | CHAR | VOID ;
 
 INCLUDE: '#include';
 STDIO_H: '<stdio.h>';
