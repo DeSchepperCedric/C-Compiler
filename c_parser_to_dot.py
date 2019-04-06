@@ -1,9 +1,9 @@
 from antlr4 import *
 import sys
 
-from ./antlr_files/CLexer import CLexer
-from ./antlr_files/CListener import CListener
-from ./antlr_files/CParser import CParser
+from antlr_files.CLexer import CLexer
+from antlr_files.CListener import CListener
+from antlr_files.CParser import CParser
 
 
 
