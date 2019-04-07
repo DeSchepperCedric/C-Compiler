@@ -17,6 +17,15 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#include.
+    def enterInclude(self, ctx:CParser.IncludeContext):
+        pass
+
+    # Exit a parse tree produced by CParser#include.
+    def exitInclude(self, ctx:CParser.IncludeContext):
+        pass
+
+
     # Enter a parse tree produced by CParser#declaration.
     def enterDeclaration(self, ctx:CParser.DeclarationContext):
         pass
@@ -71,15 +80,6 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#param_list.
-    def enterParam_list(self, ctx:CParser.Param_listContext):
-        pass
-
-    # Exit a parse tree produced by CParser#param_list.
-    def exitParam_list(self, ctx:CParser.Param_listContext):
-        pass
-
-
     # Enter a parse tree produced by CParser#param.
     def enterParam(self, ctx:CParser.ParamContext):
         pass
@@ -98,6 +98,24 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#func_def.
+    def enterFunc_def(self, ctx:CParser.Func_defContext):
+        pass
+
+    # Exit a parse tree produced by CParser#func_def.
+    def exitFunc_def(self, ctx:CParser.Func_defContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#statement.
+    def enterStatement(self, ctx:CParser.StatementContext):
+        pass
+
+    # Exit a parse tree produced by CParser#statement.
+    def exitStatement(self, ctx:CParser.StatementContext):
+        pass
+
+
     # Enter a parse tree produced by CParser#types.
     def enterTypes(self, ctx:CParser.TypesContext):
         pass
@@ -107,12 +125,66 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#var_decltr_id.
-    def enterVar_decltr_id(self, ctx:CParser.Var_decltr_idContext):
+    # Enter a parse tree produced by CParser#type_int.
+    def enterType_int(self, ctx:CParser.Type_intContext):
         pass
 
-    # Exit a parse tree produced by CParser#var_decltr_id.
-    def exitVar_decltr_id(self, ctx:CParser.Var_decltr_idContext):
+    # Exit a parse tree produced by CParser#type_int.
+    def exitType_int(self, ctx:CParser.Type_intContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#type_float.
+    def enterType_float(self, ctx:CParser.Type_floatContext):
+        pass
+
+    # Exit a parse tree produced by CParser#type_float.
+    def exitType_float(self, ctx:CParser.Type_floatContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#type_char.
+    def enterType_char(self, ctx:CParser.Type_charContext):
+        pass
+
+    # Exit a parse tree produced by CParser#type_char.
+    def exitType_char(self, ctx:CParser.Type_charContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#type_void.
+    def enterType_void(self, ctx:CParser.Type_voidContext):
+        pass
+
+    # Exit a parse tree produced by CParser#type_void.
+    def exitType_void(self, ctx:CParser.Type_voidContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#id_with_ptr.
+    def enterId_with_ptr(self, ctx:CParser.Id_with_ptrContext):
+        pass
+
+    # Exit a parse tree produced by CParser#id_with_ptr.
+    def exitId_with_ptr(self, ctx:CParser.Id_with_ptrContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#identifier.
+    def enterIdentifier(self, ctx:CParser.IdentifierContext):
+        pass
+
+    # Exit a parse tree produced by CParser#identifier.
+    def exitIdentifier(self, ctx:CParser.IdentifierContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#pointer.
+    def enterPointer(self, ctx:CParser.PointerContext):
+        pass
+
+    # Exit a parse tree produced by CParser#pointer.
+    def exitPointer(self, ctx:CParser.PointerContext):
         pass
 
 

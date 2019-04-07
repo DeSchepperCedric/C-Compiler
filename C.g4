@@ -1,11 +1,13 @@
 grammar C;
 
-program : declaration+;
+program : (include | declaration | func_def)+;
+
+// include for <stdio.h>
+include : INCLUDE STDIO_H ;
 
 /// a declaration introduces one or more identifiers into the program
 declaration : types init_decltr_list ';';
-init_decltr_list : declarator ',' init_decltr_list
-                 | declarator;
+init_decltr_list : declarator (',' declarator)*;
 
 /// a declarator introduces one identifier into the program
 declarator
@@ -14,20 +16,23 @@ declarator
 
 // variable declarator
 var_decltr
-        : var_decltr_id
-        | var_decltr_id ASSIGNMENT simpl_expr; // assignment can happen at time of declaration: "int i = 5; char* j = &k", etc.
+        : id_with_ptr
+        | id_with_ptr ASSIGNMENT simpl_expr; // assignment can happen at time of declaration: "int i = 5; char* j = &k", etc.
 
 // function declarator
-func_decltr : ID '(' param_list? ')';
+func_decltr : id_with_ptr LEFT_PAREN param_spec? RIGHT_PAREN;
 param_spec
         : VOID
-        | param_list;
-param_list : param ',' param_list;
-param : types var_decltr_id;
+        | param (',' param)* ;
+param : types id_with_ptr;
 
+// TODO remove this later
 simpl_expr : constant;
 
+// function definition
+func_def : types id_with_ptr LEFT_PAREN param_spec? RIGHT_PAREN LEFT_BRACE statement* RIGHT_BRACE ;
 
+statement : 'a = x + 5;' ; // TODO expand this to: while-loop, if-clause, assignment-expr etc
 
 // if_else: 'if' '(' expression ')' statement ('else' statement)?;
 
@@ -96,10 +101,20 @@ simpl_expr : constant;
 //         ;
 
 
-types: INT | FLOAT | CHAR | VOID ;
+types : type_int 
+	  | type_float 
+	  | type_char 
+	  | type_void ;
+	  
+type_int : INT ;
+type_float : FLOAT ;
+type_char : CHAR ;
+type_void : VOID ;
 
-// a variable name that can be used in a declarator: one or more pointer stars, followed by a variable name
-var_decltr_id : STAR* ID;
+// an identifier that has a pointer
+id_with_ptr : pointer* identifier;
+identifier : ID ;
+pointer : STAR ; 
 
 constant : INTEGER_CONSTANT | FLOATING_CONSTANT | STRING_CONSTANT;
 
