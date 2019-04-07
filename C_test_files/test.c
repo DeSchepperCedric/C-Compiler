@@ -2,11 +2,14 @@
 
 int i,b,c, f(float abc);
 
-int func();
+//int func();
 
-int* funcb(int ***i);
+//int* funcb(int ***i);
 
 int func_def(int param_x)
 {
-    a = x + 5;
+    while(x > 5)
+    {
+        x++;
+    }
 }
