@@ -116,6 +116,60 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#if_statement.
+    def enterIf_statement(self, ctx:CParser.If_statementContext):
+        pass
+
+    # Exit a parse tree produced by CParser#if_statement.
+    def exitIf_statement(self, ctx:CParser.If_statementContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#iteration_statement.
+    def enterIteration_statement(self, ctx:CParser.Iteration_statementContext):
+        pass
+
+    # Exit a parse tree produced by CParser#iteration_statement.
+    def exitIteration_statement(self, ctx:CParser.Iteration_statementContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#compound_statement.
+    def enterCompound_statement(self, ctx:CParser.Compound_statementContext):
+        pass
+
+    # Exit a parse tree produced by CParser#compound_statement.
+    def exitCompound_statement(self, ctx:CParser.Compound_statementContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#block_item.
+    def enterBlock_item(self, ctx:CParser.Block_itemContext):
+        pass
+
+    # Exit a parse tree produced by CParser#block_item.
+    def exitBlock_item(self, ctx:CParser.Block_itemContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#expression_statement.
+    def enterExpression_statement(self, ctx:CParser.Expression_statementContext):
+        pass
+
+    # Exit a parse tree produced by CParser#expression_statement.
+    def exitExpression_statement(self, ctx:CParser.Expression_statementContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#expression.
+    def enterExpression(self, ctx:CParser.ExpressionContext):
+        pass
+
+    # Exit a parse tree produced by CParser#expression.
+    def exitExpression(self, ctx:CParser.ExpressionContext):
+        pass
+
+
     # Enter a parse tree produced by CParser#types.
     def enterTypes(self, ctx:CParser.TypesContext):
         pass

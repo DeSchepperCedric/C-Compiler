@@ -30,13 +30,22 @@ param : types id_with_ptr;
 simpl_expr : constant;
 
 // function definition
-func_def : types id_with_ptr LEFT_PAREN param_spec? RIGHT_PAREN LEFT_BRACE statement* RIGHT_BRACE ;
+func_def : types id_with_ptr LEFT_PAREN param_spec? RIGHT_PAREN statement ;
 
-statement : 'a = x + 5;' ; // TODO expand this to: while-loop, if-clause, assignment-expr etc
+statement : if_statement
+		  | compound_statement
+		  | iteration_statement
+		  | expression_statement
+		  ;
 
-// if_else: 'if' '(' expression ')' statement ('else' statement)?;
+if_statement: IF LEFT_PAREN expression RIGHT_PAREN statement (ELSE statement)? ;
+iteration_statement: WHILE LEFT_PAREN expression RIGHT_PAREN statement;
 
-// iteration_statement:  WHILE '(' expression ')' statement;
+compound_statement : LEFT_BRACE block_item* RIGHT_BRACE ;
+block_item : statement | declaration ;
+
+expression_statement : expression ';' ;
+expression : 'x++' | 'x > 5' | 'y = 562127' ;
 
 // expression
 //         : assigment_expression
@@ -127,9 +136,6 @@ INT: 'int';
 FLOAT: 'float';
 VOID: 'void';
 
-ID: [a-zA-Z_][a-zA-Z0-9_]*;
-WS: [ \t\r\n]+ -> skip; // skip spaces, tabs, newlines
-
 BLOCK_COMMENT: '/*' .*? '*/' -> skip;
 LINE_COMMENT: '//' ~[\r\n]* -> skip;
 
@@ -162,7 +168,10 @@ INTEGER_CONSTANT: [1-9][0-9]*;
 FLOATING_CONSTANT: [0-9]* '.' [0-9]+;
 STRING_CONSTANT: '"' ~["\\\r\n] '"'; // expansion might be needed
 
-
+// keep this at the BOTTOM of the lexer. The identifier DFA will match almost anything, and thus has
+// to have the LOWEST priority because otherwise no other tokens will be matched!
+ID: [a-zA-Z_][a-zA-Z0-9_]*;
+WS: [ \t\r\n]+ -> skip; // skip spaces, tabs, newlines
 
 
 
