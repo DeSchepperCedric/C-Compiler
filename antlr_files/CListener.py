@@ -152,6 +152,15 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#jump_statement.
+    def enterJump_statement(self, ctx:CParser.Jump_statementContext):
+        pass
+
+    # Exit a parse tree produced by CParser#jump_statement.
+    def exitJump_statement(self, ctx:CParser.Jump_statementContext):
+        pass
+
+
     # Enter a parse tree produced by CParser#expression_statement.
     def enterExpression_statement(self, ctx:CParser.Expression_statementContext):
         pass

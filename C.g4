@@ -30,12 +30,13 @@ param : types id_with_ptr;
 simpl_expr : constant;
 
 // function definition
-func_def : types id_with_ptr LEFT_PAREN param_spec? RIGHT_PAREN statement ;
+func_def : types id_with_ptr LEFT_PAREN param_spec? RIGHT_PAREN compound_statement ;
 
 statement : if_statement
 		  | compound_statement
 		  | iteration_statement
 		  | expression_statement
+		  | jump_statement
 		  ;
 
 if_statement: IF LEFT_PAREN expression RIGHT_PAREN statement (ELSE statement)? ;
@@ -43,6 +44,8 @@ iteration_statement: WHILE LEFT_PAREN expression RIGHT_PAREN statement;
 
 compound_statement : LEFT_BRACE block_item* RIGHT_BRACE ;
 block_item : statement | declaration ;
+
+jump_statement : RETURN ';' ; // TODO (optional) add 'goto', 'break', 'continue', etc.
 
 expression_statement : expression ';' ;
 expression : 'x++' | 'x > 5' | 'y = 562127' ;
