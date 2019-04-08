@@ -45,10 +45,63 @@ iteration_statement: WHILE LEFT_PAREN expression RIGHT_PAREN statement;
 compound_statement : LEFT_BRACE block_item* RIGHT_BRACE ;
 block_item : statement | declaration ;
 
-jump_statement : RETURN ';' ; // TODO (optional) add 'goto', 'break', 'continue', etc.
+jump_statement : RETURN ';' ; 
 
 expression_statement : expression ';' ;
-expression : 'x++' | 'x > 5' | 'y = 562127' ;
+expression : assignment_expr (',' expression)* ;
+
+assignment_expr : cond_expr 
+				| unary_expr ASSIGNMENT assignment_expr
+				;
+
+cond_expr : equality_expr ; 
+
+
+equality_expr : relational_expr
+			  | equality_expr EQUAL relational_expr
+			  ;
+
+
+relational_expr : additive_expr
+			  | relational_expr LESS_THAN equality_expr
+			  | relational_expr GREATER_THAN equality_expr
+			  ;
+
+
+additive_expr : multiplicative_expr
+			  | additive_expr PLUS  multiplicative_expr
+			  | additive_expr MINUS multiplicative_expr 
+			  ;
+
+
+multiplicative_expr : cast_expr
+					| multiplicative_expr STAR cast_expr
+					| multiplicative_expr DIVIDE cast_expr
+					;
+
+
+cast_expr : unary_expr ;
+
+unary_expr : postfix_expr ; 
+
+postfix_expr : postfix_expr LEFT_BRACKET expression RIGHT_BRACKET // array access
+			 | prim_expr ;
+
+
+prim_expr : LEFT_PAREN expression RIGHT_PAREN
+		  | identifier
+		  | constant ;
+
+
+// TODO (mandatory) deref_expr, addr_expr
+
+// TODO (optional) add &&, ||, etc to 'cond_expr'
+// TODO (optional) x++, x--
+// TODO (optional) multiplicative expr '%'
+// TODO (optional) add 'goto', 'break', 'continue', etc.
+// TODO (optional) 'castExpression' in the C grammar is the "(typename) ID" expression.
+
+//-----------------------------------------------------------------------------------------------
 
 // expression
 //         : assigment_expression
@@ -67,7 +120,7 @@ expression : 'x++' | 'x > 5' | 'y = 562127' ;
 
 // primary_expression
 //         : ID
-//         | FLOATING_CONSTANT
+//         | FLOAT_CONSTANT
 //         | INTEGER_CONSTANT
 //         | STRING_CONSTANT
 //         | '(' expression ')'
@@ -112,6 +165,7 @@ expression : 'x++' | 'x > 5' | 'y = 562127' ;
 //         // | additive_expression '=>' relational_expression (optional)
 //         ;
 
+//-----------------------------------------------------------------------------------------------
 
 types : type_int 
 	  | type_float 
@@ -128,7 +182,7 @@ id_with_ptr : pointer* identifier;
 identifier : ID ;
 pointer : STAR ; 
 
-constant : INTEGER_CONSTANT | FLOATING_CONSTANT | STRING_CONSTANT;
+constant : INTEGER_CONSTANT | FLOAT_CONSTANT | STRING_CONSTANT;
 
 INCLUDE: '#include';
 STDIO_H: '<stdio.h>';
@@ -162,13 +216,13 @@ RIGHT_BRACE: '}';
 
 ASSIGNMENT: '=';
 
-GREATER: '>';
-LESS: '<';
+GREATER_THAN: '>';
+LESS_THAN: '<';
 EQUAL: '==';
 
 CHAR_CONSTANT: '\'' ~['\\\r\n] '\'';
 INTEGER_CONSTANT: [1-9][0-9]*;
-FLOATING_CONSTANT: [0-9]* '.' [0-9]+;
+FLOAT_CONSTANT: [0-9]* '.' [0-9]+;
 STRING_CONSTANT: '"' ~["\\\r\n] '"'; // expansion might be needed
 
 // keep this at the BOTTOM of the lexer. The identifier DFA will match almost anything, and thus has

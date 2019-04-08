@@ -179,6 +179,96 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#assignment_expr.
+    def enterAssignment_expr(self, ctx:CParser.Assignment_exprContext):
+        pass
+
+    # Exit a parse tree produced by CParser#assignment_expr.
+    def exitAssignment_expr(self, ctx:CParser.Assignment_exprContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#cond_expr.
+    def enterCond_expr(self, ctx:CParser.Cond_exprContext):
+        pass
+
+    # Exit a parse tree produced by CParser#cond_expr.
+    def exitCond_expr(self, ctx:CParser.Cond_exprContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#equality_expr.
+    def enterEquality_expr(self, ctx:CParser.Equality_exprContext):
+        pass
+
+    # Exit a parse tree produced by CParser#equality_expr.
+    def exitEquality_expr(self, ctx:CParser.Equality_exprContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#relational_expr.
+    def enterRelational_expr(self, ctx:CParser.Relational_exprContext):
+        pass
+
+    # Exit a parse tree produced by CParser#relational_expr.
+    def exitRelational_expr(self, ctx:CParser.Relational_exprContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#additive_expr.
+    def enterAdditive_expr(self, ctx:CParser.Additive_exprContext):
+        pass
+
+    # Exit a parse tree produced by CParser#additive_expr.
+    def exitAdditive_expr(self, ctx:CParser.Additive_exprContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#multiplicative_expr.
+    def enterMultiplicative_expr(self, ctx:CParser.Multiplicative_exprContext):
+        pass
+
+    # Exit a parse tree produced by CParser#multiplicative_expr.
+    def exitMultiplicative_expr(self, ctx:CParser.Multiplicative_exprContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#cast_expr.
+    def enterCast_expr(self, ctx:CParser.Cast_exprContext):
+        pass
+
+    # Exit a parse tree produced by CParser#cast_expr.
+    def exitCast_expr(self, ctx:CParser.Cast_exprContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#unary_expr.
+    def enterUnary_expr(self, ctx:CParser.Unary_exprContext):
+        pass
+
+    # Exit a parse tree produced by CParser#unary_expr.
+    def exitUnary_expr(self, ctx:CParser.Unary_exprContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#postfix_expr.
+    def enterPostfix_expr(self, ctx:CParser.Postfix_exprContext):
+        pass
+
+    # Exit a parse tree produced by CParser#postfix_expr.
+    def exitPostfix_expr(self, ctx:CParser.Postfix_exprContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#prim_expr.
+    def enterPrim_expr(self, ctx:CParser.Prim_exprContext):
+        pass
+
+    # Exit a parse tree produced by CParser#prim_expr.
+    def exitPrim_expr(self, ctx:CParser.Prim_exprContext):
+        pass
+
+
     # Enter a parse tree produced by CParser#types.
     def enterTypes(self, ctx:CParser.TypesContext):
         pass
