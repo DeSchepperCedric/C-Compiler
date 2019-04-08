@@ -1,15 +1,6 @@
-#include <stdio.h>
-
-int i,b,c, f(float abc);
-
-//int func();
-
-//int* funcb(int ***i);
-
-int func_def(int param_x)
+int func()
 {
-    while(x > 5)
-    {
-        x++;
-    }
+    // test expressions hier
+
+    x * 6 + 5;
 }
