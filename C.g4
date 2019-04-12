@@ -1,6 +1,6 @@
 grammar C;
 
-program : (include | declaration | func_def)+;
+program : (include | declaration | func_def)+ EOF;
 
 // include for <stdio.h>
 include : INCLUDE STDIO_H ;
@@ -93,79 +93,6 @@ postfix_expr : postfix_expr LEFT_BRACKET expression RIGHT_BRACKET // array acces
 prim_expr : LEFT_PAREN expression RIGHT_PAREN
 		  | identifier
 		  | constant ;
-
-
-// TODO (mandatory) deref_expr, addr_expr
-
-// TODO (optional) add &&, ||, etc to 'cond_expr'
-// TODO (optional) x++, x--
-// TODO (optional) multiplicative expr '%'
-// TODO (optional) add 'goto', 'break', 'continue', etc.
-// TODO (optional) 'castExpression' in the C grammar is the "(typename) ID" expression.
-
-//-----------------------------------------------------------------------------------------------
-
-// expression
-//         : assigment_expression
-//         | assignment_expression ',' expression; // example?
-
-// assignment_expression
-//         : conditional_expression
-//         | unary_expression assignment_operator assignment_expression;
-
-// assignment_operator
-//         : '='; // can be expanded with optional assignment operators like (ex. +=)
-
-// unary_expression
-// 	    : unary_operator unary_expression
-// 	    ;
-
-// primary_expression
-//         : ID
-//         | FLOAT_CONSTANT
-//         | INTEGER_CONSTANT
-//         | STRING_CONSTANT
-//         | '(' expression ')'
-//         ;
-
-
-// unary_operator
-//         : '+'
-//         | '-'
-//         | '&' // addresss. Needed?
-//         ;
-
-// cast_expression
-//         : unary_expression
-//         // unary operator|
-//         ;
-
-// additive_expression
-//         : multiplicative_expression
-//         | multiplicative_expression '+' additive_expression
-//         | multiplicative_expression '-' additive_expression
-//         ;
-
-// multiplicative_expression
-//         : cast_expression
-//         | cast_expression '*' multiplicative_expression
-//         | cast_expression '/' multiplicative_expression
-//         // cast_expression '%' multiplicative_expression (optional)
-//         ;
-
-// equality_expression
-//         : relational_expression
-//         | relational_expression '==' relation_expression
-//         // | | relational_expression '!=' relation_expression (optional)
-//         ;
-
-// relational_expression
-//         : additive_expression
-//         | additive_expression '<' relational_expression
-//         | additive_expression '>' relational_expression
-//         // | additive_expression '<=' relational_expression (optional)
-//         // | additive_expression '=>' relational_expression (optional)
-//         ;
 
 //-----------------------------------------------------------------------------------------------
 
