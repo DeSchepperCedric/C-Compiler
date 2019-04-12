@@ -17,7 +17,9 @@ declarator
 // variable declarator
 var_decltr
         : id_with_ptr
-        | id_with_ptr ASSIGNMENT simpl_expr; // assignment can happen at time of declaration: "int i = 5; char* j = &k", etc.
+        | id_with_ptr LEFT_BRACKET expression RIGHT_BRACKET
+        | id_with_ptr ASSIGNMENT simpl_expr // assignment can happen at time of declaration: "int i = 5; char* j = &k", etc.
+        ; 
 
 // function declarator
 func_decltr : id_with_ptr LEFT_PAREN param_spec? RIGHT_PAREN;
