@@ -6,8 +6,8 @@ program : (include | declaration | func_def)+ EOF;
 include : INCLUDE STDIO_H ;
 
 /// a declaration introduces one or more identifiers into the program
-declaration : types init_decltr_list ';';
-init_decltr_list : declarator (',' declarator)*;
+declaration : types init_decltr_list SC;
+init_decltr_list : declarator (COMMA declarator)*;
 
 /// a declarator introduces one identifier into the program
 declarator
@@ -22,11 +22,11 @@ var_decltr
         ; 
 
 // function declarator
-func_decltr : id_with_ptr LEFT_PAREN (param (',' param)*)? RIGHT_PAREN;
+func_decltr : id_with_ptr LEFT_PAREN (param (COMMA param)*)? RIGHT_PAREN;
 param : types id_with_ptr;
 
 // function definition
-func_def : types id_with_ptr LEFT_PAREN (param (',' param)*)? RIGHT_PAREN compound_statement ;
+func_def : types id_with_ptr LEFT_PAREN (param (COMMA param)*)? RIGHT_PAREN compound_statement ;
 
 // different types of statements
 statement
@@ -50,29 +50,55 @@ for_condition
         ;
 
 compound_statement : LEFT_BRACE block_item* RIGHT_BRACE ;
-block_item : statement | declaration ;
-
-jump_statement
-	    : RETURN ';'
-	    | BREAK ';'
-        | CONTINUE ';'
+block_item
+        : statement
+        | declaration
         ;
 
-expression_statement : expression ';' ;
+jump_statement
+	    : RETURN SC
+	    | BREAK SC
+        | CONTINUE SC
+        ;
+
+expression_statement : expression SC ;
 
 // expression
-expression : assignment_expr (',' expression)* ;
+expression : assignment_expr (COMMA expression)* ;
 
 assignment_expr
         : cond_expr
-		| unary_expr ASSIGNMENT assignment_expr
+		| unary_expr assignment_operator assignment_expr
 	    ;
 
-cond_expr : equality_expr ; 
+assignment_operator
+        : ASSIGNMENT
+        | ADD_ASSIGN
+        | SUB_ASSIGN
+        | MUL_ASSIGN
+        | DIV_ASSIGN
+        ;
+
+cond_expr
+        : logical_or_expr
+        // If we wanna add ternary operator
+        // logical_or_expr ('?' expression ':' cpnd_expr)?
+        ;
+
+logical_and_expr
+        : equality_expr
+        | logical_and_expr AND equality_expr
+        ;
+
+logical_or_expr
+        : logical_and_expr
+        | logical_or_expr OR logical_and_expr
+        ;
 
 equality_expr
         : relational_expr
     	| equality_expr EQUAL relational_expr
+    	| equality_expr NOT_EQUAL relational_expr
 	    ;
 
 relational_expr
@@ -81,7 +107,6 @@ relational_expr
         | relational_expr GREATER_THAN equality_expr
         | relational_expr GREATER_EQUAL_THAN equality_expr
         | relational_expr LESS_EQUAL_THAN equality_expr
-        | relational_expr NOT_EQUAL equality_expr
         ;
 
 additive_expr
@@ -103,6 +128,12 @@ unary_expr
         : postfix_expr
         | DECREMENT unary_expr
         | INCREMENT unary_expr
+        | unary_operator cast_expr
+        ;
+
+unary_operator
+        : PLUS
+        | MINUS
         ;
 
 postfix_expr
@@ -112,7 +143,6 @@ postfix_expr
         | postfix_expr INCREMENT
         ;
 
-
 // TODO: function call expression! "identifier ( (param ", param")? )"
 
 prim_expr : LEFT_PAREN expression RIGHT_PAREN
@@ -121,10 +151,11 @@ prim_expr : LEFT_PAREN expression RIGHT_PAREN
 
 //-----------------------------------------------------------------------------------------------
 
-types : type_int 
-	  | type_float 
-	  | type_char 
-	  | type_void ;
+types
+        : type_int
+        | type_float
+        | type_char
+        | type_void ;
 	  
 type_int : INT ;
 type_float : FLOAT ;
@@ -149,6 +180,9 @@ VOID: 'void';
 
 BLOCK_COMMENT: '/*' .*? '*/' -> skip;
 LINE_COMMENT: '//' ~[\r\n]* -> skip;
+
+COMMA: ',';
+SC: ';';
 
 IF: 'if';
 ELSE: 'else';
@@ -176,13 +210,22 @@ LEFT_BRACE: '{';
 RIGHT_BRACE: '}';
 
 ASSIGNMENT: '=';
+ADD_ASSIGN: '+=';
+SUB_ASSIGN: '-=';
+MUL_ASSIGN: '*=';
+DIV_ASSIGN: '/=';
+
 
 GREATER_THAN: '>';
 LESS_THAN: '<';
-EQUAL: '==';
 GREATER_EQUAL_THAN: '>=';
 LESS_EQUAL_THAN: '<=';
+
+EQUAL: '==';
 NOT_EQUAL: '!=';
+
+AND: '&&';
+OR: '||';
 
 CHAR_CONSTANT: '\'' ~['\\\r\n] '\'';
 INTEGER_CONSTANT: [1-9][0-9]*;
