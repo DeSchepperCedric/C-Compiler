@@ -71,30 +71,12 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#param_spec.
-    def enterParam_spec(self, ctx:CParser.Param_specContext):
-        pass
-
-    # Exit a parse tree produced by CParser#param_spec.
-    def exitParam_spec(self, ctx:CParser.Param_specContext):
-        pass
-
-
     # Enter a parse tree produced by CParser#param.
     def enterParam(self, ctx:CParser.ParamContext):
         pass
 
     # Exit a parse tree produced by CParser#param.
     def exitParam(self, ctx:CParser.ParamContext):
-        pass
-
-
-    # Enter a parse tree produced by CParser#simpl_expr.
-    def enterSimpl_expr(self, ctx:CParser.Simpl_exprContext):
-        pass
-
-    # Exit a parse tree produced by CParser#simpl_expr.
-    def exitSimpl_expr(self, ctx:CParser.Simpl_exprContext):
         pass
 
 

@@ -18,22 +18,17 @@ declarator
 var_decltr
         : id_with_ptr
         | id_with_ptr LEFT_BRACKET expression RIGHT_BRACKET
-        | id_with_ptr ASSIGNMENT simpl_expr // assignment can happen at time of declaration: "int i = 5; char* j = &k", etc.
+        | id_with_ptr ASSIGNMENT expression // assignment can happen at time of declaration: "int i = 5; char* j = &k", etc.
         ; 
 
 // function declarator
-func_decltr : id_with_ptr LEFT_PAREN param_spec? RIGHT_PAREN;
-param_spec
-        : VOID
-        | param (',' param)* ;
+func_decltr : id_with_ptr LEFT_PAREN (param (',' param)*)? RIGHT_PAREN;
 param : types id_with_ptr;
 
-// TODO remove this later
-simpl_expr : constant;
-
 // function definition
-func_def : types id_with_ptr LEFT_PAREN param_spec? RIGHT_PAREN compound_statement ;
+func_def : types id_with_ptr LEFT_PAREN (param (',' param)*)? RIGHT_PAREN compound_statement ;
 
+// different types of statements
 statement : if_statement
 		  | compound_statement
 		  | iteration_statement
@@ -43,13 +38,12 @@ statement : if_statement
 
 if_statement: IF LEFT_PAREN expression RIGHT_PAREN statement (ELSE statement)? ;
 iteration_statement: WHILE LEFT_PAREN expression RIGHT_PAREN statement;
-
 compound_statement : LEFT_BRACE block_item* RIGHT_BRACE ;
 block_item : statement | declaration ;
-
 jump_statement : RETURN ';' ; 
-
 expression_statement : expression ';' ;
+
+// expression
 expression : assignment_expr (',' expression)* ;
 
 assignment_expr : cond_expr 
@@ -89,6 +83,8 @@ unary_expr : postfix_expr ;
 postfix_expr : postfix_expr LEFT_BRACKET expression RIGHT_BRACKET // array access
 			 | prim_expr ;
 
+
+// TODO: function call expression! "identifier ( (param ", param")? )"
 
 prim_expr : LEFT_PAREN expression RIGHT_PAREN
 		  | identifier

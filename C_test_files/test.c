@@ -5,7 +5,7 @@
  * Function that demonstrates the proper parsing of
  * a function definition.
  */
-int func()
+int func(int i, char k)
 {
     int i;
     int j = 8008135;
