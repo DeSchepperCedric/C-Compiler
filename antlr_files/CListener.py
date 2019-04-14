@@ -116,6 +116,15 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#for_condition.
+    def enterFor_condition(self, ctx:CParser.For_conditionContext):
+        pass
+
+    # Exit a parse tree produced by CParser#for_condition.
+    def exitFor_condition(self, ctx:CParser.For_conditionContext):
+        pass
+
+
     # Enter a parse tree produced by CParser#compound_statement.
     def enterCompound_statement(self, ctx:CParser.Compound_statementContext):
         pass
@@ -170,12 +179,39 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#assignment_operator.
+    def enterAssignment_operator(self, ctx:CParser.Assignment_operatorContext):
+        pass
+
+    # Exit a parse tree produced by CParser#assignment_operator.
+    def exitAssignment_operator(self, ctx:CParser.Assignment_operatorContext):
+        pass
+
+
     # Enter a parse tree produced by CParser#cond_expr.
     def enterCond_expr(self, ctx:CParser.Cond_exprContext):
         pass
 
     # Exit a parse tree produced by CParser#cond_expr.
     def exitCond_expr(self, ctx:CParser.Cond_exprContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#logical_and_expr.
+    def enterLogical_and_expr(self, ctx:CParser.Logical_and_exprContext):
+        pass
+
+    # Exit a parse tree produced by CParser#logical_and_expr.
+    def exitLogical_and_expr(self, ctx:CParser.Logical_and_exprContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#logical_or_expr.
+    def enterLogical_or_expr(self, ctx:CParser.Logical_or_exprContext):
+        pass
+
+    # Exit a parse tree produced by CParser#logical_or_expr.
+    def exitLogical_or_expr(self, ctx:CParser.Logical_or_exprContext):
         pass
 
 
@@ -233,12 +269,30 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#unary_operator.
+    def enterUnary_operator(self, ctx:CParser.Unary_operatorContext):
+        pass
+
+    # Exit a parse tree produced by CParser#unary_operator.
+    def exitUnary_operator(self, ctx:CParser.Unary_operatorContext):
+        pass
+
+
     # Enter a parse tree produced by CParser#postfix_expr.
     def enterPostfix_expr(self, ctx:CParser.Postfix_exprContext):
         pass
 
     # Exit a parse tree produced by CParser#postfix_expr.
     def exitPostfix_expr(self, ctx:CParser.Postfix_exprContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#arguments.
+    def enterArguments(self, ctx:CParser.ArgumentsContext):
+        pass
+
+    # Exit a parse tree produced by CParser#arguments.
+    def exitArguments(self, ctx:CParser.ArgumentsContext):
         pass
 
 
