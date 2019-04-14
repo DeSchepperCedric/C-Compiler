@@ -18,43 +18,184 @@ class ASTNode:
     # ENDMETHOD
 # ENDCLASS
 
-# program:
-#   list of "include","func_decl", "func_def"
+class ASTProgramNode:
+    # LIST of includeNode, funcdecl, vardecl
+    pass
 
-# include: opaque node
+class IncludeNode:
+    # no members, will always be "#include <stdio.h>"
+    pass
 
-# func declaration
-#   "type", "id_with_ptr", list of "param"
+class FuncDecl:
+    # type
+    # IdWithPtr
+    # LIST of Param
+    pass
 
-# var declaration
-#   "type", "id_with_ptr", "decl_typ"={ID_DECL, ARRAY_DECL, ID_DECL_INIT}", opt:array_size_expr, opt:init_expr
+class VarDecl:
+    # type
+    # IdWithPtr
+    pass
 
-# func_def:
-#   "type", "id_with_ptr", list of "param", "compound_statement"
-# !!! indien er ergens een return statement is, alles daarna moet weg
+class ArrayVarDecl(VarDecl):
+    # size expr
+    pass
 
-# id_with_ptr:
-#   "pointer_count" "id"
+class VarDeclWithInit(VarDecl):
+    # init_expr
+    pass
 
-# param:
-#   "type", "id_with_ptr"
+class FuncDef:
+    # type
+    # IdWithPtr
+    # LIST of Param
+    # body: LIST of Statement
+    # NOTE: alles na "return" statement moet weg!
+    pass
 
-# compound_statement:
-#   list of "statement":
+class IdWithPtr:
+    # id: IdentifierExpr
+    # pointer-count: string
+    pass
 
-#  while statement
-#   "condition", "body"
-#   in body: alles na "continue" weg, alles na "break" weg
+class FuncParam:
+    # type
+    # IdWithPtr
+    pass
 
-# for statement
-#   "init", "condition", "iter", "body"
-#   in body: alles na "continue" weg, alles na "break" weg
+class Statement:
+    # base class for statements
+    pass
 
-# if statement
-#   "branch", "if_body", "else_body"
+class CompoundStmt(Statement):
+    # LIST of Statement
+    pass
 
-# expression_statement
-# ???
+class WhileStmt(Statement):
+    # condition: expr
+    # body: LIST of Statement
+    # NOTE: alles na "continue" of "break" weg.
+    pass
+
+class ForStmt(Statement):
+    # init
+    # condition
+    # iter
+    # body: LIST of Statement
+    # NOTE: alles na "continue" of "break" weg.
+    pass
+
+class BranchStmt(Statement):
+    # conditon
+    # if-branch
+    # else-branch
+    pass
+
+class ExpressionStatement(Statement):
+    # expression: can be empty
+    pass
+
+class Expression:
+    # base class for all expression
+    pass
+
+class AssignmentExpr(Expression):
+    # left
+    # right
+    # operator: {'=', '+=', '-=', '*=', '/='
+    pass
+
+class LogicBinExpr(Expression):
+    # left
+    # right
+    # operator: {'&&', '||'}
+    pass
+
+class EqualityExpr(Expression):
+    # left
+    # right
+    # operator: {'==', '!='}
+    pass
+
+class ComparisonExpr(Expression):
+    # left
+    # right
+    # operator: {'<', '>', '<=', '>='}
+    pass
+
+class AdditiveExpr(Expression):
+    # left
+    # right
+    # operator: {'+', '-'}
+    pass
+
+class MultiplicativeExpr(Expression):
+    # left
+    # right
+    # operator: {'*', '/', '%'}
+    pass
+
+class CastExpr(Expression):
+    # list of types
+    # expr
+    pass
+
+class LogicNotExpr(Expression):
+    # expr
+    pass
+
+class PrefixIncDecExpr(Expression):
+    # ++x, --x
+    # op: {'++', '--'}
+    # expr
+    pass
+
+class PostfixIncDecExpr(Expression):
+    # x++, x--
+    # expr
+    # op: {'++', '--'}
+    pass
+
+class PlusMinPrefixExpr(Expression):
+    # +x, -x
+    # op: {'+', '-'}
+    # expr
+    pass
+
+class ArrayAccessExpr(Expression):
+    # target: expression
+    # index: expression
+    pass
+
+class PointerDerefExpr(Expression):
+    # *x
+    # expr
+    pass
+
+class FuncCallExpr(Expression):
+    # functionname
+    # List of Expression: parameters
+    pass
+
+class IdentifierExpr(Expression):
+    # identifier
+    pass
+
+class ConstantExpr(Expression):
+    # base class for constants
+    pass
+
+class IntegerConstant(ConstantExpr):
+    pass
+
+class FloatConstant(ConstantExpr):
+    pass
+
+class StringConstant(ConstantExpr):
+    pass
+
+class CharConstant(ConstantExpr):
+    pass
 
 
 

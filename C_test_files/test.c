@@ -1,9 +1,11 @@
 
 #include <stdio.h>
 
+int predicate();
+
 int func()
 {
-    int i = 0.0;
+    a == b && c * 3 + d % f(a+b);
 
-i++;
+    // (a==b) && (c*3) + (d % f(a+b))
 }

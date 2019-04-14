@@ -1,4 +1,4 @@
-# Generated from /Users/Cedric/Desktop/C-Compiler/C.g4 by ANTLR 4.7.2
+# Generated from ./C.g4 by ANTLR 4.7.2
 from antlr4 import *
 if __name__ is not None and "." in __name__:
     from .CParser import CParser
@@ -125,24 +125,6 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#for_declaration.
-    def enterFor_declaration(self, ctx:CParser.For_declarationContext):
-        pass
-
-    # Exit a parse tree produced by CParser#for_declaration.
-    def exitFor_declaration(self, ctx:CParser.For_declarationContext):
-        pass
-
-
-    # Enter a parse tree produced by CParser#for_expr.
-    def enterFor_expr(self, ctx:CParser.For_exprContext):
-        pass
-
-    # Exit a parse tree produced by CParser#for_expr.
-    def exitFor_expr(self, ctx:CParser.For_exprContext):
-        pass
-
-
     # Enter a parse tree produced by CParser#compound_statement.
     def enterCompound_statement(self, ctx:CParser.Compound_statementContext):
         pass
@@ -206,12 +188,12 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#cond_expr.
-    def enterCond_expr(self, ctx:CParser.Cond_exprContext):
+    # Enter a parse tree produced by CParser#logical_or_expr.
+    def enterLogical_or_expr(self, ctx:CParser.Logical_or_exprContext):
         pass
 
-    # Exit a parse tree produced by CParser#cond_expr.
-    def exitCond_expr(self, ctx:CParser.Cond_exprContext):
+    # Exit a parse tree produced by CParser#logical_or_expr.
+    def exitLogical_or_expr(self, ctx:CParser.Logical_or_exprContext):
         pass
 
 
@@ -221,15 +203,6 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#logical_and_expr.
     def exitLogical_and_expr(self, ctx:CParser.Logical_and_exprContext):
-        pass
-
-
-    # Enter a parse tree produced by CParser#logical_or_expr.
-    def enterLogical_or_expr(self, ctx:CParser.Logical_or_exprContext):
-        pass
-
-    # Exit a parse tree produced by CParser#logical_or_expr.
-    def exitLogical_or_expr(self, ctx:CParser.Logical_or_exprContext):
         pass
 
 
@@ -428,6 +401,15 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#str_constant.
     def exitStr_constant(self, ctx:CParser.Str_constantContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#char_constant.
+    def enterChar_constant(self, ctx:CParser.Char_constantContext):
+        pass
+
+    # Exit a parse tree produced by CParser#char_constant.
+    def exitChar_constant(self, ctx:CParser.Char_constantContext):
         pass
 
 
