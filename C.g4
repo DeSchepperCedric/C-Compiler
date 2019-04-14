@@ -45,9 +45,17 @@ iteration_statement
 	    ;
 
 for_condition
-        : expression_statement expression_statement expression
-        | expression_statement expression_statement expression
-        ;
+	:   for_declaration SC for_expr? SC for_expr?
+	|   expression? SC for_expr? SC for_expr?
+	;
+
+for_declaration
+	: 	types init_decltr_list
+    ;
+
+for_expr
+    :   assignment_expr (COMMA for_expr)*
+    ;
 
 compound_statement : LEFT_BRACE block_item* RIGHT_BRACE ;
 block_item
