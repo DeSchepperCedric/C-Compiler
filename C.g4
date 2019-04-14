@@ -170,10 +170,12 @@ id_with_ptr : pointer* identifier;
 identifier : ID ;
 pointer : STAR ; 
 
-constant : int_constant | float_constant | str_constant;
+constant : int_constant | float_constant | str_constant | char_constant ;
+
 int_constant : INTEGER_CONSTANT ;
 float_constant : FLOAT_CONSTANT ;
 str_constant : STRING_CONSTANT ;
+char_constant : CHAR_CONSTANT ;
 
 INCLUDE: '#include';
 STDIO_H: '<stdio.h>';
@@ -233,10 +235,23 @@ NOT_EQUAL: '!=';
 AND: '&&';
 OR: '||';
 
-CHAR_CONSTANT: '\'' ~['\\\r\n] '\'';
+// escapes like '\n'. This is a backslash followed by a specific set of characters.
+fragment ESCAPED_CHAR : '\\' ['"?abfnrtv\\] ;
+
+// character that belongs in a character literal
+fragment CHARACTER_CHAR : ~['\\\r\n]
+                        | ESCAPED_CHAR
+                        ;
+
+// character that belongs in a string literal
+fragment STRING_CHAR : ~["\\\r\n]
+                     | ESCAPED_CHAR
+                     ;
+
+CHAR_CONSTANT: '\'' CHARACTER_CHAR+ '\'';
 INTEGER_CONSTANT: [0-9][0-9]*;
 FLOAT_CONSTANT: [0-9]* '.' [0-9]+;
-STRING_CONSTANT: '"' ~["\\\r\n] '"'; // expansion might be needed
+STRING_CONSTANT: '"' STRING_CHAR* '"'; // expansion might be needed
 
 // keep this at the BOTTOM of the lexer. The identifier DFA will match almost anything, and thus has
 // to have the LOWEST priority because otherwise no other tokens will be matched!

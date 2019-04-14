@@ -3,7 +3,9 @@
 
 int func()
 {
-    int i = 0.0;
 
-i++;
+
+
+    f("abcdef5454");
+
 }

@@ -413,3 +413,12 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#char_constant.
+    def enterChar_constant(self, ctx:CParser.Char_constantContext):
+        pass
+
+    # Exit a parse tree produced by CParser#char_constant.
+    def exitChar_constant(self, ctx:CParser.Char_constantContext):
+        pass
+
+
