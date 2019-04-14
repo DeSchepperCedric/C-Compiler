@@ -67,7 +67,7 @@ expression_statement : expression? SC ;
 expression : assignment_expr (COMMA expression)* ;
 
 assignment_expr
-        : cond_expr
+        : logical_or_expr
 		| unary_expr assignment_operator assignment_expr
 	    ;
 
@@ -79,20 +79,14 @@ assignment_operator
         | DIV_ASSIGN
         ;
 
-cond_expr
-        : logical_or_expr
-        // If we wanna add ternary operator
-        // logical_or_expr ('?' expression ':' cpnd_expr)?
+logical_or_expr
+        : logical_and_expr
+        | logical_or_expr OR logical_and_expr
         ;
 
 logical_and_expr
         : equality_expr
         | logical_and_expr AND equality_expr
-        ;
-
-logical_or_expr
-        : logical_and_expr
-        | logical_or_expr OR logical_and_expr
         ;
 
 equality_expr
@@ -103,10 +97,10 @@ equality_expr
 
 relational_expr
         : additive_expr
-        | relational_expr LESS_THAN equality_expr
-        | relational_expr GREATER_THAN equality_expr
-        | relational_expr GREATER_EQUAL_THAN equality_expr
-        | relational_expr LESS_EQUAL_THAN equality_expr
+        | relational_expr LESS_THAN additive_expr
+        | relational_expr GREATER_THAN additive_expr
+        | relational_expr GREATER_EQUAL_THAN additive_expr
+        | relational_expr LESS_EQUAL_THAN additive_expr
         ;
 
 additive_expr
@@ -134,6 +128,8 @@ unary_expr
 unary_operator
         : PLUS
         | MINUS
+        | pointer // dereference
+        | NOT
         ;
 
 postfix_expr
@@ -145,7 +141,7 @@ postfix_expr
         ;
 
 arguments
-        :   assignment_expr (COMMA assignment_expr)*
+        : assignment_expr (COMMA assignment_expr)*
         ;
 
 prim_expr : LEFT_PAREN expression RIGHT_PAREN
@@ -162,10 +158,10 @@ types
 //        | type_bool
         ;
 	  
-type_int : INT ;
+type_int   : INT ;
 type_float : FLOAT ;
-type_char : CHAR ;
-type_void : VOID ;
+type_char  : CHAR ;
+type_void  : VOID ;
 //type_bool : BOOL ;
 
 // an identifier that has a pointer
@@ -177,7 +173,7 @@ constant : int_constant
          | float_constant 
          | str_constant 
          | char_constant
-         | bool_constant 
+//         | bool_constant 
          ;
 
 int_constant   : INTEGER_CONSTANT ;
@@ -208,14 +204,14 @@ CONTINUE : 'continue';
 FOR      : 'for';
 
 //operations
+INCREMENT : '++';
+DECREMENT : '--';
+
 PLUS   : '+';
 MINUS  : '-';
 STAR   : '*';
 DIVIDE : '/';
 MOD    : '%';
-
-INCREMENT : '++';
-DECREMENT : '--';
 
 LEFT_PAREN    : '(';
 RIGHT_PAREN   : ')';
@@ -224,23 +220,23 @@ RIGHT_BRACKET : ']';
 LEFT_BRACE    : '{';
 RIGHT_BRACE   : '}';
 
-ASSIGNMENT: '=';
-ADD_ASSIGN: '+=';
-SUB_ASSIGN: '-=';
-MUL_ASSIGN: '*=';
-DIV_ASSIGN: '/=';
+EQUAL         : '==';
+NOT_EQUAL     : '!=';
 
+ASSIGNMENT : '=';
+ADD_ASSIGN : '+=';
+SUB_ASSIGN : '-=';
+MUL_ASSIGN : '*=';
+DIV_ASSIGN : '/=';
+
+AND : '&&';
+OR  : '||';
+NOT : '!' ; // must be before '!=' for precedence reasons.
 
 GREATER_THAN       : '>';
 LESS_THAN          : '<';
 GREATER_EQUAL_THAN : '>=';
 LESS_EQUAL_THAN    : '<=';
-
-EQUAL              : '==';
-NOT_EQUAL          : '!=';
-
-AND : '&&';
-OR  : '||';
 
 // escapes like '\n'. This is a backslash followed by a specific set of characters.
 fragment ESCAPED_CHAR : '\\' ['"?abfnrtv\\] ;

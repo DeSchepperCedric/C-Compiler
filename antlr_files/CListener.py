@@ -188,12 +188,12 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#cond_expr.
-    def enterCond_expr(self, ctx:CParser.Cond_exprContext):
+    # Enter a parse tree produced by CParser#logical_or_expr.
+    def enterLogical_or_expr(self, ctx:CParser.Logical_or_exprContext):
         pass
 
-    # Exit a parse tree produced by CParser#cond_expr.
-    def exitCond_expr(self, ctx:CParser.Cond_exprContext):
+    # Exit a parse tree produced by CParser#logical_or_expr.
+    def exitLogical_or_expr(self, ctx:CParser.Logical_or_exprContext):
         pass
 
 
@@ -203,15 +203,6 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#logical_and_expr.
     def exitLogical_and_expr(self, ctx:CParser.Logical_and_exprContext):
-        pass
-
-
-    # Enter a parse tree produced by CParser#logical_or_expr.
-    def enterLogical_or_expr(self, ctx:CParser.Logical_or_exprContext):
-        pass
-
-    # Exit a parse tree produced by CParser#logical_or_expr.
-    def exitLogical_or_expr(self, ctx:CParser.Logical_or_exprContext):
         pass
 
 
@@ -350,15 +341,6 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#type_bool.
-    def enterType_bool(self, ctx:CParser.Type_boolContext):
-        pass
-
-    # Exit a parse tree produced by CParser#type_bool.
-    def exitType_bool(self, ctx:CParser.Type_boolContext):
-        pass
-
-
     # Enter a parse tree produced by CParser#id_with_ptr.
     def enterId_with_ptr(self, ctx:CParser.Id_with_ptrContext):
         pass
@@ -428,15 +410,6 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#char_constant.
     def exitChar_constant(self, ctx:CParser.Char_constantContext):
-        pass
-
-
-    # Enter a parse tree produced by CParser#bool_constant.
-    def enterBool_constant(self, ctx:CParser.Bool_constantContext):
-        pass
-
-    # Exit a parse tree produced by CParser#bool_constant.
-    def exitBool_constant(self, ctx:CParser.Bool_constantContext):
         pass
 
 

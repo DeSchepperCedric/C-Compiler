@@ -1,16 +1,11 @@
 
 #include <stdio.h>
 
-int j = 5;
-
-int j;
+int predicate();
 
 int func()
 {
-    bool b = true;
+    a == b && c * 3 + d % f(a+b);
 
-    for(i = 5; i < 6; i++)
-    {
-        
-    }
+    // (a==b) && (c*3) + (d % f(a+b))
 }
