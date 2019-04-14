@@ -125,24 +125,6 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#for_declaration.
-    def enterFor_declaration(self, ctx:CParser.For_declarationContext):
-        pass
-
-    # Exit a parse tree produced by CParser#for_declaration.
-    def exitFor_declaration(self, ctx:CParser.For_declarationContext):
-        pass
-
-
-    # Enter a parse tree produced by CParser#for_expr.
-    def enterFor_expr(self, ctx:CParser.For_exprContext):
-        pass
-
-    # Exit a parse tree produced by CParser#for_expr.
-    def exitFor_expr(self, ctx:CParser.For_exprContext):
-        pass
-
-
     # Enter a parse tree produced by CParser#compound_statement.
     def enterCompound_statement(self, ctx:CParser.Compound_statementContext):
         pass
@@ -368,6 +350,15 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#type_bool.
+    def enterType_bool(self, ctx:CParser.Type_boolContext):
+        pass
+
+    # Exit a parse tree produced by CParser#type_bool.
+    def exitType_bool(self, ctx:CParser.Type_boolContext):
+        pass
+
+
     # Enter a parse tree produced by CParser#id_with_ptr.
     def enterId_with_ptr(self, ctx:CParser.Id_with_ptrContext):
         pass
@@ -437,6 +428,15 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#char_constant.
     def exitChar_constant(self, ctx:CParser.Char_constantContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#bool_constant.
+    def enterBool_constant(self, ctx:CParser.Bool_constantContext):
+        pass
+
+    # Exit a parse tree produced by CParser#bool_constant.
+    def exitBool_constant(self, ctx:CParser.Bool_constantContext):
         pass
 
 

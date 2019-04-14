@@ -1,11 +1,16 @@
 
 #include <stdio.h>
 
+int j = 5;
+
+int j;
+
 int func()
 {
+    bool b = true;
 
-
-
-    f("abcdef5\n454");
-
+    for(i = 5; i < 6; i++)
+    {
+        
+    }
 }

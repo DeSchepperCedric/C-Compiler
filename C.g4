@@ -1,12 +1,12 @@
 grammar C;
 
-program : (include | declaration | func_def)+ EOF;
+program : (include | declaration SC | func_def)+ EOF;
 
 // include for <stdio.h>
 include : INCLUDE STDIO_H ;
 
 /// a declaration introduces one or more identifiers into the program
-declaration : types init_decltr_list SC;
+declaration : types init_decltr_list;
 init_decltr_list : declarator (COMMA declarator)*;
 
 /// a declarator introduces one identifier into the program
@@ -45,17 +45,9 @@ iteration_statement
 	    ;
 
 for_condition
-	:   for_declaration SC for_expr? SC for_expr?
-	|   expression? SC for_expr? SC for_expr?
+	: declaration SC expression? SC expression?
+	| expression? SC expression? SC expression?
 	;
-
-for_declaration
-	: 	types init_decltr_list
-    ;
-
-for_expr
-    :   assignment_expr (COMMA for_expr)*
-    ;
 
 compound_statement : LEFT_BRACE block_item* RIGHT_BRACE ;
 block_item
@@ -166,64 +158,71 @@ types
         : type_int
         | type_float
         | type_char
-        | type_void ;
+        | type_void 
+//        | type_bool
+        ;
 	  
 type_int : INT ;
 type_float : FLOAT ;
 type_char : CHAR ;
 type_void : VOID ;
+//type_bool : BOOL ;
 
 // an identifier that has a pointer
 id_with_ptr : pointer* identifier;
-identifier : ID ;
-pointer : STAR ; 
+identifier  : ID ;
+pointer     : STAR ; 
 
-constant : int_constant | float_constant | str_constant | char_constant ;
+constant : int_constant 
+         | float_constant 
+         | str_constant 
+         | char_constant
+         | bool_constant 
+         ;
 
-int_constant : INTEGER_CONSTANT ;
+int_constant   : INTEGER_CONSTANT ;
 float_constant : FLOAT_CONSTANT ;
-str_constant : STRING_CONSTANT ;
-char_constant : CHAR_CONSTANT ;
+str_constant   : STRING_CONSTANT ;
+char_constant  : CHAR_CONSTANT ;
+//bool_constant  : BOOL_CONSTANT ;
 
-INCLUDE: '#include';
-STDIO_H: '<stdio.h>';
+INCLUDE : '#include';
+STDIO_H : '<stdio.h>';
 
 // types
-CHAR: 'char';
-INT: 'int';
-FLOAT: 'float';
-VOID: 'void';
+CHAR  : 'char';
+INT   : 'int';
+FLOAT : 'float';
+VOID  : 'void';
+//BOOL  : 'bool';
 
-BLOCK_COMMENT: '/*' .*? '*/' -> skip;
-LINE_COMMENT: '//' ~[\r\n]* -> skip;
+COMMA : ',';
+SC    : ';';
 
-COMMA: ',';
-SC: ';';
-
-IF: 'if';
-ELSE: 'else';
-RETURN: 'return';
-WHILE: 'while';
-BREAK: 'break';
-CONTINUE: 'continue';
-FOR: 'for';
+IF       : 'if';
+ELSE     : 'else';
+RETURN   : 'return';
+WHILE    : 'while';
+BREAK    : 'break';
+CONTINUE : 'continue';
+FOR      : 'for';
 
 //operations
-PLUS: '+';
-MINUS: '-';
-STAR: '*';
-DIVIDE: '/';
-MOD: '%';
+PLUS   : '+';
+MINUS  : '-';
+STAR   : '*';
+DIVIDE : '/';
+MOD    : '%';
 
-INCREMENT: '++';
-DECREMENT: '--';
+INCREMENT : '++';
+DECREMENT : '--';
 
-LEFT_PAREN: '(';
-RIGHT_PAREN: ')';
-LEFT_BRACKET: '[';
-RIGHT_BRACKET: ']';
-LEFT_BRACE: '{';
-RIGHT_BRACE: '}';
+LEFT_PAREN    : '(';
+RIGHT_PAREN   : ')';
+LEFT_BRACKET  : '[';
+RIGHT_BRACKET : ']';
+LEFT_BRACE    : '{';
+RIGHT_BRACE   : '}';
 
 ASSIGNMENT: '=';
 ADD_ASSIGN: '+=';
@@ -232,16 +231,16 @@ MUL_ASSIGN: '*=';
 DIV_ASSIGN: '/=';
 
 
-GREATER_THAN: '>';
-LESS_THAN: '<';
-GREATER_EQUAL_THAN: '>=';
-LESS_EQUAL_THAN: '<=';
+GREATER_THAN       : '>';
+LESS_THAN          : '<';
+GREATER_EQUAL_THAN : '>=';
+LESS_EQUAL_THAN    : '<=';
 
-EQUAL: '==';
-NOT_EQUAL: '!=';
+EQUAL              : '==';
+NOT_EQUAL          : '!=';
 
-AND: '&&';
-OR: '||';
+AND : '&&';
+OR  : '||';
 
 // escapes like '\n'. This is a backslash followed by a specific set of characters.
 fragment ESCAPED_CHAR : '\\' ['"?abfnrtv\\] ;
@@ -256,15 +255,19 @@ fragment STRING_CHAR : ~["\\\r\n]
                      | ESCAPED_CHAR
                      ;
 
-CHAR_CONSTANT: '\'' CHARACTER_CHAR+ '\'';
-INTEGER_CONSTANT: [0-9][0-9]*;
-FLOAT_CONSTANT: [0-9]* '.' [0-9]+;
-STRING_CONSTANT: '"' STRING_CHAR* '"'; // expansion might be needed
+CHAR_CONSTANT    : '\'' CHARACTER_CHAR+ '\'';
+INTEGER_CONSTANT : [0-9][0-9]*;
+FLOAT_CONSTANT   : [0-9]* '.' [0-9]+;
+STRING_CONSTANT  : '"' STRING_CHAR* '"'; // expansion might be needed
+//BOOL_CONSTANT    : 'true' | 'false';
+
+BLOCK_COMMENT : '/*' .*? '*/' -> skip;
+LINE_COMMENT  : '//' ~[\r\n]* -> skip;
 
 // keep this at the BOTTOM of the lexer. The identifier DFA will match almost anything, and thus has
 // to have the LOWEST priority because otherwise no other tokens will be matched!
-ID: [a-zA-Z_][a-zA-Z0-9_]*;
-WS: [ \t\r\n]+ -> skip; // skip spaces, tabs, newlines
+ID : [a-zA-Z_][a-zA-Z0-9_]*;
+WS : [ \t\r\n]+ -> skip; // skip spaces, tabs, newlines
 
 
 
