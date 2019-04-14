@@ -141,9 +141,12 @@ postfix_expr
         | prim_expr
         | postfix_expr DECREMENT
         | postfix_expr INCREMENT
+        | postfix_expr LEFT_PAREN arguments? RIGHT_PAREN // function call
         ;
 
-// TODO: function call expression! "identifier ( (param ", param")? )"
+arguments
+        :   assignment_expr (COMMA assignment_expr)*
+        ;
 
 prim_expr : LEFT_PAREN expression RIGHT_PAREN
 		  | identifier
