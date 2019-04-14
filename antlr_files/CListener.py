@@ -386,3 +386,30 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#int_constant.
+    def enterInt_constant(self, ctx:CParser.Int_constantContext):
+        pass
+
+    # Exit a parse tree produced by CParser#int_constant.
+    def exitInt_constant(self, ctx:CParser.Int_constantContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#float_constant.
+    def enterFloat_constant(self, ctx:CParser.Float_constantContext):
+        pass
+
+    # Exit a parse tree produced by CParser#float_constant.
+    def exitFloat_constant(self, ctx:CParser.Float_constantContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#str_constant.
+    def enterStr_constant(self, ctx:CParser.Str_constantContext):
+        pass
+
+    # Exit a parse tree produced by CParser#str_constant.
+    def exitStr_constant(self, ctx:CParser.Str_constantContext):
+        pass
+
+

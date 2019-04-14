@@ -170,7 +170,10 @@ id_with_ptr : pointer* identifier;
 identifier : ID ;
 pointer : STAR ; 
 
-constant : INTEGER_CONSTANT | FLOAT_CONSTANT | STRING_CONSTANT;
+constant : int_constant | float_constant | str_constant;
+int_constant : INTEGER_CONSTANT ;
+float_constant : FLOAT_CONSTANT ;
+str_constant : STRING_CONSTANT ;
 
 INCLUDE: '#include';
 STDIO_H: '<stdio.h>';
