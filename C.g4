@@ -41,12 +41,12 @@ if_statement: IF LEFT_PAREN expression RIGHT_PAREN statement (ELSE statement)? ;
 
 iteration_statement
         : WHILE LEFT_PAREN expression RIGHT_PAREN statement
-	    | FOR LEFT_PAREN for_condition RIGHT_PAREN
+	    | FOR LEFT_PAREN for_condition RIGHT_PAREN statement
 	    ;
 
 for_condition
         : expression_statement expression_statement expression
-        | expression_statement expression_statement
+        | expression_statement expression_statement expression
         ;
 
 compound_statement : LEFT_BRACE block_item* RIGHT_BRACE ;
@@ -138,10 +138,10 @@ unary_operator
 
 postfix_expr
         : postfix_expr LEFT_BRACKET expression RIGHT_BRACKET // array access
-        | prim_expr
         | postfix_expr DECREMENT
         | postfix_expr INCREMENT
         | postfix_expr LEFT_PAREN arguments? RIGHT_PAREN // function call
+        | prim_expr
         ;
 
 arguments
