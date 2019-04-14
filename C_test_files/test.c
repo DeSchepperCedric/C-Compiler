@@ -6,6 +6,6 @@ int func()
 
 
 
-    f("abcdef5454");
+    f("abcdef5\n454");
 
 }

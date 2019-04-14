@@ -99,7 +99,7 @@ digraph G {
 	48 -> 49;
 	49 [label="str_constant"];
 	49 -> 50;
-	50 [label="TERM: \"abcdef5454\""];
+	50 [label="TERM: 'abcdef5\n454'"];
 	29 -> 51;
 	51 [label="TERM: ')'"];
 	17 -> 52;

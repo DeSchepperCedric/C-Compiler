@@ -41,7 +41,16 @@ def rec_visit(cur_node, cur_id):
             rule_name = CParser.ruleNames[rule_idx]
         except:
             rule_name = "TERM"
-        print("\t{} [label=\"{}: '{}'\"];".format(cur_id, rule_name, cur_node.getText()))
+
+        text = cur_node.getText()
+
+        if text.endswith("\""):
+            text = text[:-1]
+
+        if text.startswith("\""):
+            text = text[1:]
+            
+        print("\t{} [label=\"{}: '{}'\"];".format(cur_id, rule_name, text))
     # ENDIF
 
     return i
