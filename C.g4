@@ -231,7 +231,7 @@ AND: '&&';
 OR: '||';
 
 CHAR_CONSTANT: '\'' ~['\\\r\n] '\'';
-INTEGER_CONSTANT: [1-9][0-9]*;
+INTEGER_CONSTANT: [0-9][0-9]*;
 FLOAT_CONSTANT: [0-9]* '.' [0-9]+;
 STRING_CONSTANT: '"' ~["\\\r\n] '"'; // expansion might be needed
 

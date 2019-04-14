@@ -1,17 +1,9 @@
 
 #include <stdio.h>
 
-/**
- * Function that demonstrates the proper parsing of
- * a function definition.
- */
-int func(int i, char k)
+int func()
 {
-    int i;
-    int j = 8008135;
+    int i  = 0;
+
+i++;
 }
-
-
-int j[5];
-
-int j = 8008135;
