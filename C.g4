@@ -52,7 +52,7 @@ for_condition
 compound_statement : LEFT_BRACE block_item* RIGHT_BRACE ;
 block_item
         : statement
-        | declaration
+        | declaration SC
         ;
 
 jump_statement
