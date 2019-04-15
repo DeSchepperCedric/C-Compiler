@@ -44,12 +44,12 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#declarator.
-    def enterDeclarator(self, ctx:CParser.DeclaratorContext):
+    # Enter a parse tree produced by CParser#funcDecl.
+    def enterFuncDecl(self, ctx:CParser.FuncDeclContext):
         pass
 
-    # Exit a parse tree produced by CParser#declarator.
-    def exitDeclarator(self, ctx:CParser.DeclaratorContext):
+    # Exit a parse tree produced by CParser#funcDecl.
+    def exitFuncDecl(self, ctx:CParser.FuncDeclContext):
         pass
 
 
@@ -77,15 +77,6 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#varDeclInit.
     def exitVarDeclInit(self, ctx:CParser.VarDeclInitContext):
-        pass
-
-
-    # Enter a parse tree produced by CParser#func_decltr.
-    def enterFunc_decltr(self, ctx:CParser.Func_decltrContext):
-        pass
-
-    # Exit a parse tree produced by CParser#func_decltr.
-    def exitFunc_decltr(self, ctx:CParser.Func_decltrContext):
         pass
 
 
