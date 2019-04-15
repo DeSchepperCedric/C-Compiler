@@ -155,14 +155,14 @@ types
         | type_float
         | type_char
         | type_void 
-//        | type_bool
+        | type_bool
         ;
 	  
 type_int   : INT ;
 type_float : FLOAT ;
 type_char  : CHAR ;
 type_void  : VOID ;
-//type_bool : BOOL ;
+type_bool  : BOOL ;
 
 // an identifier that has a pointer
 id_with_ptr : pointer* identifier;
@@ -173,14 +173,14 @@ constant : int_constant
          | float_constant 
          | str_constant 
          | char_constant
-//         | bool_constant 
+         | bool_constant 
          ;
 
 int_constant   : INTEGER_CONSTANT ;
 float_constant : FLOAT_CONSTANT ;
 str_constant   : STRING_CONSTANT ;
 char_constant  : CHAR_CONSTANT ;
-//bool_constant  : BOOL_CONSTANT ;
+bool_constant  : BOOL_CONSTANT ;
 
 INCLUDE : '#include';
 STDIO_H : '<stdio.h>';
@@ -190,7 +190,7 @@ CHAR  : 'char';
 INT   : 'int';
 FLOAT : 'float';
 VOID  : 'void';
-//BOOL  : 'bool';
+BOOL  : 'bool';
 
 COMMA : ',';
 SC    : ';';
@@ -229,9 +229,9 @@ SUB_ASSIGN : '-=';
 MUL_ASSIGN : '*=';
 DIV_ASSIGN : '/=';
 
-AND : '&&';
-OR  : '||';
-NOT : '!' ; // must be before '!=' for precedence reasons.
+AND : '&&' | 'and';
+OR  : '||' | 'or';
+NOT : '!' | 'not'; // must be before '!=' for precedence reasons.
 
 GREATER_THAN       : '>';
 LESS_THAN          : '<';
@@ -251,11 +251,11 @@ fragment STRING_CHAR : ~["\\\r\n]
                      | ESCAPED_CHAR
                      ;
 
-CHAR_CONSTANT    : '\'' CHARACTER_CHAR+ '\'';
+BOOL_CONSTANT    : 'true' | 'false';
 INTEGER_CONSTANT : [0-9][0-9]*;
 FLOAT_CONSTANT   : [0-9]* '.' [0-9]+;
+CHAR_CONSTANT    : '\'' CHARACTER_CHAR+ '\'';
 STRING_CONSTANT  : '"' STRING_CHAR* '"'; // expansion might be needed
-//BOOL_CONSTANT    : 'true' | 'false';
 
 BLOCK_COMMENT : '/*' .*? '*/' -> skip;
 LINE_COMMENT  : '//' ~[\r\n]* -> skip;

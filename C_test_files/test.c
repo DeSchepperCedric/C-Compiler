@@ -5,7 +5,7 @@ int predicate();
 
 int func()
 {
-    a == b && c * 3 + d % f(a+b);
+    bool flag = false and true;
 
-    // (a==b) && (c*3) + (d % f(a+b))
+    int flag = 1 && 0
 }
