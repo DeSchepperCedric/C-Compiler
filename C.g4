@@ -6,7 +6,7 @@ program : (include | declaration SC | func_def)+ EOF;
 include : INCLUDE STDIO_H ;
 
 /// a declaration introduces one or more identifiers into the program
-declaration : types init_decltr_list;
+declaration : prim_type init_decltr_list;
 init_decltr_list : declarator (COMMA declarator)*;
 
 /// a declarator introduces one identifier into the program
@@ -16,17 +16,17 @@ declarator
 
 // variable declarator
 var_decltr
-        : id_with_ptr
-        | id_with_ptr LEFT_BRACKET expression RIGHT_BRACKET
-        | id_with_ptr ASSIGNMENT expression // assignment can happen at time of declaration: "int i = 5; char* j = &k", etc.
+        : id_with_ptr                                         # varDeclSimple
+        | id_with_ptr LEFT_BRACKET expression RIGHT_BRACKET   # varDeclArray
+        | id_with_ptr ASSIGNMENT expression                   # varDeclInit
         ; 
 
 // function declarator
 func_decltr : id_with_ptr LEFT_PAREN (param (COMMA param)*)? RIGHT_PAREN;
-param : types id_with_ptr;
+param : prim_type id_with_ptr;
 
 // function definition
-func_def : types id_with_ptr LEFT_PAREN (param (COMMA param)*)? RIGHT_PAREN compound_statement ;
+func_def : prim_type id_with_ptr LEFT_PAREN (param (COMMA param)*)? RIGHT_PAREN compound_statement ;
 
 // different types of statements
 statement
@@ -40,13 +40,13 @@ statement
 if_statement: IF LEFT_PAREN expression RIGHT_PAREN statement (ELSE statement)? ;
 
 iteration_statement
-        : WHILE LEFT_PAREN expression RIGHT_PAREN statement
-	    | FOR LEFT_PAREN for_condition RIGHT_PAREN statement
+        : WHILE LEFT_PAREN expression RIGHT_PAREN statement  # forLoop
+	    | FOR LEFT_PAREN for_condition RIGHT_PAREN statement # whileLoop
 	    ;
 
 for_condition
-	: declaration SC expression? SC expression?
-	| expression? SC expression? SC expression?
+	: declaration SC expression? SC expression? # forCondWithDecl
+	| expression? SC expression? SC expression? # forCondNoDecl
 	;
 
 compound_statement : LEFT_BRACE block_item* RIGHT_BRACE ;
@@ -56,9 +56,9 @@ block_item
         ;
 
 jump_statement
-	    : RETURN SC
-	    | BREAK SC
-        | CONTINUE SC
+	    : RETURN SC   # jumpReturn
+	    | BREAK SC    # jumpBreak
+        | CONTINUE SC # jumpContinue
         ;
 
 expression_statement : expression? SC ;
@@ -116,13 +116,13 @@ multiplicative_expr : cast_expr
 					;
 
 
-cast_expr: (LEFT_PAREN types RIGHT_PAREN)* unary_expr;
+cast_expr: (LEFT_PAREN prim_type RIGHT_PAREN)* unary_expr;
 
 unary_expr
-        : postfix_expr
-        | DECREMENT unary_expr
-        | INCREMENT unary_expr
-        | unary_operator cast_expr
+        : postfix_expr             # unaryAsPostfix
+        | DECREMENT unary_expr     # prefixDec
+        | INCREMENT unary_expr     # prefixInc
+        | unary_operator cast_expr # unaryOp
         ;
 
 unary_operator
@@ -133,24 +133,25 @@ unary_operator
         ;
 
 postfix_expr
-        : postfix_expr LEFT_BRACKET expression RIGHT_BRACKET // array access
-        | postfix_expr DECREMENT
-        | postfix_expr INCREMENT
-        | postfix_expr LEFT_PAREN arguments? RIGHT_PAREN // function call
-        | prim_expr
+        : postfix_expr LEFT_BRACKET expression RIGHT_BRACKET # arrayAccesExpr
+        | postfix_expr DECREMENT                             # postfixDec
+        | postfix_expr INCREMENT                             # postfixInc
+        | postfix_expr LEFT_PAREN arguments? RIGHT_PAREN     # funcCall
+        | prim_expr                                          # primitiveExpr
         ;
 
 arguments
         : assignment_expr (COMMA assignment_expr)*
         ;
 
-prim_expr : LEFT_PAREN expression RIGHT_PAREN
-		  | identifier
-		  | constant ;
+prim_expr : LEFT_PAREN expression RIGHT_PAREN # parenExpr
+		  | identifier                        # simpleId
+		  | constant                          # constantExpr
+          ;
 
 //-----------------------------------------------------------------------------------------------
 
-types
+prim_type
         : type_int
         | type_float
         | type_char

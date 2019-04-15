@@ -197,6 +197,9 @@ class StringConstant(ConstantExpr):
 class CharConstant(ConstantExpr):
     pass
 
+class BoolConstant(ConstantExpr):
+    pass
+
 
 
 

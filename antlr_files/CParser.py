@@ -291,7 +291,7 @@ class CParser ( Parser ):
     RULE_postfix_expr = 29
     RULE_arguments = 30
     RULE_prim_expr = 31
-    RULE_types = 32
+    RULE_prim_type = 32
     RULE_type_int = 33
     RULE_type_float = 34
     RULE_type_char = 35
@@ -315,8 +315,8 @@ class CParser ( Parser ):
                    "assignment_operator", "logical_or_expr", "logical_and_expr", 
                    "equality_expr", "relational_expr", "additive_expr", 
                    "multiplicative_expr", "cast_expr", "unary_expr", "unary_operator", 
-                   "postfix_expr", "arguments", "prim_expr", "types", "type_int", 
-                   "type_float", "type_char", "type_void", "type_bool", 
+                   "postfix_expr", "arguments", "prim_expr", "prim_type", 
+                   "type_int", "type_float", "type_char", "type_void", "type_bool", 
                    "id_with_ptr", "identifier", "pointer", "constant", "int_constant", 
                    "float_constant", "str_constant", "char_constant", "bool_constant" ]
 
@@ -533,8 +533,8 @@ class CParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
-        def types(self):
-            return self.getTypedRuleContext(CParser.TypesContext,0)
+        def prim_type(self):
+            return self.getTypedRuleContext(CParser.Prim_typeContext,0)
 
 
         def init_decltr_list(self):
@@ -562,7 +562,7 @@ class CParser ( Parser ):
         try:
             self.enterOuterAlt(localctx, 1)
             self.state = 108
-            self.types()
+            self.prim_type()
             self.state = 109
             self.init_decltr_list()
         except RecognitionException as re:
@@ -701,34 +701,83 @@ class CParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
-        def id_with_ptr(self):
-            return self.getTypedRuleContext(CParser.Id_with_ptrContext,0)
-
-
-        def LEFT_BRACKET(self):
-            return self.getToken(CParser.LEFT_BRACKET, 0)
-
-        def expression(self):
-            return self.getTypedRuleContext(CParser.ExpressionContext,0)
-
-
-        def RIGHT_BRACKET(self):
-            return self.getToken(CParser.RIGHT_BRACKET, 0)
-
-        def ASSIGNMENT(self):
-            return self.getToken(CParser.ASSIGNMENT, 0)
 
         def getRuleIndex(self):
             return CParser.RULE_var_decltr
 
+     
+        def copyFrom(self, ctx:ParserRuleContext):
+            super().copyFrom(ctx)
+
+
+
+    class VarDeclInitContext(Var_decltrContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Var_decltrContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def id_with_ptr(self):
+            return self.getTypedRuleContext(CParser.Id_with_ptrContext,0)
+
+        def ASSIGNMENT(self):
+            return self.getToken(CParser.ASSIGNMENT, 0)
+        def expression(self):
+            return self.getTypedRuleContext(CParser.ExpressionContext,0)
+
+
         def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterVar_decltr" ):
-                listener.enterVar_decltr(self)
+            if hasattr( listener, "enterVarDeclInit" ):
+                listener.enterVarDeclInit(self)
 
         def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitVar_decltr" ):
-                listener.exitVar_decltr(self)
+            if hasattr( listener, "exitVarDeclInit" ):
+                listener.exitVarDeclInit(self)
 
+
+    class VarDeclSimpleContext(Var_decltrContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Var_decltrContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def id_with_ptr(self):
+            return self.getTypedRuleContext(CParser.Id_with_ptrContext,0)
+
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterVarDeclSimple" ):
+                listener.enterVarDeclSimple(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitVarDeclSimple" ):
+                listener.exitVarDeclSimple(self)
+
+
+    class VarDeclArrayContext(Var_decltrContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Var_decltrContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def id_with_ptr(self):
+            return self.getTypedRuleContext(CParser.Id_with_ptrContext,0)
+
+        def LEFT_BRACKET(self):
+            return self.getToken(CParser.LEFT_BRACKET, 0)
+        def expression(self):
+            return self.getTypedRuleContext(CParser.ExpressionContext,0)
+
+        def RIGHT_BRACKET(self):
+            return self.getToken(CParser.RIGHT_BRACKET, 0)
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterVarDeclArray" ):
+                listener.enterVarDeclArray(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitVarDeclArray" ):
+                listener.exitVarDeclArray(self)
 
 
 
@@ -741,12 +790,14 @@ class CParser ( Parser ):
             self._errHandler.sync(self)
             la_ = self._interp.adaptivePredict(self._input,4,self._ctx)
             if la_ == 1:
+                localctx = CParser.VarDeclSimpleContext(self, localctx)
                 self.enterOuterAlt(localctx, 1)
                 self.state = 123
                 self.id_with_ptr()
                 pass
 
             elif la_ == 2:
+                localctx = CParser.VarDeclArrayContext(self, localctx)
                 self.enterOuterAlt(localctx, 2)
                 self.state = 124
                 self.id_with_ptr()
@@ -759,6 +810,7 @@ class CParser ( Parser ):
                 pass
 
             elif la_ == 3:
+                localctx = CParser.VarDeclInitContext(self, localctx)
                 self.enterOuterAlt(localctx, 3)
                 self.state = 129
                 self.id_with_ptr()
@@ -869,8 +921,8 @@ class CParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
-        def types(self):
-            return self.getTypedRuleContext(CParser.TypesContext,0)
+        def prim_type(self):
+            return self.getTypedRuleContext(CParser.Prim_typeContext,0)
 
 
         def id_with_ptr(self):
@@ -898,7 +950,7 @@ class CParser ( Parser ):
         try:
             self.enterOuterAlt(localctx, 1)
             self.state = 149
-            self.types()
+            self.prim_type()
             self.state = 150
             self.id_with_ptr()
         except RecognitionException as re:
@@ -916,8 +968,8 @@ class CParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
-        def types(self):
-            return self.getTypedRuleContext(CParser.TypesContext,0)
+        def prim_type(self):
+            return self.getTypedRuleContext(CParser.Prim_typeContext,0)
 
 
         def id_with_ptr(self):
@@ -969,7 +1021,7 @@ class CParser ( Parser ):
         try:
             self.enterOuterAlt(localctx, 1)
             self.state = 152
-            self.types()
+            self.prim_type()
             self.state = 153
             self.id_with_ptr()
             self.state = 154
@@ -1176,41 +1228,70 @@ class CParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
-        def WHILE(self):
-            return self.getToken(CParser.WHILE, 0)
-
-        def LEFT_PAREN(self):
-            return self.getToken(CParser.LEFT_PAREN, 0)
-
-        def expression(self):
-            return self.getTypedRuleContext(CParser.ExpressionContext,0)
-
-
-        def RIGHT_PAREN(self):
-            return self.getToken(CParser.RIGHT_PAREN, 0)
-
-        def statement(self):
-            return self.getTypedRuleContext(CParser.StatementContext,0)
-
-
-        def FOR(self):
-            return self.getToken(CParser.FOR, 0)
-
-        def for_condition(self):
-            return self.getTypedRuleContext(CParser.For_conditionContext,0)
-
 
         def getRuleIndex(self):
             return CParser.RULE_iteration_statement
 
+     
+        def copyFrom(self, ctx:ParserRuleContext):
+            super().copyFrom(ctx)
+
+
+
+    class WhileLoopContext(Iteration_statementContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Iteration_statementContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def FOR(self):
+            return self.getToken(CParser.FOR, 0)
+        def LEFT_PAREN(self):
+            return self.getToken(CParser.LEFT_PAREN, 0)
+        def for_condition(self):
+            return self.getTypedRuleContext(CParser.For_conditionContext,0)
+
+        def RIGHT_PAREN(self):
+            return self.getToken(CParser.RIGHT_PAREN, 0)
+        def statement(self):
+            return self.getTypedRuleContext(CParser.StatementContext,0)
+
+
         def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterIteration_statement" ):
-                listener.enterIteration_statement(self)
+            if hasattr( listener, "enterWhileLoop" ):
+                listener.enterWhileLoop(self)
 
         def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitIteration_statement" ):
-                listener.exitIteration_statement(self)
+            if hasattr( listener, "exitWhileLoop" ):
+                listener.exitWhileLoop(self)
 
+
+    class ForLoopContext(Iteration_statementContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Iteration_statementContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def WHILE(self):
+            return self.getToken(CParser.WHILE, 0)
+        def LEFT_PAREN(self):
+            return self.getToken(CParser.LEFT_PAREN, 0)
+        def expression(self):
+            return self.getTypedRuleContext(CParser.ExpressionContext,0)
+
+        def RIGHT_PAREN(self):
+            return self.getToken(CParser.RIGHT_PAREN, 0)
+        def statement(self):
+            return self.getTypedRuleContext(CParser.StatementContext,0)
+
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterForLoop" ):
+                listener.enterForLoop(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitForLoop" ):
+                listener.exitForLoop(self)
 
 
 
@@ -1223,6 +1304,7 @@ class CParser ( Parser ):
             self._errHandler.sync(self)
             token = self._input.LA(1)
             if token in [CParser.WHILE]:
+                localctx = CParser.ForLoopContext(self, localctx)
                 self.enterOuterAlt(localctx, 1)
                 self.state = 184
                 self.match(CParser.WHILE)
@@ -1236,6 +1318,7 @@ class CParser ( Parser ):
                 self.statement()
                 pass
             elif token in [CParser.FOR]:
+                localctx = CParser.WhileLoopContext(self, localctx)
                 self.enterOuterAlt(localctx, 2)
                 self.state = 190
                 self.match(CParser.FOR)
@@ -1266,16 +1349,27 @@ class CParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
-        def declaration(self):
-            return self.getTypedRuleContext(CParser.DeclarationContext,0)
 
+        def getRuleIndex(self):
+            return CParser.RULE_for_condition
+
+     
+        def copyFrom(self, ctx:ParserRuleContext):
+            super().copyFrom(ctx)
+
+
+
+    class ForCondNoDeclContext(For_conditionContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.For_conditionContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
 
         def SC(self, i:int=None):
             if i is None:
                 return self.getTokens(CParser.SC)
             else:
                 return self.getToken(CParser.SC, i)
-
         def expression(self, i:int=None):
             if i is None:
                 return self.getTypedRuleContexts(CParser.ExpressionContext)
@@ -1283,17 +1377,43 @@ class CParser ( Parser ):
                 return self.getTypedRuleContext(CParser.ExpressionContext,i)
 
 
-        def getRuleIndex(self):
-            return CParser.RULE_for_condition
-
         def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFor_condition" ):
-                listener.enterFor_condition(self)
+            if hasattr( listener, "enterForCondNoDecl" ):
+                listener.enterForCondNoDecl(self)
 
         def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFor_condition" ):
-                listener.exitFor_condition(self)
+            if hasattr( listener, "exitForCondNoDecl" ):
+                listener.exitForCondNoDecl(self)
 
+
+    class ForCondWithDeclContext(For_conditionContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.For_conditionContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def declaration(self):
+            return self.getTypedRuleContext(CParser.DeclarationContext,0)
+
+        def SC(self, i:int=None):
+            if i is None:
+                return self.getTokens(CParser.SC)
+            else:
+                return self.getToken(CParser.SC, i)
+        def expression(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(CParser.ExpressionContext)
+            else:
+                return self.getTypedRuleContext(CParser.ExpressionContext,i)
+
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterForCondWithDecl" ):
+                listener.enterForCondWithDecl(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitForCondWithDecl" ):
+                listener.exitForCondWithDecl(self)
 
 
 
@@ -1307,6 +1427,7 @@ class CParser ( Parser ):
             self._errHandler.sync(self)
             token = self._input.LA(1)
             if token in [CParser.CHAR, CParser.INT, CParser.FLOAT, CParser.VOID, CParser.BOOL]:
+                localctx = CParser.ForCondWithDeclContext(self, localctx)
                 self.enterOuterAlt(localctx, 1)
                 self.state = 198
                 self.declaration()
@@ -1332,6 +1453,7 @@ class CParser ( Parser ):
 
                 pass
             elif token in [CParser.SC, CParser.INCREMENT, CParser.DECREMENT, CParser.PLUS, CParser.MINUS, CParser.STAR, CParser.LEFT_PAREN, CParser.NOT, CParser.BOOL_CONSTANT, CParser.INTEGER_CONSTANT, CParser.FLOAT_CONSTANT, CParser.CHAR_CONSTANT, CParser.STRING_CONSTANT, CParser.ID]:
+                localctx = CParser.ForCondNoDeclContext(self, localctx)
                 self.enterOuterAlt(localctx, 2)
                 self.state = 208
                 self._errHandler.sync(self)
@@ -1501,29 +1623,74 @@ class CParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
-        def RETURN(self):
-            return self.getToken(CParser.RETURN, 0)
-
-        def SC(self):
-            return self.getToken(CParser.SC, 0)
-
-        def BREAK(self):
-            return self.getToken(CParser.BREAK, 0)
-
-        def CONTINUE(self):
-            return self.getToken(CParser.CONTINUE, 0)
 
         def getRuleIndex(self):
             return CParser.RULE_jump_statement
 
+     
+        def copyFrom(self, ctx:ParserRuleContext):
+            super().copyFrom(ctx)
+
+
+
+    class JumpContinueContext(Jump_statementContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Jump_statementContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def CONTINUE(self):
+            return self.getToken(CParser.CONTINUE, 0)
+        def SC(self):
+            return self.getToken(CParser.SC, 0)
+
         def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterJump_statement" ):
-                listener.enterJump_statement(self)
+            if hasattr( listener, "enterJumpContinue" ):
+                listener.enterJumpContinue(self)
 
         def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitJump_statement" ):
-                listener.exitJump_statement(self)
+            if hasattr( listener, "exitJumpContinue" ):
+                listener.exitJumpContinue(self)
 
+
+    class JumpReturnContext(Jump_statementContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Jump_statementContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def RETURN(self):
+            return self.getToken(CParser.RETURN, 0)
+        def SC(self):
+            return self.getToken(CParser.SC, 0)
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterJumpReturn" ):
+                listener.enterJumpReturn(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitJumpReturn" ):
+                listener.exitJumpReturn(self)
+
+
+    class JumpBreakContext(Jump_statementContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Jump_statementContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def BREAK(self):
+            return self.getToken(CParser.BREAK, 0)
+        def SC(self):
+            return self.getToken(CParser.SC, 0)
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterJumpBreak" ):
+                listener.enterJumpBreak(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitJumpBreak" ):
+                listener.exitJumpBreak(self)
 
 
 
@@ -1536,6 +1703,7 @@ class CParser ( Parser ):
             self._errHandler.sync(self)
             token = self._input.LA(1)
             if token in [CParser.RETURN]:
+                localctx = CParser.JumpReturnContext(self, localctx)
                 self.enterOuterAlt(localctx, 1)
                 self.state = 233
                 self.match(CParser.RETURN)
@@ -1543,6 +1711,7 @@ class CParser ( Parser ):
                 self.match(CParser.SC)
                 pass
             elif token in [CParser.BREAK]:
+                localctx = CParser.JumpBreakContext(self, localctx)
                 self.enterOuterAlt(localctx, 2)
                 self.state = 235
                 self.match(CParser.BREAK)
@@ -1550,6 +1719,7 @@ class CParser ( Parser ):
                 self.match(CParser.SC)
                 pass
             elif token in [CParser.CONTINUE]:
+                localctx = CParser.JumpContinueContext(self, localctx)
                 self.enterOuterAlt(localctx, 3)
                 self.state = 237
                 self.match(CParser.CONTINUE)
@@ -2410,11 +2580,11 @@ class CParser ( Parser ):
             else:
                 return self.getToken(CParser.LEFT_PAREN, i)
 
-        def types(self, i:int=None):
+        def prim_type(self, i:int=None):
             if i is None:
-                return self.getTypedRuleContexts(CParser.TypesContext)
+                return self.getTypedRuleContexts(CParser.Prim_typeContext)
             else:
-                return self.getTypedRuleContext(CParser.TypesContext,i)
+                return self.getTypedRuleContext(CParser.Prim_typeContext,i)
 
 
         def RIGHT_PAREN(self, i:int=None):
@@ -2451,7 +2621,7 @@ class CParser ( Parser ):
                     self.state = 350
                     self.match(CParser.LEFT_PAREN)
                     self.state = 351
-                    self.types()
+                    self.prim_type()
                     self.state = 352
                     self.match(CParser.RIGHT_PAREN) 
                 self.state = 358
@@ -2475,39 +2645,97 @@ class CParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
+
+        def getRuleIndex(self):
+            return CParser.RULE_unary_expr
+
+     
+        def copyFrom(self, ctx:ParserRuleContext):
+            super().copyFrom(ctx)
+
+
+
+    class UnaryAsPostfixContext(Unary_exprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Unary_exprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
         def postfix_expr(self):
             return self.getTypedRuleContext(CParser.Postfix_exprContext,0)
 
 
-        def DECREMENT(self):
-            return self.getToken(CParser.DECREMENT, 0)
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterUnaryAsPostfix" ):
+                listener.enterUnaryAsPostfix(self)
 
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitUnaryAsPostfix" ):
+                listener.exitUnaryAsPostfix(self)
+
+
+    class PrefixIncContext(Unary_exprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Unary_exprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def INCREMENT(self):
+            return self.getToken(CParser.INCREMENT, 0)
         def unary_expr(self):
             return self.getTypedRuleContext(CParser.Unary_exprContext,0)
 
 
-        def INCREMENT(self):
-            return self.getToken(CParser.INCREMENT, 0)
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterPrefixInc" ):
+                listener.enterPrefixInc(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitPrefixInc" ):
+                listener.exitPrefixInc(self)
+
+
+    class PrefixDecContext(Unary_exprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Unary_exprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def DECREMENT(self):
+            return self.getToken(CParser.DECREMENT, 0)
+        def unary_expr(self):
+            return self.getTypedRuleContext(CParser.Unary_exprContext,0)
+
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterPrefixDec" ):
+                listener.enterPrefixDec(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitPrefixDec" ):
+                listener.exitPrefixDec(self)
+
+
+    class UnaryOpContext(Unary_exprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Unary_exprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
 
         def unary_operator(self):
             return self.getTypedRuleContext(CParser.Unary_operatorContext,0)
-
 
         def cast_expr(self):
             return self.getTypedRuleContext(CParser.Cast_exprContext,0)
 
 
-        def getRuleIndex(self):
-            return CParser.RULE_unary_expr
-
         def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterUnary_expr" ):
-                listener.enterUnary_expr(self)
+            if hasattr( listener, "enterUnaryOp" ):
+                listener.enterUnaryOp(self)
 
         def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitUnary_expr" ):
-                listener.exitUnary_expr(self)
-
+            if hasattr( listener, "exitUnaryOp" ):
+                listener.exitUnaryOp(self)
 
 
 
@@ -2520,11 +2748,13 @@ class CParser ( Parser ):
             self._errHandler.sync(self)
             token = self._input.LA(1)
             if token in [CParser.LEFT_PAREN, CParser.BOOL_CONSTANT, CParser.INTEGER_CONSTANT, CParser.FLOAT_CONSTANT, CParser.CHAR_CONSTANT, CParser.STRING_CONSTANT, CParser.ID]:
+                localctx = CParser.UnaryAsPostfixContext(self, localctx)
                 self.enterOuterAlt(localctx, 1)
                 self.state = 361
                 self.postfix_expr(0)
                 pass
             elif token in [CParser.DECREMENT]:
+                localctx = CParser.PrefixDecContext(self, localctx)
                 self.enterOuterAlt(localctx, 2)
                 self.state = 362
                 self.match(CParser.DECREMENT)
@@ -2532,6 +2762,7 @@ class CParser ( Parser ):
                 self.unary_expr()
                 pass
             elif token in [CParser.INCREMENT]:
+                localctx = CParser.PrefixIncContext(self, localctx)
                 self.enterOuterAlt(localctx, 3)
                 self.state = 364
                 self.match(CParser.INCREMENT)
@@ -2539,6 +2770,7 @@ class CParser ( Parser ):
                 self.unary_expr()
                 pass
             elif token in [CParser.PLUS, CParser.MINUS, CParser.STAR, CParser.NOT]:
+                localctx = CParser.UnaryOpContext(self, localctx)
                 self.enterOuterAlt(localctx, 4)
                 self.state = 366
                 self.unary_operator()
@@ -2636,50 +2868,126 @@ class CParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
-        def prim_expr(self):
-            return self.getTypedRuleContext(CParser.Prim_exprContext,0)
-
-
-        def postfix_expr(self):
-            return self.getTypedRuleContext(CParser.Postfix_exprContext,0)
-
-
-        def LEFT_BRACKET(self):
-            return self.getToken(CParser.LEFT_BRACKET, 0)
-
-        def expression(self):
-            return self.getTypedRuleContext(CParser.ExpressionContext,0)
-
-
-        def RIGHT_BRACKET(self):
-            return self.getToken(CParser.RIGHT_BRACKET, 0)
-
-        def DECREMENT(self):
-            return self.getToken(CParser.DECREMENT, 0)
-
-        def INCREMENT(self):
-            return self.getToken(CParser.INCREMENT, 0)
-
-        def LEFT_PAREN(self):
-            return self.getToken(CParser.LEFT_PAREN, 0)
-
-        def RIGHT_PAREN(self):
-            return self.getToken(CParser.RIGHT_PAREN, 0)
-
-        def arguments(self):
-            return self.getTypedRuleContext(CParser.ArgumentsContext,0)
-
 
         def getRuleIndex(self):
             return CParser.RULE_postfix_expr
 
+     
+        def copyFrom(self, ctx:ParserRuleContext):
+            super().copyFrom(ctx)
+
+
+    class ArrayAccesExprContext(Postfix_exprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Postfix_exprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def postfix_expr(self):
+            return self.getTypedRuleContext(CParser.Postfix_exprContext,0)
+
+        def LEFT_BRACKET(self):
+            return self.getToken(CParser.LEFT_BRACKET, 0)
+        def expression(self):
+            return self.getTypedRuleContext(CParser.ExpressionContext,0)
+
+        def RIGHT_BRACKET(self):
+            return self.getToken(CParser.RIGHT_BRACKET, 0)
+
         def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterPostfix_expr" ):
-                listener.enterPostfix_expr(self)
+            if hasattr( listener, "enterArrayAccesExpr" ):
+                listener.enterArrayAccesExpr(self)
 
         def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitPostfix_expr" ):
-                listener.exitPostfix_expr(self)
+            if hasattr( listener, "exitArrayAccesExpr" ):
+                listener.exitArrayAccesExpr(self)
+
+
+    class PostfixDecContext(Postfix_exprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Postfix_exprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def postfix_expr(self):
+            return self.getTypedRuleContext(CParser.Postfix_exprContext,0)
+
+        def DECREMENT(self):
+            return self.getToken(CParser.DECREMENT, 0)
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterPostfixDec" ):
+                listener.enterPostfixDec(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitPostfixDec" ):
+                listener.exitPostfixDec(self)
+
+
+    class PrimitiveExprContext(Postfix_exprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Postfix_exprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def prim_expr(self):
+            return self.getTypedRuleContext(CParser.Prim_exprContext,0)
+
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterPrimitiveExpr" ):
+                listener.enterPrimitiveExpr(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitPrimitiveExpr" ):
+                listener.exitPrimitiveExpr(self)
+
+
+    class FuncCallContext(Postfix_exprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Postfix_exprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def postfix_expr(self):
+            return self.getTypedRuleContext(CParser.Postfix_exprContext,0)
+
+        def LEFT_PAREN(self):
+            return self.getToken(CParser.LEFT_PAREN, 0)
+        def RIGHT_PAREN(self):
+            return self.getToken(CParser.RIGHT_PAREN, 0)
+        def arguments(self):
+            return self.getTypedRuleContext(CParser.ArgumentsContext,0)
+
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterFuncCall" ):
+                listener.enterFuncCall(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitFuncCall" ):
+                listener.exitFuncCall(self)
+
+
+    class PostfixIncContext(Postfix_exprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Postfix_exprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def postfix_expr(self):
+            return self.getTypedRuleContext(CParser.Postfix_exprContext,0)
+
+        def INCREMENT(self):
+            return self.getToken(CParser.INCREMENT, 0)
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterPostfixInc" ):
+                listener.enterPostfixInc(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitPostfixInc" ):
+                listener.exitPostfixInc(self)
 
 
 
@@ -2693,6 +3001,10 @@ class CParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
+            localctx = CParser.PrimitiveExprContext(self, localctx)
+            self._ctx = localctx
+            _prevctx = localctx
+
             self.state = 378
             self.prim_expr()
             self._ctx.stop = self._input.LT(-1)
@@ -2708,7 +3020,7 @@ class CParser ( Parser ):
                     self._errHandler.sync(self)
                     la_ = self._interp.adaptivePredict(self._input,38,self._ctx)
                     if la_ == 1:
-                        localctx = CParser.Postfix_exprContext(self, _parentctx, _parentState)
+                        localctx = CParser.ArrayAccesExprContext(self, CParser.Postfix_exprContext(self, _parentctx, _parentState))
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_postfix_expr)
                         self.state = 380
                         if not self.precpred(self._ctx, 5):
@@ -2723,7 +3035,7 @@ class CParser ( Parser ):
                         pass
 
                     elif la_ == 2:
-                        localctx = CParser.Postfix_exprContext(self, _parentctx, _parentState)
+                        localctx = CParser.PostfixDecContext(self, CParser.Postfix_exprContext(self, _parentctx, _parentState))
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_postfix_expr)
                         self.state = 385
                         if not self.precpred(self._ctx, 4):
@@ -2734,7 +3046,7 @@ class CParser ( Parser ):
                         pass
 
                     elif la_ == 3:
-                        localctx = CParser.Postfix_exprContext(self, _parentctx, _parentState)
+                        localctx = CParser.PostfixIncContext(self, CParser.Postfix_exprContext(self, _parentctx, _parentState))
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_postfix_expr)
                         self.state = 387
                         if not self.precpred(self._ctx, 3):
@@ -2745,7 +3057,7 @@ class CParser ( Parser ):
                         pass
 
                     elif la_ == 4:
-                        localctx = CParser.Postfix_exprContext(self, _parentctx, _parentState)
+                        localctx = CParser.FuncCallContext(self, CParser.Postfix_exprContext(self, _parentctx, _parentState))
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_postfix_expr)
                         self.state = 389
                         if not self.precpred(self._ctx, 2):
@@ -2848,35 +3160,75 @@ class CParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
+
+        def getRuleIndex(self):
+            return CParser.RULE_prim_expr
+
+     
+        def copyFrom(self, ctx:ParserRuleContext):
+            super().copyFrom(ctx)
+
+
+
+    class ParenExprContext(Prim_exprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Prim_exprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
         def LEFT_PAREN(self):
             return self.getToken(CParser.LEFT_PAREN, 0)
-
         def expression(self):
             return self.getTypedRuleContext(CParser.ExpressionContext,0)
 
-
         def RIGHT_PAREN(self):
             return self.getToken(CParser.RIGHT_PAREN, 0)
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterParenExpr" ):
+                listener.enterParenExpr(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitParenExpr" ):
+                listener.exitParenExpr(self)
+
+
+    class SimpleIdContext(Prim_exprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Prim_exprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
 
         def identifier(self):
             return self.getTypedRuleContext(CParser.IdentifierContext,0)
 
 
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterSimpleId" ):
+                listener.enterSimpleId(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitSimpleId" ):
+                listener.exitSimpleId(self)
+
+
+    class ConstantExprContext(Prim_exprContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.Prim_exprContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
         def constant(self):
             return self.getTypedRuleContext(CParser.ConstantContext,0)
 
 
-        def getRuleIndex(self):
-            return CParser.RULE_prim_expr
-
         def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterPrim_expr" ):
-                listener.enterPrim_expr(self)
+            if hasattr( listener, "enterConstantExpr" ):
+                listener.enterConstantExpr(self)
 
         def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitPrim_expr" ):
-                listener.exitPrim_expr(self)
-
+            if hasattr( listener, "exitConstantExpr" ):
+                listener.exitConstantExpr(self)
 
 
 
@@ -2889,6 +3241,7 @@ class CParser ( Parser ):
             self._errHandler.sync(self)
             token = self._input.LA(1)
             if token in [CParser.LEFT_PAREN]:
+                localctx = CParser.ParenExprContext(self, localctx)
                 self.enterOuterAlt(localctx, 1)
                 self.state = 408
                 self.match(CParser.LEFT_PAREN)
@@ -2898,11 +3251,13 @@ class CParser ( Parser ):
                 self.match(CParser.RIGHT_PAREN)
                 pass
             elif token in [CParser.ID]:
+                localctx = CParser.SimpleIdContext(self, localctx)
                 self.enterOuterAlt(localctx, 2)
                 self.state = 412
                 self.identifier()
                 pass
             elif token in [CParser.BOOL_CONSTANT, CParser.INTEGER_CONSTANT, CParser.FLOAT_CONSTANT, CParser.CHAR_CONSTANT, CParser.STRING_CONSTANT]:
+                localctx = CParser.ConstantExprContext(self, localctx)
                 self.enterOuterAlt(localctx, 3)
                 self.state = 413
                 self.constant()
@@ -2919,7 +3274,7 @@ class CParser ( Parser ):
         return localctx
 
 
-    class TypesContext(ParserRuleContext):
+    class Prim_typeContext(ParserRuleContext):
 
         def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
             super().__init__(parent, invokingState)
@@ -2946,23 +3301,23 @@ class CParser ( Parser ):
 
 
         def getRuleIndex(self):
-            return CParser.RULE_types
+            return CParser.RULE_prim_type
 
         def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTypes" ):
-                listener.enterTypes(self)
+            if hasattr( listener, "enterPrim_type" ):
+                listener.enterPrim_type(self)
 
         def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTypes" ):
-                listener.exitTypes(self)
+            if hasattr( listener, "exitPrim_type" ):
+                listener.exitPrim_type(self)
 
 
 
 
-    def types(self):
+    def prim_type(self):
 
-        localctx = CParser.TypesContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 64, self.RULE_types)
+        localctx = CParser.Prim_typeContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 64, self.RULE_prim_type)
         try:
             self.state = 421
             self._errHandler.sync(self)

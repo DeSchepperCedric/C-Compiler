@@ -141,7 +141,7 @@ unary_operator
 postfix_expr
 arguments
 prim_expr
-types
+prim_type
 type_int
 type_float
 type_char

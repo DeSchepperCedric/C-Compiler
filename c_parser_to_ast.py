@@ -5,6 +5,8 @@ from antlr_files.CLexer import CLexer
 from antlr_files.CListener import CListener
 from antlr_files.CParser import CParser
 
+import ASTTree
+
 
 def main(argv):
     in_stream = FileStream(argv[1])
