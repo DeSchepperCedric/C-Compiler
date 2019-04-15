@@ -11,18 +11,13 @@ init_decltr_list : declarator (COMMA declarator)*;
 
 /// a declarator introduces one identifier into the program
 declarator
-        : var_decltr
-        | func_decltr;
-
-// variable declarator
-var_decltr
-        : id_with_ptr                                         # varDeclSimple
-        | id_with_ptr LEFT_BRACKET expression RIGHT_BRACKET   # varDeclArray
-        | id_with_ptr ASSIGNMENT expression                   # varDeclInit
+        : id_with_ptr LEFT_PAREN (param (COMMA param)*)? RIGHT_PAREN  # funcDecl
+        | id_with_ptr                                                 # varDeclSimple
+        | id_with_ptr LEFT_BRACKET expression RIGHT_BRACKET           # varDeclArray
+        | id_with_ptr ASSIGNMENT expression                           # varDeclInit
         ; 
 
 // function declarator
-func_decltr : id_with_ptr LEFT_PAREN (param (COMMA param)*)? RIGHT_PAREN;
 param : prim_type id_with_ptr;
 
 // function definition
