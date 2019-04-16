@@ -386,15 +386,6 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#arguments.
-    def enterArguments(self, ctx:CParser.ArgumentsContext):
-        pass
-
-    # Exit a parse tree produced by CParser#arguments.
-    def exitArguments(self, ctx:CParser.ArgumentsContext):
-        pass
-
-
     # Enter a parse tree produced by CParser#parenExpr.
     def enterParenExpr(self, ctx:CParser.ParenExprContext):
         pass

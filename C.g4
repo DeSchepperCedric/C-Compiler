@@ -131,13 +131,13 @@ postfix_expr
         : postfix_expr LEFT_BRACKET expression RIGHT_BRACKET # arrayAccesExpr
         | postfix_expr DECREMENT                             # postfixDec
         | postfix_expr INCREMENT                             # postfixInc
-        | postfix_expr LEFT_PAREN arguments? RIGHT_PAREN     # funcCall
+        | postfix_expr LEFT_PAREN expression? RIGHT_PAREN     # funcCall
         | prim_expr                                          # primitiveExpr
         ;
 
-arguments
-        : assignment_expr (COMMA assignment_expr)*
-        ;
+//arguments
+//        : assignment_expr (COMMA assignment_expr)*
+//        ;
 
 prim_expr : LEFT_PAREN expression RIGHT_PAREN # parenExpr
 		  | identifier                        # simpleId

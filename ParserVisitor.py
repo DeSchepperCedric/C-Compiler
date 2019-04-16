@@ -280,12 +280,6 @@ class ParserVisitor(CVisitor):
     # END
 
 
-    # Visit a parse tree produced by CParser#arguments.
-    def visitArguments(self, ctx:CParser.ArgumentsContext):
-        return self.visitChildren(ctx)
-    # END
-
-
     # Visit a parse tree produced by CParser#parenExpr.
     def visitParenExpr(self, ctx:CParser.ParenExprContext):
         return self.visitChildren(ctx)
