@@ -3,14 +3,10 @@ class ASTNode:
     """
         Base class for all nodes in AST Trees.
     """
-    def __init(self, parent, node_name):
-        self.parent = parent
+    def __init(self, node_name):
         self.node_name = node_name
 
-    def getParent(self):
-        return parent
-
-    def getName(self):
+    def getNodeName(self):
         return self.node_name
 # ENDCLASS
 
@@ -198,6 +194,7 @@ class Statement(ASTNode):
     def __init__(self, statement_type):
     	super().__init__(node_name="Stmt:"+statement_type)
 
+
 class CompoundStmt(Statement):
     """
 		Node that represents a compound statement: "{ <statements> }".
@@ -205,66 +202,142 @@ class CompoundStmt(Statement):
     def __init__(self, child_list):
     	super().__init__(statement_type="CompoundStmt")
     	self.child_list = child_list
+
+    def getChildList(self):
+    	return self.child_list
 # ENDCLASS
 
 
 class WhileStmt(Statement):
-    # condition: expr
-    # body: LIST of Statement
-    # NOTE: alles na "continue" of "break" weg.
     """
-		Node that represents a while statement.
+		Node that represents a while loop.
     """
     def __init__(self, condition_expr, body):
     	super().__init__(statement_type="WhileStmt")
     	self.cond_expr = condition_expr
     	self.body = body
+
+    def getCondExpr(self):
+    	return self.cond_expr
+
+   	def getBody(self):
+   		return self.body
 # ENDCLASS
 
 
 class ForStmt(Statement):
-    # init
-    # condition
-    # iter
-    # body: LIST of Statement
-    # NOTE: alles na "continue" of "break" weg.
-    pass
+    """
+    	Node that represents a for loop.
+    """
+    def __init__(self, init, condition_expr, iter_expr, body):
+    	super().__init__(statement_type="ForStmt")
+    	self.init = init
+    	self.cond_expr = condition_expr
+    	self.iter_expr = iter_expr
+    	self.body = body
+
+   	def getInit(self):
+   		return self.init
+
+    def getCondExpr(self):
+    	return self.cond_expr
+
+    def getIterExpr(self):
+    	return self.iter_expr
+
+   	def getBody(self):
+   		return self.body
 # ENDCLASS
 
 
 class BranchStmt(Statement):
-    # conditon
-    # if-branch
-    # else-branch
-    pass
+    """
+		Node that represents an if statement.
+    """
+    def __init__(self, condition_expr, if_body, else_body):
+    	super().__init__(statement_type="BranchStmt")
+    	self.cond_expr = condition_expr
+    	self.if_body = if_body
+    	self.else_body = else_body
+
+    def getCondExpr(self):
+    	return self.cond_expr
+
+    def getIfBody(self):
+    	return self.if_body
+
+    def getElseBody(self):
+    	return self.else_body
 # ENDCLASS
 
 
 class ExpressionStatement(Statement):
-    # expression: can be empty
-    pass
+	"""
+		Node that represents an expression statement.
+		An expression statement can contain multiple expressions.
+	"""
+    def __init__(self, expressions):
+    	super().__init__(statement_type="ExpressionStatement")
+    	self.expressions = expressions
+
+    def getExpressions(self):
+    	return self.expressions
 # ENDCLASS
 
 
-class Expression:
-    # base class for all expression
-    pass
+class Expression(ASTNode):
+    """
+		Base class for all expression nodes.
+    """
+    
+    def __init__(self, expression_type):
+    	super().__init__(node_name=expression_type)
 # ENDCLASS
 
 
 class AssignmentExpr(Expression):
-    # left
-    # right
-    # operator: {'=', '+=', '-=', '*=', '/='
-    pass
+    """
+		Node that represents assignment expression.
+    """
+    
+    def __init__(self, left, right, operator):
+    	super().__init__(expression_type="AssignmentExpr")
+    	self.left = left
+    	self.right = right
+
+    	self.operator = operator
+
+    def getLeft(self):
+    	return self.left
+
+    def getRight(self):
+    	return self.right
+
+    def getOperator(self):
+    	return self.operator
 # ENDCLASS
 
 
 class LogicBinExpr(Expression):
-    # left
-    # right
-    # operator: {'&&', '||'}
-    pass
+	"""
+		Node that represents AND, OR expression.
+	"""
+
+    def __init__(self, left, right, operator):
+    	super().__init__(expression_type="AssignmentExpr")
+    	self.left = left
+    	self.right = right
+
+    	self.operator = operator
+
+    def getLeft(self):
+    	return self.left
+
+    def getRight(self):
+    	return self.right
+
+    def getOperator(self):
+    	return self.operator
 # ENDCLASS
 
 
@@ -370,26 +443,26 @@ class ConstantExpr(Expression):
 # ENDCLASS
 
 
-class IntegerConstant(ConstantExpr):
+class IntegerConstantExpr(ConstantExpr):
     pass
 # ENDCLASS
 
 
-class FloatConstant(ConstantExpr):
+class FloatConstantExpr(ConstantExpr):
     pass
 # ENDCLASS
 
 
-class StringConstant(ConstantExpr):
+class StringConstantExpr(ConstantExpr):
     pass
 # ENDCLASS
 
 
-class CharConstant(ConstantExpr):
+class CharConstantExpr(ConstantExpr):
     pass
 # ENDCLASS
 
 
-class BoolConstant(ConstantExpr):
+class BoolConstantExpr(ConstantExpr):
     pass
 # ENDCLASS

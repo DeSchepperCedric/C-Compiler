@@ -135,10 +135,6 @@ postfix_expr
         | prim_expr                                          # primitiveExpr
         ;
 
-//arguments
-//        : assignment_expr (COMMA assignment_expr)*
-//        ;
-
 prim_expr : LEFT_PAREN expression RIGHT_PAREN # parenExpr
 		  | identifier                        # simpleId
 		  | constant                          # constantExpr
