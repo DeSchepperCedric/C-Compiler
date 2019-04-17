@@ -14,6 +14,11 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by CParser#top_level_node.
+    def visitTop_level_node(self, ctx:CParser.Top_level_nodeContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by CParser#include.
     def visitInclude(self, ctx:CParser.IncludeContext):
         return self.visitChildren(ctx)
@@ -21,11 +26,6 @@ class CVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by CParser#declaration.
     def visitDeclaration(self, ctx:CParser.DeclarationContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#init_decltr_list.
-    def visitInit_decltr_list(self, ctx:CParser.Init_decltr_listContext):
         return self.visitChildren(ctx)
 
 

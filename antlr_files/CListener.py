@@ -17,6 +17,15 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#top_level_node.
+    def enterTop_level_node(self, ctx:CParser.Top_level_nodeContext):
+        pass
+
+    # Exit a parse tree produced by CParser#top_level_node.
+    def exitTop_level_node(self, ctx:CParser.Top_level_nodeContext):
+        pass
+
+
     # Enter a parse tree produced by CParser#include.
     def enterInclude(self, ctx:CParser.IncludeContext):
         pass
@@ -32,15 +41,6 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#declaration.
     def exitDeclaration(self, ctx:CParser.DeclarationContext):
-        pass
-
-
-    # Enter a parse tree produced by CParser#init_decltr_list.
-    def enterInit_decltr_list(self, ctx:CParser.Init_decltr_listContext):
-        pass
-
-    # Exit a parse tree produced by CParser#init_decltr_list.
-    def exitInit_decltr_list(self, ctx:CParser.Init_decltr_listContext):
         pass
 
 

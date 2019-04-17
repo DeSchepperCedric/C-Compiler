@@ -1,13 +1,18 @@
 grammar C;
 
-program : (include | declaration SC | func_def)+ EOF;
+program : top_level_node+ EOF;
+
+top_level_node
+        : include
+        | declaration SC
+        | func_def
+        ;
 
 // include for <stdio.h>
 include : INCLUDE STDIO_H ;
 
 /// a declaration introduces one or more identifiers into the program
-declaration : prim_type init_decltr_list;
-init_decltr_list : declarator (COMMA declarator)*;
+declaration : prim_type declarator (COMMA declarator)*;
 
 /// a declarator introduces one identifier into the program
 declarator
