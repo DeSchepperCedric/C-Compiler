@@ -136,7 +136,7 @@ postfix_expr
         : postfix_expr LEFT_BRACKET expression RIGHT_BRACKET # arrayAccesExpr
         | postfix_expr DECREMENT                             # postfixDec
         | postfix_expr INCREMENT                             # postfixInc
-        | postfix_expr LEFT_PAREN expression? RIGHT_PAREN     # funcCall
+        | postfix_expr LEFT_PAREN expression? RIGHT_PAREN    # funcCall
         | prim_expr                                          # primitiveExpr
         ;
 
