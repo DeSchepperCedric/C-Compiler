@@ -7,11 +7,6 @@ from ASTTreeNodes import *
 import sys
 
 class ParserVisitor(CVisitor):
-    # def __init__(self):
-    #     self.ast_tree = ProgramNode()
-
-    def getASTTree(self):
-        return self.ast_tree
 
     def manuallyVisitChild(self, child_node):
         return child_node.accept(self)
@@ -21,21 +16,22 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#program.
     def visitProgram(self, ctx: CParser.ProgramContext):
         
-        self.ast_tree = ProgramNode()
+        program_node = ProgramNode()
 
         # add each top-level-instruction as a child
         for child in ctx.getChildren():
-            # skip EOF
+            # skip EOF (hacky solution)
             if child.getText() == "<EOF>":
                 continue
 
             child_result = self.manuallyVisitChild(child)
             if isinstance(child_result, list):
-                for i in child_result:
-                    self.ast_tree.addChild(child_result)
+                for c in child_result:
+                    program_node.addChild(c)
             else:
-                self.ast_tree.addChild(child_result)
+                program_node.addChild(child_result)
 
+        return program_node
     # END
 
     # Visit a parse tree produced by CParser#top_level_node.
@@ -59,7 +55,7 @@ class ParserVisitor(CVisitor):
     def visitDeclaration(self, ctx: CParser.DeclarationContext):
 
         # retrieve type: child #0
-        decl_type = self.manuallyVisitChild(list(ctx.getChildren())[0])
+        decl_type = self.manuallyVisitChild(ctx.getChild(0))
 
         # retrieve decl list: child #1-n
         #    these are declarations separated by ','
@@ -67,17 +63,12 @@ class ParserVisitor(CVisitor):
         #
         raw_decltr_list = list(ctx.getChildren())[1:]
 
-        declarators = []
-
-        for raw_child in raw_decltr_list:
-            text = raw_child.getText()
-            if text == ",":
-                continue
-
-            declarators.append(raw_child)
+        declarators = [child for child in raw_decltr_list if child.getText() != ","]
 
         print("Child count before filter:", len(raw_decltr_list))
-        print("Child count after filter:", len(declarators))
+        print("Child count after filter:",  len(declarators))
+
+        
 
         
 
