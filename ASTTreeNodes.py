@@ -549,7 +549,7 @@ class Expression(ASTNode):
         Base class for all expression nodes.
     """
 
-    def __init__(self, expression_type):
+    def __init__(self,  expression_type):
         super().__init__(node_name=expression_type)
 # ENDCLASS
 
@@ -1105,6 +1105,7 @@ class TypeNode(ASTNode):
 
     def getTypeName(self):
         return self.type_name
+
 # ENDCLASS
 
 

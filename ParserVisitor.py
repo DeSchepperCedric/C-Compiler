@@ -273,36 +273,38 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#id_with_ptr.
     def visitId_with_ptr(self, ctx: CParser.Id_with_ptrContext):
-        return self.visitChildren(ctx)
+        pointer_amount = len(ctx.getChildren()) - 1  # -1 because of identifier
+        identifier = ctx.getChild(pointer_amount).getText()  # identifier
+        return IdWithPtr(identifier, pointer_amount)
 
     # Visit a parse tree produced by CParser#identifier.
     def visitIdentifier(self, ctx: CParser.IdentifierContext):
-        return self.visitChildren(ctx)
+        return IdentifierNode(ctx.getText())
 
     # Visit a parse tree produced by CParser#pointer.
     def visitPointer(self, ctx: CParser.PointerContext):
-        return self.visitChildren(ctx)
+        pass
 
     # Visit a parse tree produced by CParser#constant.
     def visitConstant(self, ctx: CParser.ConstantContext):
-        return self.visitChildren(ctx)
+        return self.manuallyVisitChild(ctx.getChild(0))
 
     # Visit a parse tree produced by CParser#int_constant.
     def visitInt_constant(self, ctx: CParser.Int_constantContext):
-        return self.visitChildren(ctx)
+        return IntegerConstantExpr(ctx.getText())
 
     # Visit a parse tree produced by CParser#float_constant.
     def visitFloat_constant(self, ctx: CParser.Float_constantContext):
-        return self.visitChildren(ctx)
+        return FloatConstantExpr(ctx.getText())
 
     # Visit a parse tree produced by CParser#str_constant.
     def visitStr_constant(self, ctx: CParser.Str_constantContext):
-        return self.visitChildren(ctx)
+        return StringConstantExpr(ctx.getText())
 
     # Visit a parse tree produced by CParser#char_constant.
     def visitChar_constant(self, ctx: CParser.Char_constantContext):
-        return self.visitChildren(ctx)
+        return CharConstantExpr(ctx.getText())
 
     # Visit a parse tree produced by CParser#bool_constant.
     def visitBool_constant(self, ctx: CParser.Bool_constantContext):
-        return self.visitChildren(ctx)
+        return BoolConstantExpr(ctx.getText())
