@@ -8,6 +8,9 @@ from ASTTreeNodes import *
 
 class ParserVisitor(CVisitor):
 
+    def getASTTree(self):
+        return self.ast_tree
+
     def manuallyVisitChild(self, child_node):
         return child_node.accept(self)
     # END
@@ -20,22 +23,25 @@ class ParserVisitor(CVisitor):
 
         # add each top-level-instruction as a child
         for child in ctx.getChildren():
-            child_result = self.manuallyVisitChild(child)
+            self.ast_tree.addChild(ASTTestTermNode())
+            # child_result = self.manuallyVisitChild(child)
 
-            if isinstance(child_result, list):
-                for i in child_result:
-                    self.ast_tree.append(child_result)
-            else:
-                self.ast_tree.append(child_result)
+
+
+            # if isinstance(child_result, list):
+            #     for i in child_result:
+            #         self.ast_tree.addChild(child_result)
+            # else:
+            #     self.ast_tree.addChild(child_result)
     # END
     
         # Visit a parse tree produced by CParser#top_level_node.
     def visitTop_level_node(self, ctx:CParser.Top_level_nodeContext):
-    	# top level node has
-    	#	include: one child
-    	#   func def: one child
-    	#   declaration: two children, only first one is useful
-    	# ==> take first child (#0), and return to parent.
+        # top level node has
+        #   include: one child
+        #   func def: one child
+        #   declaration: two children, only first one is useful
+        # ==> take first child (#0), and return to parent.
 
         return self.manuallyVisitChild(ctx.getChildren()[0])
     # END
@@ -60,11 +66,11 @@ class ParserVisitor(CVisitor):
         declarators = []
 
         for raw_child in raw_decltr_list:
-        	text = raw_child.getText()
-        	if text == ",":
-        		continue
+            text = raw_child.getText()
+            if text == ",":
+                continue
 
-        	declarators.append(raw_child)
+            declarators.append(raw_child)
 
         print("Child count before filter:",len(raw_decltr_list))
         print("Child count after filter:",len(declarators))
