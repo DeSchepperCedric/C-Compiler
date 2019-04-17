@@ -4,10 +4,11 @@ from antlr_files.CListener import CListener
 from antlr_files.CParser import CParser
 from ASTTreeNodes import *
 
+import sys
 
 class ParserVisitor(CVisitor):
-    def __init__(self):
-        self.ast_tree = ProgramNode()
+    # def __init__(self):
+    #     self.ast_tree = ProgramNode()
 
     def getASTTree(self):
         return self.ast_tree
@@ -19,13 +20,16 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#program.
     def visitProgram(self, ctx: CParser.ProgramContext):
-
+        
         self.ast_tree = ProgramNode()
 
         # add each top-level-instruction as a child
         for child in ctx.getChildren():
-            self.ast_tree.addChild(ASTTestTermNode())
-            # child_result = self.manuallyVisitChild(child)
+            # skip EOF
+            if child.getText() == "<EOF>":
+                continue
+
+            child_result = self.manuallyVisitChild(child)
             if isinstance(child_result, list):
                 for i in child_result:
                     self.ast_tree.addChild(child_result)
@@ -42,8 +46,7 @@ class ParserVisitor(CVisitor):
         #   declaration: two children, only first one is useful
         # ==> take first child (#0), and return to parent.
 
-        return self.manuallyVisitChild(ctx.getChildren()[0])
-
+        return self.manuallyVisitChild(ctx.getChild(0))
     # END
 
     # Visit a parse tree produced by CParser#include.
@@ -56,13 +59,13 @@ class ParserVisitor(CVisitor):
     def visitDeclaration(self, ctx: CParser.DeclarationContext):
 
         # retrieve type: child #0
-        decl_type = self.manuallyVisitChild(ctx.getChildren()[0])
+        decl_type = self.manuallyVisitChild(list(ctx.getChildren())[0])
 
         # retrieve decl list: child #1-n
         #    these are declarations separated by ','
         #    visit each of these and add to list, but skip commas
         #
-        raw_decltr_list = ctx.getChildren()[1:]
+        raw_decltr_list = list(ctx.getChildren())[1:]
 
         declarators = []
 
@@ -75,6 +78,8 @@ class ParserVisitor(CVisitor):
 
         print("Child count before filter:", len(raw_decltr_list))
         print("Child count after filter:", len(declarators))
+
+        
 
     # END
 
