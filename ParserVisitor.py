@@ -9,6 +9,9 @@ class ParserVisitor(CVisitor):
     def __init__(self):
         self.ast_tree = ProgramNode()
 
+    def getASTTree(self):
+        return self.ast_tree
+
     def manuallyVisitChild(self, child_node):
         return child_node.accept(self)
 
@@ -21,8 +24,8 @@ class ParserVisitor(CVisitor):
 
         # add each top-level-instruction as a child
         for child in ctx.getChildren():
-            child_result = self.manuallyVisitChild(child)
-
+            self.ast_tree.addChild(ASTTestTermNode())
+            # child_result = self.manuallyVisitChild(child)
             if isinstance(child_result, list):
                 for i in child_result:
                     self.ast_tree.addChild(child_result)
@@ -298,4 +301,3 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#bool_constant.
     def visitBool_constant(self, ctx: CParser.Bool_constantContext):
         return self.visitChildren(ctx)
-

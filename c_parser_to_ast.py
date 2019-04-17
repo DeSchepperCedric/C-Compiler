@@ -16,7 +16,7 @@ def main(argv):
     tree = parser.program()
     visitor = ParserVisitor()
     visitor.visitProgram(tree)
-
+    print(visitor.getASTTree().toDot(add_open_close=True)[1])
 
 if __name__ == "__main__":
     main(sys.argv)
