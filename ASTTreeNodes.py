@@ -9,8 +9,68 @@ class ASTNode:
     def getNodeName(self):
         return self.node_name
 
-    def toDot(self):
-        return ""
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        """
+            Gives a dot presententation for this node/branch/tree.
+            
+            The opening and closing statements "digraph graphName{" and "}" will only
+            be included of 'add_open_close' is set to true.
+
+            Example with add_open_close=False:
+                1 [label="20"];
+                2 [label="30"];
+                1 -> 2;
+
+            Example with add_open_close=True:
+                digraph ast_tree {
+                1 [label="20"];
+                2 [label="30"];
+                1 -> 2;
+                }
+
+            Params:
+                'parent_nr': An integer that specifies the number of the parent node.
+                'begin_nr': An integer that specifies what number the beginning dot-node should have.
+                'add_open_close': Whether or not the open and closing statements must be added.
+
+            The exact return value is a tuple. The first member is the number of the node that was last added
+            to the dot file, the second member is a string that contains the dot contents of this branch.
+        """
+        raise NotImplementedError()
+
+    def M_defaultToDotImpl(self, children, parent_nr, begin_nr, add_open_close):
+        """
+            Default implementation for the toDot() method. This method can be called
+            from a toDot() method. The children on which the recursion will be performed
+            are passed to the parameter 'children'.
+        """
+        # nr [label="ProgramNode"]
+        # nr -> parent_nr
+
+        dotdata = ""
+
+        current_node_nr = begin_nr
+
+        # add self
+        dotdata += "{} [label=\"{}\"]\n".format(current_node_nr, self.getNodeName())
+
+        if parent_nr is not None:
+            dotdata += "{} -> {}".format(parent_nr, current_node_nr)
+
+        current_node_nr += 1
+
+        for child in children:
+            # the child should have node number 'current_node_nr+1'
+            # update the current node number
+            current_node_nr, child_dotdata = child.toDot(parent_nr=begin_nr, begin_nr = current_node_nr+1)
+
+            # add the dotfile data to the current data
+            dotdata += child_dotdata
+
+        if add_open_close:
+            dotdata = "digraph ast_tree {\n" + dotdata + "}\n"
+
+        return (current_node_nr, dotdata)
 # ENDCLASS
 
 
@@ -28,9 +88,11 @@ class ProgramNode(ASTNode):
     def getChildren(self):
         return self.children
 
-    def toDot(self):
-        # nr [label="ProgramNode"]
-        # nr -> parent_nr
+    def toDot(self, parent_nr=None, begin_nr=1, add_open_close=False):
+        return M_defaultToDotImpl(children=self.children, 
+                                  parent_nr=parent_nr, 
+                                  begin_nr=begin_nr, 
+                                  add_open_close=add_open_close)
 # ENDCLASS
 
 
@@ -50,6 +112,12 @@ class IncludeNode(TopLevelNode):
 
     def __init__(self):
         super().__init__(node_name="Include")
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [], 
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -79,10 +147,16 @@ class ArrayDecl(SymbolDecl):
         super().__init__(symbol_class="Array",
                          symbol_type = array_type,
                          symbol_id = array_id)
-        self.size_expr = size_exp
+        self.size_expr = size_expr
 
     def getSizeExp(self):
         return self.size_expr
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.symbol_type, self.symbol_id, self.size_expr], 
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -91,9 +165,15 @@ class VarDelcDefault(SymbolDecl):
         Node that represents a variable declaration without initializer: "type id;"
     """
     def __init__(self, var_type, var_id):
-        super().__init__(symbol_class="Var",
+        super().__init__(symbol_class="VarDefault",
                          symbol_type=var_type,
                          symbol_id=var_id)
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.symbol_type, self.symbol_id], 
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -110,6 +190,12 @@ class VarDeclWithInit(SymbolDecl):
 
     def getInitExpr(self):
         return self.init_expr
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.symbol_type, self.symbol_id, self.init_expr], 
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 class FuncDecl(SymbolDecl):
@@ -124,6 +210,12 @@ class FuncDecl(SymbolDecl):
 
     def getParams(self):
         return self.param_list
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.symbol_type, self.symbol_id, *self.param_list], 
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -149,6 +241,12 @@ class FuncDef(TopLevelNode):
 
     def getBody(self):
     	return self.body
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.return_type, self.func_id, *self.param_list, self.body], 
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -166,6 +264,10 @@ class IdWithPtr(ASTNode):
 
     def getPointerCount(self):
     	return self.pointer_count
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+
+        # TODO
 # ENDCLASS
 
 
@@ -179,6 +281,12 @@ class Body(ASTNode):
 
     def getChildren(self):
         return self.child_list
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = child_list,
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -196,6 +304,12 @@ class FuncParam(ASTNode):
 
     def getParamID(self):
     	return self.param_id
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.param_type, self.param_id],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -218,6 +332,12 @@ class CompoundStmt(Statement):
 
     def getChildList(self):
     	return self.child_list
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = child_list,
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -235,6 +355,12 @@ class WhileStmt(Statement):
 
     def getBody(self):
         return self.body
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.cond_expr, self.body],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -260,6 +386,12 @@ class ForStmt(Statement):
 
     def getBody(self):
         return self.body
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.init, self.cond_expr, self.iter_expr, self.body],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -281,6 +413,12 @@ class BranchStmt(Statement):
 
     def getElseBody(self):
     	return self.else_body
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.cond_expr, self.if_body, self.else_body],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -299,6 +437,9 @@ class ReturnStatement(JumpStatement):
     """
     def __init__(self):
         super().__init__(jump_type="return")
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
 # ENDCLASS
 
 
@@ -308,6 +449,9 @@ class BreakStatement(JumpStatement):
     """
     def __init__(self):
         super().__init__(jump_type="break")
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
 # ENDCLASS
 
 
@@ -317,6 +461,9 @@ class ContinueStatement(JumpStatement):
     """
     def __init__(self):
         super().__init__(jump_type="continue")
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
 # ENDCLASS
 
 
@@ -331,6 +478,12 @@ class ExpressionStatement(Statement):
 
     def getExpressions(self):
     	return self.expressions
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.expressions],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -353,6 +506,12 @@ class ParenExpression(Expression):
 
 	def getExpr(self):
 		return self.expression
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.expression],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -361,7 +520,7 @@ class AssignmentExpr(Expression):
 		Node that represents assignment expression.
     """
     def __init__(self, left, right, operator):
-    	super().__init__(expression_type="AssignmentExpr")
+    	super().__init__(expression_type="AssignmentExpr:"+str(operator))
     	self.left = left
     	self.right = right
 
@@ -375,6 +534,12 @@ class AssignmentExpr(Expression):
 
     def getOperator(self):
     	return self.operator
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.left, self.right],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -384,7 +549,7 @@ class LogicBinExpr(Expression):
     """
 
     def __init__(self, left, right, operator):
-    	super().__init__(expression_type="AssignmentExpr")
+    	super().__init__(expression_type="LogicBinExpr:"+str(operator))
     	self.left = left
     	self.right = right
 
@@ -398,6 +563,12 @@ class LogicBinExpr(Expression):
 
     def getOperator(self):
     	return self.operator
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.left, self.right],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -406,7 +577,7 @@ class EqualityExpr(Expression):
     	Node that represents equality or inequality expression.
     """
     def __init__(self, left, right, operator):
-    	super().__init__(expression_type="EqualityExpr")
+    	super().__init__(expression_type="EqualityExpr:"+str(operator))
     	self.left = left
     	self.right = right
 
@@ -420,6 +591,12 @@ class EqualityExpr(Expression):
 
     def getOperator(self):
     	return self.operator
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.left, self.right],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -428,7 +605,7 @@ class ComparisonExpr(Expression):
         Node that represents a comparison.
     """
     def __init__(self, left, right, operator):
-    	super().__init__(expression_type="ComparisonExpr")
+    	super().__init__(expression_type="ComparisonExpr:"+str(operator))
     	self.left = left
     	self.right = right
 
@@ -442,6 +619,12 @@ class ComparisonExpr(Expression):
 
     def getOperator(self):
     	return self.operator
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.left, self.right],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -450,7 +633,7 @@ class AdditiveExpr(Expression):
         Node that represents an addition or subtraction.
     """
     def __init__(self, left, right, operator):
-    	super().__init__(expression_type="AdditiveExpr")
+    	super().__init__(expression_type="AdditiveExpr:"+str(operator))
     	self.left = left
     	self.right = right
 
@@ -464,6 +647,12 @@ class AdditiveExpr(Expression):
 
     def getOperator(self):
     	return self.operator
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.left, self.right],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -472,7 +661,7 @@ class MultiplicativeExpr(Expression):
         Node that represents a multiplication, division or modulo operation.
     """
     def __init__(self, left, right, operator):
-    	super().__init__(expression_type="MultiplicativeExpr")
+    	super().__init__(expression_type="MultiplicativeExpr:"+str(operator))
     	self.left = left
     	self.right = right
 
@@ -486,6 +675,12 @@ class MultiplicativeExpr(Expression):
 
     def getOperator(self):
     	return self.operator
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.left, self.right],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -494,6 +689,11 @@ class CastExpr(Expression):
         Node that represents a cast expression.
     """
     def __init__(self, type_list, expression):
+        """
+        Params:
+            'type_list': list of TypeNode.
+            'expression': The Expression that is cast to the specified types.
+        """
     	super().__init__(expression_type="CastExpr")
     	self.type_list = type_list
     	self.expression = expression
@@ -503,6 +703,12 @@ class CastExpr(Expression):
 
     def getExpr(self):
     	return self.expression
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [*self.type_list, self.expression],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -516,6 +722,12 @@ class LogicNotExpr(Expression):
 
     def getExpr(self):
     	return self.expression
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.expression],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -523,12 +735,18 @@ class PrefixIncExpr(Expression):
     """
         Node that represents "++x".
     """
-    def __init__(self, expression,):
+    def __init__(self, expression):
     	super().__init__(expression_type="PrefixIncExpr")
     	self.expression = expression
 
     def getExpr(self):
     	return self.expression
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.expression],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 class PrefixDecExpr(Expression):
@@ -541,6 +759,12 @@ class PrefixDecExpr(Expression):
 
     def getExpr(self):
     	return self.expression
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.expression],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -548,12 +772,18 @@ class PostfixIncExpr(Expression):
     """
         Node that represents "x++".
     """
-    def __init__(self, expression, operator):
+    def __init__(self, expression):
     	super().__init__(expression_type="PostfixIncExpr")
     	self.expression = expression
 
     def getExpr(self):
     	return self.expression
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.expression],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 
 # ENDCLASS
 
@@ -561,12 +791,18 @@ class PostfixDecExpr(Expression):
     """
         Node that represents "x--".
     """
-    def __init__(self, expression, operator):
+    def __init__(self, expression):
     	super().__init__(expression_type="PostfixDecExpr")
     	self.expression = expression
 
     def getExpr(self):
     	return self.expression
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.expression],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -580,6 +816,12 @@ class PlusPrefixExpr(Expression):
 
     def getExpr(self):
     	return self.expression
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.expression],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 class MinPrefixExpr(Expression):
@@ -592,6 +834,12 @@ class MinPrefixExpr(Expression):
 
     def getExpr(self):
     	return self.expression
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.expression],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -609,6 +857,12 @@ class ArrayAccessExpr(Expression):
 
     def getIndexArray(self):
     	return self.index_expr
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.target_array, self.index_expr],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -622,6 +876,12 @@ class PointerDerefExpr(Expression):
 
     def getTargetPtr(self):
     	return self.target_ptr
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.target_ptr],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -630,6 +890,11 @@ class FuncCallExpr(Expression):
     	Node that represents a function call: "identifier(params)".
     """
     def __init__(self, function_identifier, argument_list):
+        """
+        Params:
+            'function_identifier': IdentifierNode object that represents the identifier of the function.
+            'argument_list': list of Expression
+        """
     	super().__init__(expression_type="FuncCallExpr")
     	self.identifier = function_identifier
     	self.argument_list = argument_list
@@ -639,12 +904,18 @@ class FuncCallExpr(Expression):
 
     def getArguments(self):
         return self.argument_list
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [self.function_identifier, *self.argument_list],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
 class IdentifierExpr(Expression):
     """
-        Node that represents an identifier.
+        Node that represents an identifier expression (different from the idenfier itself!)
     """
     def __init__(self, identifier):
     	super().__init__(expression_type="IdentifierExpr")
@@ -652,6 +923,9 @@ class IdentifierExpr(Expression):
 
     def getIdentifier(self):
     	return self.identifier
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
 # ENDCLASS
 
 
@@ -660,7 +934,7 @@ class ConstantExpr(Expression):
         Base class for constant expressions.
     """
     def __init__(self, constant_expr_type, value):
-    	super().__init__(expression_type="constant_expr_type")
+    	super().__init__(expression_type=constant_expr_type)
 
     def getValue(self):
     	return self.value
@@ -676,6 +950,9 @@ class IntegerConstantExpr(ConstantExpr):
     
     def getIntValue(self):
     	return int(self.getValue())
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
 # ENDCLASS
 
 
@@ -688,6 +965,9 @@ class FloatConstantExpr(ConstantExpr):
     
     def getFloatValue(self):
     	return float(self.getValue())
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
 # ENDCLASS
 
 
@@ -700,6 +980,9 @@ class StringConstantExpr(ConstantExpr):
     
     def getStrValue(self):
     	return str(self.getValue())
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
 # ENDCLASS
 
 
@@ -712,6 +995,9 @@ class CharConstantExpr(ConstantExpr):
     
     def getCharValue(self):
     	return str(self.getValue())
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
 # ENDCLASS
 
 
@@ -724,6 +1010,9 @@ class BoolConstantExpr(ConstantExpr):
     
     def getBoolValue(self):
     	return str(self.getValue()).lower() == "true"
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
 # ENDCLASS
 
 
@@ -746,6 +1035,9 @@ class TypeVoid(TypeNode):
     """
     def __init__(self):
         super().__init__(type_name="void")
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
 # ENDCLASS
 
 
@@ -755,6 +1047,9 @@ class TypeInt(TypeNode):
     """
     def __init__(self):
         super().__init__(type_name="int")
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
 # ENDCLASS
 
 class TypeFloat(TypeNode):
@@ -763,6 +1058,9 @@ class TypeFloat(TypeNode):
     """
     def __init__(self):
         super().__init__(type_name="float")
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
 # ENDCLASS
 
 
@@ -772,6 +1070,9 @@ class TypeBool(TypeNode):
     """
     def __init__(self):
         super().__init__(type_name="bool")
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
 # ENDCLASS
 
 
@@ -781,6 +1082,9 @@ class TypeChar(TypeNode):
     """
     def __init__(self):
         super().__init__(type_name="char")
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
 # ENDCLASS
 
 
@@ -794,3 +1098,7 @@ class IdentifierNode(ASTNode):
 
     def getID(self):
         return self.identifier
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        # TODO
+# ENDCLASS
