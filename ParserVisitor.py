@@ -184,59 +184,94 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#cast_expr.
     def visitCast_expr(self, ctx: CParser.Cast_exprContext):
-        return self.visitChildren(ctx)
+        cast_amount = (len(ctx.getChildren()) - 1) % 3
+        type_list = list()
+        expr = self.manuallyVisitChild(ctx.getChild(len(ctx.getChildren()) - 1))
+
+        for i in range(0, cast_amount):
+            type_list.append(self.manuallyVisitChild(ctx.getChild(2 + 3 * i)))
+
+        return CastExpr(type_list, expr)
 
     # Visit a parse tree produced by CParser#unaryAsPostfix.
     def visitUnaryAsPostfix(self, ctx: CParser.UnaryAsPostfixContext):
-        return self.visitChildren(ctx)
+        return self.manuallyVisitChild(ctx.getChild(0))
 
     # Visit a parse tree produced by CParser#prefixDec.
     def visitPrefixDec(self, ctx: CParser.PrefixDecContext):
-        return self.visitChildren(ctx)
+        expression = self.manuallyVisitChild(ctx.getChild(1))
+        return PrefixDecExpr(expression)
 
     # Visit a parse tree produced by CParser#prefixInc.
     def visitPrefixInc(self, ctx: CParser.PrefixIncContext):
-        return self.visitChildren(ctx)
+        expression = self.manuallyVisitChild(ctx.getChild(1))
+        return PrefixIncExpr(expression)
 
     # Visit a parse tree produced by CParser#unaryOp.
     def visitUnaryOp(self, ctx: CParser.UnaryOpContext):
-        return self.visitChildren(ctx)
+        operator = self.manuallyVisitChild(ctx.getChild(0))
+        expr = self.manuallyVisitChild(ctx.getChild(0))
+
+        if operator == "+":
+            return PlusPrefixExpr(expr)
+
+        elif operator == "-":
+            return MinPrefixExpr(expr)
+
+        elif operator == "not" or operator == '!':
+            return LogicNotExpr(expr)
+
+        elif operator == "*":
+            return PointerDerefExpr(expr)
+
 
     # Visit a parse tree produced by CParser#unary_operator.
     def visitUnary_operator(self, ctx: CParser.Unary_operatorContext):
-        return self.visitChildren(ctx)
+        # return the operator to be checked in visitUnaryOp
+        return ctx.getText()
 
     # Visit a parse tree produced by CParser#arrayAccesExpr.
     def visitArrayAccesExpr(self, ctx: CParser.ArrayAccesExprContext):
-        return self.visitChildren(ctx)
+        target_array = self.manuallyVisitChild(ctx.getChild(0))
+        index_expr = self.manuallyVisitChild(ctx.getChild(2))
+
+        return FuncCallExpr(target_array, index_expr)
 
     # Visit a parse tree produced by CParser#postfixDec.
     def visitPostfixDec(self, ctx: CParser.PostfixDecContext):
-        return self.visitChildren(ctx)
+        expression = self.manuallyVisitChild(ctx.getChild(0))
+        return PostfixDecExpr(expression)
 
     # Visit a parse tree produced by CParser#primitiveExpr.
     def visitPrimitiveExpr(self, ctx: CParser.PrimitiveExprContext):
-        return self.visitChildren(ctx)
+        return self.manuallyVisitChild(ctx.getChild(0))
 
     # Visit a parse tree produced by CParser#funcCall.
     def visitFuncCall(self, ctx: CParser.FuncCallContext):
-        return self.visitChildren(ctx)
+        function_id = self.manuallyVisitChild(ctx.getChild(0))
+        arguments = list()
+        # ignore parentheses
+        for i in range(2, len(ctx.getChildren())):
+            arguments.append(self.manuallyVisitChild(ctx.getChild(i)))
+        return FuncCallExpr(function_id, arguments)
 
     # Visit a parse tree produced by CParser#postfixInc.
     def visitPostfixInc(self, ctx: CParser.PostfixIncContext):
-        return self.visitChildren(ctx)
+        expression = self.manuallyVisitChild(ctx.getChild(0))
+        return PostfixIncExpr(expression)
 
     # Visit a parse tree produced by CParser#parenExpr.
     def visitParenExpr(self, ctx: CParser.ParenExprContext):
-        return self.visitChildren(ctx)
+        # ignore the parentheses
+        return self.manuallyVisitChild(ctx.getChild(1))
 
     # Visit a parse tree produced by CParser#simpleId.
     def visitSimpleId(self, ctx: CParser.SimpleIdContext):
-        return self.visitChildren(ctx)
+        return self.manuallyVisitChild(ctx.getChild(0))
 
     # Visit a parse tree produced by CParser#constantExpr.
     def visitConstantExpr(self, ctx: CParser.ConstantExprContext):
-        return self.visitChildren(ctx)
+        return self.manuallyVisitChild(ctx.getChild(0))
 
     # Visit a parse tree produced by CParser#prim_type.
     def visitPrim_type(self, ctx: CParser.Prim_typeContext):
