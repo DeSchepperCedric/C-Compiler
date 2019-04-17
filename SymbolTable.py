@@ -1,4 +1,3 @@
-import sys
 
 
 class SymbolTable:
@@ -89,15 +88,15 @@ def print_symbol_table_node_to_dot(node, cur_id):
     print("\t{} [\n shape=plaintext \nlabel=< <table border=\'0\' cellborder=\'1\' cellspacing=\'0\'>".format(cur_id))
 
     print("\t<tr><td colspan=\"2\"> {} </td></tr>".format(node.name))
-    for symbol, type in node.symbols.items():
+    for symbol, sym_type in node.symbols.items():
         print("\t<tr>")
-        print("\t<td>{}</td>".format(type))
+        print("\t<td>{}</td>".format(sym_type))
         print("\t<td>{}</td>".format(symbol))
         print("\t</tr>")
     print("\t</table>  >];")
 
 
-def main(argv):
+def main():
     root = SymbolTable("root")
     root.insert("i", "int")
     root.insert("b", "float")
@@ -114,8 +113,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    main(sys.argv)
-
-
-
-
+    main()

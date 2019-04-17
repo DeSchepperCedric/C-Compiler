@@ -7,6 +7,7 @@ from antlr_files.CParser import CParser
 
 from ParserVisitor import ParserVisitor
 
+
 def main(argv):
     in_stream = FileStream(argv[1])
     lexer = CLexer(in_stream)
@@ -15,6 +16,7 @@ def main(argv):
     tree = parser.program()
     visitor = ParserVisitor()
     visitor.visitProgram(tree)
+
 
 if __name__ == "__main__":
     main(sys.argv)

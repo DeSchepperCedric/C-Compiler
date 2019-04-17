@@ -6,7 +6,6 @@ from antlr_files.CListener import CListener
 from antlr_files.CParser import CParser
 
 
-
 def main(argv):
     in_stream = FileStream(argv[1])
     lexer = CLexer(in_stream)
@@ -19,6 +18,7 @@ def main(argv):
     print("digraph G {")
     walker.walk(printer, tree)
     print("}")
+
 
 def rec_visit(cur_node, cur_id):
     """
@@ -55,6 +55,7 @@ def rec_visit(cur_node, cur_id):
 
     return i
 # ENDFUNCTION
+
 
 class PrintListener(CListener):
     def enterProgram(self, ctx:CParser.ProgramContext):
