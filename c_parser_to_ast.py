@@ -13,11 +13,11 @@ def main(argv):
     lexer = CLexer(in_stream)
     stream = CommonTokenStream(lexer)
     parser = CParser(stream)
-    tree = parser.program()
+    parse_tree = parser.program()
     visitor = ParserVisitor()
-    #visitor.visitProgram(tree)
-    tree.accept(visitor)
-    print(visitor.getASTTree().toDot(add_open_close=True)[1])
+    ast_tree = visitor.visitProgram(parse_tree)
+
+    print(ast_tree.toDot(add_open_close=True)[1])
 
 if __name__ == "__main__":
     main(sys.argv)
