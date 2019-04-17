@@ -248,23 +248,24 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#prim_type.
     def visitPrim_type(self, ctx: CParser.Prim_typeContext):
-        return self.visitChildren(ctx)
+        # skip this node and just return the child.
+        return self.manuallyVisitChild(ctx.getChild(0)) 
 
     # Visit a parse tree produced by CParser#type_int.
     def visitType_int(self, ctx: CParser.Type_intContext):
-        return self.visitChildren(ctx)
+        return TypeInt()
 
     # Visit a parse tree produced by CParser#type_float.
     def visitType_float(self, ctx: CParser.Type_floatContext):
-        return self.visitChildren(ctx)
+        return TypeFloat()
 
     # Visit a parse tree produced by CParser#type_char.
     def visitType_char(self, ctx: CParser.Type_charContext):
-        return self.visitChildren(ctx)
+        return TypeChar()
 
     # Visit a parse tree produced by CParser#type_void.
     def visitType_void(self, ctx: CParser.Type_voidContext):
-        return self.visitChildren(ctx)
+        return TypeVoid()
 
     # Visit a parse tree produced by CParser#type_bool.
     def visitType_bool(self, ctx: CParser.Type_boolContext):
