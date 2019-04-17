@@ -299,5 +299,3 @@ class ParserVisitor(CVisitor):
     def visitBool_constant(self, ctx: CParser.Bool_constantContext):
         return self.visitChildren(ctx)
 
-
-del CParser

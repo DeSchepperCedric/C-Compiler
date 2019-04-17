@@ -573,7 +573,7 @@ class Expression(ASTNode):
 		Base class for all expression nodes.
     """
 
-    def __init__(self, expression_type):
+    def __init__(self,  expression_type):
         super().__init__(node_name=expression_type)
 
 
@@ -999,7 +999,7 @@ class ArrayAccessExpr(Expression):
 
 class PointerDerefExpr(Expression):
     """
-    	Node that represents a pointer dereference expression: "*target_ptr".
+    Node that represents a pointer dereference expression: "*target_ptr".
     """
 
     def __init__(self, target_ptr):
@@ -1180,6 +1180,9 @@ class TypeNode(ASTNode):
 
     def getTypeName(self):
         return self.type_name
+
+
+""
 
 
 # ENDCLASS
