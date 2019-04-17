@@ -31,8 +31,6 @@ class ParserVisitor(CVisitor):
             else:
                 program_node.addChild(child_result)
 
-        print("Toplevel nodes:",program_node.children)
-
         return program_node
     # END
 
@@ -67,8 +65,6 @@ class ParserVisitor(CVisitor):
 
         declarators = [child for child in raw_decltr_list if child.getText() != ","]
 
-        print("type:",decl_type)
-
         # turn the parse tree nodes into AST nodes by visiting them
         ast_node_list = [self.manuallyVisitChild(decltr) for decltr in declarators]
 
@@ -76,39 +72,70 @@ class ParserVisitor(CVisitor):
         for decl_node in ast_node_list:
             decl_node.symbol_type = decl_type
 
-        for decl_node in ast_node_list:
-            print("dcl type:",decl_node.getType())
-            print("id:",decl_node.getID())
-
         return ast_node_list
     # END
 
     # Visit a parse tree produced by CParser#funcDecl.
     def visitFuncDecl(self, ctx: CParser.FuncDeclContext):
-        return self.visitChildren(ctx)
+
+        id_with_ptr = self.manuallyVisitChild(ctx.getChild(0))
+
+        # remove all '(', ')', ','
+        param_declarations = [ node for node in list(ctx.getChildren())[1:] if not node.getText() in [',', '(', ')']]
+
+        param_list = [self.manuallyVisitChild(decl) for decl in param_declarations]
+
+        return FuncDecl(None, id_with_ptr, param_list)
 
     # Visit a parse tree produced by CParser#varDeclSimple.
     def visitVarDeclSimple(self, ctx: CParser.VarDeclSimpleContext):
         id_with_ptr = self.manuallyVisitChild(ctx.getChild(0))
 
+        # temporarily set type to None
         return VarDeclDefault(None, id_with_ptr)
     # ENDCLASS
 
     # Visit a parse tree produced by CParser#varDeclArray.
     def visitVarDeclArray(self, ctx: CParser.VarDeclArrayContext):
-        return self.visitChildren(ctx)
+        # child 0 is identifier with ptr
+        # child 1 is "["
+        # child 2 is size_expr
+        # child 3 is "]"
+
+        id_with_ptr = self.manuallyVisitChild(ctx.getChild(0))
+        size_expr   = self.manuallyVisitChild(ctx.getChild(2))
+
+        # temporarily set type to None
+        return ArrayDecl(None, id_with_ptr, size_expr)
 
     # Visit a parse tree produced by CParser#varDeclInit.
     def visitVarDeclInit(self, ctx: CParser.VarDeclInitContext):
-        return self.visitChildren(ctx)
+        # child 0 is identifier with ptr
+        # child 1 is "="
+        # child 2 is init_expr
+
+        id_with_ptr = self.manuallyVisitChild(ctx.getChild(0))
+        init_expr   = self.manuallyVisitChild(ctx.getChild(2))
+
+        # temporarily set type to None
+        return VarDeclWithInit(None, id_with_ptr, init_expr)
 
     # Visit a parse tree produced by CParser#param.
     def visitParam(self, ctx: CParser.ParamContext):
-        return self.visitChildren(ctx)
+        # child 0 is type
+        # child 1 is id with ptr
+
+        param_type = self.manuallyVisitChild(ctx.getChild(0))
+        param_id   = self.manuallyVisitChild(ctx.getChild(1))
+
+        return FuncParam(param_type, param_id)
 
     # Visit a parse tree produced by CParser#func_def.
     def visitFunc_def(self, ctx: CParser.Func_defContext):
         return self.visitChildren(ctx)
+
+    # is het Body -> Compountstatement -> statements?
+    # of Body -> statements?
 
     # Visit a parse tree produced by CParser#statement.
     def visitStatement(self, ctx: CParser.StatementContext):
@@ -144,15 +171,15 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#jumpReturn.
     def visitJumpReturn(self, ctx: CParser.JumpReturnContext):
-        return self.visitChildren(ctx)
+        return ReturnStatement()
 
     # Visit a parse tree produced by CParser#jumpBreak.
     def visitJumpBreak(self, ctx: CParser.JumpBreakContext):
-        return self.visitChildren(ctx)
+        return BreakStatement()
 
     # Visit a parse tree produced by CParser#jumpContinue.
     def visitJumpContinue(self, ctx: CParser.JumpContinueContext):
-        return self.visitChildren(ctx)
+        return ContinueStatement()
 
     # Visit a parse tree produced by CParser#expression_statement.
     def visitExpression_statement(self, ctx: CParser.Expression_statementContext):

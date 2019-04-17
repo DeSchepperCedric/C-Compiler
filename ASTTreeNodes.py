@@ -1015,7 +1015,7 @@ class ConstantExpr(Expression):
     """
 
     def __init__(self, constant_expr_type, value):
-        super().__init__(expression_type=constant_expr_type)
+        super().__init__(expression_type=constant_expr_type+":'" + str(value) + "'")
         self.value = value
 
     def getValue(self):
@@ -1035,7 +1035,7 @@ class IntegerConstantExpr(ConstantExpr):
     """
 
     def __init__(self, integer_value):
-        super().__init__(constant_expr_type="IntConstant\n'" + str(integer_value) + "'", value=integer_value)
+        super().__init__(constant_expr_type="IntConstant", value=integer_value)
 
     def getIntValue(self):
         return int(self.getValue())
@@ -1048,7 +1048,7 @@ class FloatConstantExpr(ConstantExpr):
     """
 
     def __init__(self, float_value):
-        super().__init__(constant_expr_type="FloatConstant\n'" + str(float_value) + "'", value=float_value)
+        super().__init__(constant_expr_type="FloatConstant", value=float_value)
 
     def getFloatValue(self):
         return float(self.getValue())
@@ -1061,7 +1061,7 @@ class StringConstantExpr(ConstantExpr):
     """
 
     def __init__(self, str_value):
-        super().__init__(constant_expr_type="StrConstant\n'" + str(str_value) + "'", value=str_value)
+        super().__init__(constant_expr_type="StrConstant", value=str_value)
 
     def getStrValue(self):
         return str(self.getValue())
@@ -1074,7 +1074,7 @@ class CharConstantExpr(ConstantExpr):
     """
 
     def __init__(self, char_value):
-        super().__init__(constant_expr_type="CharConstant\n'" + str(char_value) + "'", value=char_value)
+        super().__init__(constant_expr_type="CharConstant", value=char_value)
 
     def getCharValue(self):
         return str(self.getValue())
@@ -1087,7 +1087,7 @@ class BoolConstantExpr(ConstantExpr):
     """
 
     def __init__(self, bool_value):
-        super().__init__(constant_expr_type="BoolConstant\n'" + str(bool_value) + "'", value=bool_value)
+        super().__init__(constant_expr_type="BoolConstant", value=bool_value)
 
     def getBoolValue(self):
         return str(self.getValue()).lower() == "true"
@@ -1193,7 +1193,7 @@ class IdentifierNode(ASTNode):
     """
 
     def __init__(self, identifier):
-        super().__init__(node_name="Identifier\n'" + str(identifier) + "'")
+        super().__init__(node_name="Identifier:'" + str(identifier) + "'")
         self.identifier = identifier
 
     def getID(self):
