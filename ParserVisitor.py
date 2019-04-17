@@ -31,6 +31,8 @@ class ParserVisitor(CVisitor):
             else:
                 program_node.addChild(child_result)
 
+        print(program_node.children)
+
         return program_node
     # END
 
@@ -65,13 +67,16 @@ class ParserVisitor(CVisitor):
 
         declarators = [child for child in raw_decltr_list if child.getText() != ","]
 
-        print("Child count before filter:", len(raw_decltr_list))
-        print("Child count after filter:",  len(declarators))
+        print(decl_type)
 
-        
+        # turn the parse tree nodes into AST nodes by visiting them
+        ast_node_list = [self.manuallyVisitChild(decltr) for decltr in declarators]
 
-        
+        # hack: manually add the type since here we have the type
+        for decl_node in ast_node_list:
+            decl_node.symbol_type = decl_type
 
+        return ast_node_list
     # END
 
     # Visit a parse tree produced by CParser#funcDecl.
@@ -80,7 +85,10 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#varDeclSimple.
     def visitVarDeclSimple(self, ctx: CParser.VarDeclSimpleContext):
-        return self.visitChildren(ctx)
+        id_with_ptr = self.manuallyVisitChild(ctx.getChild(0))
+
+        return VarDeclDefault(None, id_with_ptr)
+    # ENDCLASS
 
     # Visit a parse tree produced by CParser#varDeclArray.
     def visitVarDeclArray(self, ctx: CParser.VarDeclArrayContext):
@@ -260,7 +268,7 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#type_bool.
     def visitType_bool(self, ctx: CParser.Type_boolContext):
-        return self.visitChildren(ctx)
+        return TypeBool()
 
     # Visit a parse tree produced by CParser#id_with_ptr.
     def visitId_with_ptr(self, ctx: CParser.Id_with_ptrContext):

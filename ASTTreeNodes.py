@@ -183,7 +183,7 @@ class ArrayDecl(SymbolDecl):
 # ENDCLASS
 
 
-class VarDelcDefault(SymbolDecl):
+class VarDeclDefault(SymbolDecl):
     """
         Node that represents a variable declaration without initializer: "type id;"
     """

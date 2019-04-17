@@ -1,5 +1,5 @@
 
 #include <stdio.h>
 
-int predicate(), i, b, **c;
+int a, b, c;
 
