@@ -15,7 +15,8 @@ def main(argv):
     parser = CParser(stream)
     tree = parser.program()
     visitor = ParserVisitor()
-    visitor.visitProgram(tree)
+    #visitor.visitProgram(tree)
+    tree.accept(visitor)
     print(visitor.getASTTree().toDot(add_open_close=True)[1])
 
 if __name__ == "__main__":
