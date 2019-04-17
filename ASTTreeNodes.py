@@ -254,9 +254,14 @@ class IdWithPtr(ASTNode):
     """
         Node that represents an identifier that can possibly be a pointer: "**id"; "id", "*id", etc.
     """
-    def __init__(self, id_name, pointer_count):
-    	super().__init__(node_name="IdWithPtr")
-    	self.identifier = self.identifier
+    def __init__(self, identifier, pointer_count):
+        """
+            Params:
+                'identifier': An IdentifierNode object that represents the identifier.
+                'pointer_count': An integer that represents the number of pointer stars.
+        """
+    	super().__init__(node_name="IdWithPtr:"+str(pointer_count))
+    	self.identifier = identifier
     	self.pointer_count = pointer_count
 
     def getID(self):
@@ -266,8 +271,10 @@ class IdWithPtr(ASTNode):
     	return self.pointer_count
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-
-        # TODO
+        return M_defaultToDotImpl(children       = [self.identifier], 
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -439,7 +446,10 @@ class ReturnStatement(JumpStatement):
         super().__init__(jump_type="return")
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
+        return M_defaultToDotImpl(children       = [],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -451,7 +461,10 @@ class BreakStatement(JumpStatement):
         super().__init__(jump_type="break")
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
+        return M_defaultToDotImpl(children       = [],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -463,7 +476,10 @@ class ContinueStatement(JumpStatement):
         super().__init__(jump_type="continue")
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
+        return M_defaultToDotImpl(children       = [],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -925,7 +941,10 @@ class IdentifierExpr(Expression):
     	return self.identifier
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
+        return M_defaultToDotImpl(children       = [self.identifier],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -938,6 +957,12 @@ class ConstantExpr(Expression):
 
     def getValue(self):
     	return self.value
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return M_defaultToDotImpl(children       = [],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -946,13 +971,10 @@ class IntegerConstantExpr(ConstantExpr):
         Node that represents integer constants: "0123456789".
     """
     def __init__(self, integer_value):
-    	super().__init__(constant_expr_type="IntConstant", value = integer_value)
+    	super().__init__(constant_expr_type="IntConstant\n'" + str(integer_value) + "'", value = integer_value)
     
     def getIntValue(self):
     	return int(self.getValue())
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
 # ENDCLASS
 
 
@@ -961,13 +983,10 @@ class FloatConstantExpr(ConstantExpr):
         Node that represents float constants: "012345.6789".
     """
     def __init__(self, float_value):
-    	super().__init__(constant_expr_type="IntConstant", value = float_value)
+    	super().__init__(constant_expr_type="FloatConstant\n'" + str(float_value) + "'", value = float_value)
     
     def getFloatValue(self):
     	return float(self.getValue())
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
 # ENDCLASS
 
 
@@ -976,13 +995,10 @@ class StringConstantExpr(ConstantExpr):
         Node that represents string constants: "abcdef".
     """
     def __init__(self, str_value):
-    	super().__init__(constant_expr_type="IntConstant", value = str_value)
+    	super().__init__(constant_expr_type="StrConstant\n'" + str(str_value) + "'", value = str_value)
     
     def getStrValue(self):
     	return str(self.getValue())
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
 # ENDCLASS
 
 
@@ -991,13 +1007,10 @@ class CharConstantExpr(ConstantExpr):
         Node that represents character constants: 'a', 'b', 'abc'.
     """
     def __init__(self, char_value):
-    	super().__init__(constant_expr_type="IntConstant", value = char_value)
+    	super().__init__(constant_expr_type="CharConstant\n'" + str(char_value) + "'", value = char_value)
     
     def getCharValue(self):
     	return str(self.getValue())
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
 # ENDCLASS
 
 
@@ -1006,13 +1019,10 @@ class BoolConstantExpr(ConstantExpr):
         Node that represents boolean constants: 'true', 'false'.
     """
     def __init__(self, bool_value):
-    	super().__init__(constant_expr_type="IntConstant", value = bool_value)
+    	super().__init__(constant_expr_type="BoolConstant\n'" + str(bool_value) + "'", value = bool_value)
     
     def getBoolValue(self):
     	return str(self.getValue()).lower() == "true"
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
 # ENDCLASS
 
 
@@ -1037,7 +1047,10 @@ class TypeVoid(TypeNode):
         super().__init__(type_name="void")
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
+        return M_defaultToDotImpl(children       = [],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -1049,7 +1062,10 @@ class TypeInt(TypeNode):
         super().__init__(type_name="int")
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
+        return M_defaultToDotImpl(children       = [],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 class TypeFloat(TypeNode):
@@ -1060,7 +1076,10 @@ class TypeFloat(TypeNode):
         super().__init__(type_name="float")
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
+        return M_defaultToDotImpl(children       = [],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -1072,7 +1091,10 @@ class TypeBool(TypeNode):
         super().__init__(type_name="bool")
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
+        return M_defaultToDotImpl(children       = [],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -1084,7 +1106,10 @@ class TypeChar(TypeNode):
         super().__init__(type_name="char")
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
+        return M_defaultToDotImpl(children       = [],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
 
 
@@ -1093,12 +1118,15 @@ class IdentifierNode(ASTNode):
         Node that represents an identifier (without pointer stars, and not an expression).
     """
     def __init__(self, identifier):
-        super().__init__(node_name="Identifier")
+        super().__init__(node_name="Identifier\n'" + str(identifier) + "'")
         self.identifier = identifier
 
     def getID(self):
         return self.identifier
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        # TODO
+        return M_defaultToDotImpl(children       = [],
+                                  parent_nr      = parent_nr, 
+                                  begin_nr       = begin_nr, 
+                                  add_open_close = add_open_close)
 # ENDCLASS
