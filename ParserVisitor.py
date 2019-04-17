@@ -31,7 +31,7 @@ class ParserVisitor(CVisitor):
             else:
                 program_node.addChild(child_result)
 
-        print(program_node.children)
+        print("Toplevel nodes:",program_node.children)
 
         return program_node
     # END
@@ -67,7 +67,7 @@ class ParserVisitor(CVisitor):
 
         declarators = [child for child in raw_decltr_list if child.getText() != ","]
 
-        print(decl_type)
+        print("type:",decl_type)
 
         # turn the parse tree nodes into AST nodes by visiting them
         ast_node_list = [self.manuallyVisitChild(decltr) for decltr in declarators]
@@ -75,6 +75,10 @@ class ParserVisitor(CVisitor):
         # hack: manually add the type since here we have the type
         for decl_node in ast_node_list:
             decl_node.symbol_type = decl_type
+
+        for decl_node in ast_node_list:
+            print("dcl type:",decl_node.getType())
+            print("id:",decl_node.getID())
 
         return ast_node_list
     # END
@@ -158,7 +162,7 @@ class ParserVisitor(CVisitor):
     def visitExpression(self, ctx: CParser.ExpressionContext):
         return self.visitChildren(ctx)
 
-    # Visit a parse tree produced by CParser#assignment_expr.
+    # Visit a parse tree produced by CParser#assignment_eoonxpr.
     def visitAssignment_expr(self, ctx: CParser.Assignment_exprContext):
         return self.visitChildren(ctx)
 
@@ -273,8 +277,14 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#id_with_ptr.
     def visitId_with_ptr(self, ctx: CParser.Id_with_ptrContext):
-        pointer_amount = len(ctx.getChildren()) - 1  # -1 because of identifier
-        identifier = ctx.getChild(pointer_amount).getText()  # identifier
+        pointer_amount = len(list(ctx.getChildren())) - 1  # -1 because of identifier
+
+        # take child that contains the identifier
+        identifier_child = ctx.getChild(pointer_amount)
+
+        # process child into AST node.
+        identifier = self.manuallyVisitChild(identifier_child)
+
         return IdWithPtr(identifier, pointer_amount)
 
     # Visit a parse tree produced by CParser#identifier.
