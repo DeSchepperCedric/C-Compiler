@@ -1036,6 +1036,25 @@ class PointerDerefExpr(Expression):
 # ENDCLASS
 
 
+class AddressExpr(Expression):
+    """
+        Node that represents an address expression: "&x".
+    """
+    def __init__(self, target_expr):
+        super().__init(expressio_type="AddressExpr")
+        self.target_expr = target_expr
+
+    def getTargetExpr(self):
+        return self.target_expr
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[self.target_expr],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+# ENDCLASS
+
+
 class FuncCallExpr(Expression):
     """
         Node that represents a function call: "identifier(params)".

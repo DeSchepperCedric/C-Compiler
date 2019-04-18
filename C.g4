@@ -130,6 +130,7 @@ unary_operator
         | MINUS
         | pointer // dereference
         | NOT
+        | AMPERSAND // address
         ;
 
 postfix_expr
@@ -229,6 +230,9 @@ DIV_ASSIGN : '/=';
 AND : '&&' | 'and';
 OR  : '||' | 'or';
 NOT : '!' | 'not'; // must be before '!=' for precedence reasons.
+
+// must be after '&&' for precedence reasons.
+AMPERSAND : '&';
 
 GREATER_THAN       : '>';
 LESS_THAN          : '<';
