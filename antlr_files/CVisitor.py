@@ -94,8 +94,13 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#block_item.
-    def visitBlock_item(self, ctx:CParser.Block_itemContext):
+    # Visit a parse tree produced by CParser#blockItemStatement.
+    def visitBlockItemStatement(self, ctx:CParser.BlockItemStatementContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#blockItemDeclaration.
+    def visitBlockItemDeclaration(self, ctx:CParser.BlockItemDeclarationContext):
         return self.visitChildren(ctx)
 
 
@@ -174,16 +179,6 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#prefixDec.
-    def visitPrefixDec(self, ctx:CParser.PrefixDecContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#prefixInc.
-    def visitPrefixInc(self, ctx:CParser.PrefixIncContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by CParser#unaryOp.
     def visitUnaryOp(self, ctx:CParser.UnaryOpContext):
         return self.visitChildren(ctx)
@@ -224,8 +219,8 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#simpleId.
-    def visitSimpleId(self, ctx:CParser.SimpleIdContext):
+    # Visit a parse tree produced by CParser#idExpr.
+    def visitIdExpr(self, ctx:CParser.IdExprContext):
         return self.visitChildren(ctx)
 
 

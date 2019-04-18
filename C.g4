@@ -51,8 +51,8 @@ for_condition
 
 compound_statement : LEFT_BRACE block_item* RIGHT_BRACE ;
 block_item
-        : statement
-        | declaration SC
+        : statement      # blockItemStatement
+        | declaration SC # blockItemDeclaration
         ;
 
 jump_statement
@@ -118,10 +118,8 @@ multiplicative_expr : cast_expr
 
 cast_expr: (LEFT_PAREN prim_type RIGHT_PAREN)* unary_expr;
 
-unary_expr
+unary_expr // note: does not get visited
         : postfix_expr             # unaryAsPostfix
-        | DECREMENT unary_expr     # prefixDec
-        | INCREMENT unary_expr     # prefixInc
         | unary_operator cast_expr # unaryOp
         ;
 
@@ -131,6 +129,8 @@ unary_operator
         | pointer // dereference
         | NOT
         | AMPERSAND // address
+        | DECREMENT // --x
+        | INCREMENT // ++x
         ;
 
 postfix_expr
@@ -142,7 +142,7 @@ postfix_expr
         ;
 
 prim_expr : LEFT_PAREN expression RIGHT_PAREN # parenExpr
-		  | identifier                        # simpleId
+		  | identifier                        # idExpr
 		  | constant                          # constantExpr
           ;
 

@@ -13,7 +13,7 @@ class ASTNode:
         """
             Gives a dot presententation for this node/branch/tree.
             
-            The opening and closing statements "digraph graphName{" and "}" will only
+            The opening and closing statements "digraph graphName{", "splines=ortho;", and "}" will only
             be included of 'add_open_close' is set to true.
 
             Example with add_open_close=False:
@@ -23,6 +23,7 @@ class ASTNode:
 
             Example with add_open_close=True:
                 digraph ast_tree {
+                splines=ortho;
                 1 [label="20"];
                 2 [label="30"];
                 1 -> 2;
@@ -52,10 +53,10 @@ class ASTNode:
         current_node_nr = begin_nr
 
         # add self
-        dotdata += "{} [label=\"{}\"]\n".format(current_node_nr, self.getNodeName())
+        dotdata += "{} [label=\"{}\", shape=box]\n".format(current_node_nr, self.getNodeName())
 
         if parent_nr is not None:
-            dotdata += "{} -> {}\n".format(parent_nr, current_node_nr)
+            dotdata += "{}:s -> {}:n\n".format(parent_nr, current_node_nr)
 
         current_node_nr += 1
 
@@ -68,12 +69,9 @@ class ASTNode:
             dotdata += child_dotdata
 
         if add_open_close:
-            dotdata = "digraph ast_tree {\n" + dotdata + "}\n"
+            dotdata = "digraph ast_tree {\nsplines=ortho;\n" + dotdata + "}\n"
 
         return (current_node_nr, dotdata)
-
-
-# ENDCLASS
 
 
 class ASTTestTermNode(ASTNode):
@@ -89,9 +87,6 @@ class ASTTestTermNode(ASTNode):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class ProgramNode(ASTNode):
@@ -116,9 +111,6 @@ class ProgramNode(ASTNode):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
-
 class TopLevelNode(ASTNode):
     """
         Base class for nodes that appear directly underneath the program node.
@@ -128,16 +120,13 @@ class TopLevelNode(ASTNode):
         super().__init__(node_name=node_name)
 
 
-# ENDCLASS
-
-
 class IncludeNode(TopLevelNode):
     """
         Node that represents "#include <stdio.h>"
     """
 
     def __init__(self):
-        super().__init__(node_name="Include")
+        super().__init__(node_name="Include <stdio.h>")
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[],
@@ -146,27 +135,43 @@ class IncludeNode(TopLevelNode):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
-
 class SymbolDecl(TopLevelNode):
     """
         Base class for variable declaration nodes.
     """
 
-    def __init__(self, symbol_class, symbol_type, symbol_id):
-        super().__init__(node_name="Decl:{}\\nType:{}".format(symbol_class, symbol_type))
+    def __init__(self, symbol_class : str, symbol_type : str, symbol_id : str, symbol_ptr_cnt : int):
+        """
+        Params:
+            'symbol_class': Whether the symbol is an array, variable, function, etc.
+            'symbol_type': A string that contains the name of the type of the symbol.
+            'symbol_id': String that represents the name of the symbol.
+            'symbol_ptr_count': Integer that denotes the amount of pointer levels. Can be set to zero if the symbol is not a pointer.
+        """
+        # string that represents the node in dot-format.
+        full_node_name = "Decl:{}\\nId:{}\\nPtrCount:{}\\nType:{}".format(symbol_class, symbol_id, symbol_ptr_cnt, symbol_type)
+        super().__init__(node_name=full_node_name)
         self.symbol_type = symbol_type
         self.symbol_id = symbol_id
+        self.symbol_ptr_cnt = symbol_ptr_cnt
 
     def getType(self):
+        """
+           Retrieve a string that contains the name of the type of the symbol. 
+        """
         return self.symbol_type
 
     def getID(self):
+        """
+            Retrieve a string that contains the name of the identifier.
+        """
         return self.symbol_id
 
-
-# ENDCLASS
+    def getPointerCount(self):
+        """
+            Retrieve the number of pointer levels the identifier of the symbol has.
+        """
+        return self.symbol_ptr_cnt
 
 
 class ArrayDecl(SymbolDecl):
@@ -174,23 +179,21 @@ class ArrayDecl(SymbolDecl):
         Node that represents an array declaration: "type id[size_expr];"
     """
 
-    def __init__(self, array_type, array_id, size_expr):
+    def __init__(self, array_type : str, array_id : str, ptr_count : int, size_expr):
         super().__init__(symbol_class="Array",
                          symbol_type=array_type,
-                         symbol_id=array_id)
+                         symbol_id=array_id,
+                         symbol_ptr_cnt=ptr_count)
         self.size_expr = size_expr
 
     def getSizeExp(self):
         return self.size_expr
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.symbol_id, self.size_expr],
+        return self.M_defaultToDotImpl(children=[self.size_expr],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class VarDeclDefault(SymbolDecl):
@@ -198,19 +201,17 @@ class VarDeclDefault(SymbolDecl):
         Node that represents a variable declaration without initializer: "type id;"
     """
 
-    def __init__(self, var_type, var_id):
+    def __init__(self, var_type : str, var_id : str, ptr_count : int):
         super().__init__(symbol_class="VarDefault",
                          symbol_type=var_type,
-                         symbol_id=var_id)
+                         symbol_id=var_id,
+                         symbol_ptr_cnt=ptr_count)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.symbol_id],
+        return self.M_defaultToDotImpl(children=[],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class VarDeclWithInit(SymbolDecl):
@@ -218,46 +219,43 @@ class VarDeclWithInit(SymbolDecl):
         Node that represents a variabele declaration with initializer: "type id = init_expr;"
     """
 
-    def __init__(self, var_type, var_id, init_expr):
+    def __init__(self, var_type : str, var_id : str, ptr_count : int, init_expr):
         super().__init__(symbol_class="VarWithInit",
                          symbol_type=var_type,
-                         symbol_id=var_id)
+                         symbol_id=var_id,
+                         symbol_ptr_cnt=ptr_count)
         self.init_expr = init_expr
 
     def getInitExpr(self):
         return self.init_expr
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.symbol_id, self.init_expr],
+        return self.M_defaultToDotImpl(children=[self.init_expr],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-
-# ENDCLASS
 
 class FuncDecl(SymbolDecl):
     """
         Node that represents a function declaration: "type func(type param);"
     """
 
-    def __init__(self, return_type, func_id, param_list):
+    def __init__(self, return_type : str, func_id : str, ptr_count : int, param_list):
         super().__init__(symbol_class="FuncDecl",
                          symbol_type=return_type,
-                         symbol_id=func_id)
+                         symbol_id=func_id,
+                         symbol_ptr_cnt=ptr_count)
         self.param_list = param_list
 
     def getParams(self):
         return self.param_list
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.symbol_id, *self.param_list],
+        return self.M_defaultToDotImpl(children=[*self.param_list],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class FuncDef(TopLevelNode):
@@ -265,10 +263,11 @@ class FuncDef(TopLevelNode):
     Node that represents a function definition: "type func(param) { <statements> }"
     """
 
-    def __init__(self, return_type, func_id, param_list, body):
+    def __init__(self, return_type : str, func_id : str, ptr_count : int, param_list : list, body):
         super().__init__(node_name="FuncDef\\nType:'" + return_type + "'")
         self.return_type = return_type
         self.func_id = func_id
+        self.ptr_count = ptr_count
         self.param_list = param_list
         self.body = body
 
@@ -278,6 +277,9 @@ class FuncDef(TopLevelNode):
     def getFuncID(self):
         return self.func_id
 
+    def getPointerCount(self):
+        return self.ptr_count
+
     def getParamList(self):
         return self.param_list
 
@@ -285,44 +287,10 @@ class FuncDef(TopLevelNode):
         return self.body
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.func_id, *self.param_list, self.body],
+        return self.M_defaultToDotImpl(children=[*self.param_list, self.body],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
-
-
-class IdWithPtr(ASTNode):
-    """
-        Node that represents an identifier that can possibly be a pointer: "**id"; "id", "*id", etc.
-    """
-
-    def __init__(self, identifier : str, pointer_count : int):
-        """
-            Params:
-                'identifier': A string that represents the identifier.
-                'pointer_count': An integer that represents the number of pointer stars.
-        """
-        super().__init__(node_name="IdWithPtr\\nPtrs:{}\\nId:'{}'".format(pointer_count, identifier))
-        self.identifier = identifier
-        self.pointer_count = pointer_count
-
-    def getID(self):
-        return self.identifier
-
-    def getPointerCount(self):
-        return self.pointer_count
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class Body(ASTNode):
@@ -344,18 +312,16 @@ class Body(ASTNode):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
-
 class FuncParam(ASTNode):
     """
         Node that represents a function param: "type id_with_ptr".
     """
 
-    def __init__(self, param_type, param_id):
+    def __init__(self, param_type : str, param_id : str, ptr_count : int):
         super().__init__(node_name="FuncParam\\nType:'" + param_type + "'")
         self.param_type = param_type
         self.param_id = param_id
+        self.ptr_count = ptr_count
 
     def getParamType(self):
         return self.param_type
@@ -363,14 +329,14 @@ class FuncParam(ASTNode):
     def getParamID(self):
         return self.param_id
 
+    def getPointerCount(self):
+        return self.ptr_count
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.param_id],
+        return self.M_defaultToDotImpl(children=[],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class Statement(ASTNode):
@@ -380,9 +346,6 @@ class Statement(ASTNode):
 
     def __init__(self, statement_type):
         super().__init__(node_name="Stmt:" + statement_type)
-
-
-# ENDCLASS
 
 
 class CompoundStmt(Statement):
@@ -402,9 +365,6 @@ class CompoundStmt(Statement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class WhileStmt(Statement):
@@ -428,9 +388,6 @@ class WhileStmt(Statement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class ForStmt(Statement):
@@ -463,9 +420,6 @@ class ForStmt(Statement):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-
-# ENDCLASS
-
 class BranchStmt(Statement):
     """
         Node that represents an if statement.
@@ -491,9 +445,6 @@ class BranchStmt(Statement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class JumpStatement(Statement):
@@ -523,9 +474,6 @@ class ReturnStatement(JumpStatement):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
-
 class BreakStatement(JumpStatement):
     """
         Node that represents a break statement.
@@ -539,9 +487,6 @@ class BreakStatement(JumpStatement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class ContinueStatement(JumpStatement):
@@ -559,30 +504,24 @@ class ContinueStatement(JumpStatement):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
-
 class ExpressionStatement(Statement):
     """
         Node that represents an expression statement.
-        An expression statement can contain multiple expressions.
+        An expression statement contains exactly one expression.
     """
 
-    def __init__(self, expressions):
+    def __init__(self, expression):
         super().__init__(statement_type="ExpressionStatement")
-        self.expressions = expressions
+        self.expressions = expression
 
-    def getExpressions(self):
-        return self.expressions
+    def getExpression(self):
+        return self.expression
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.expressions],
+        return self.M_defaultToDotImpl(children=[self.expression],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class Expression(ASTNode):
@@ -592,9 +531,6 @@ class Expression(ASTNode):
 
     def __init__(self, expression_type):
         super().__init__(node_name=expression_type)
-
-
-# ENDCLASS
 
 
 class AssignmentExpr(Expression):
@@ -625,29 +561,21 @@ class AssignmentExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
-
-class LogicBinExpr(Expression):
+class LogicOrExpr(Expression):
     """
-        Node that represents AND, OR expression.
+        Node that represents OR expression.
     """
 
     def __init__(self, left, right, operator):
-        super().__init__(expression_type="LogicBinExpr:" + str(operator))
+        super().__init__(expression_type="LogicOrExpr")
         self.left = left
         self.right = right
-
-        self.operator = operator
 
     def getLeft(self):
         return self.left
 
     def getRight(self):
         return self.right
-
-    def getOperator(self):
-        return self.operator
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -656,7 +584,20 @@ class LogicBinExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
+class LogicAndExpr(Expression):
+    """
+        Node that represents AND expression.
+    """
+    def __init__(self, left, right):
+        super().__init__(expression_type="LogicAndExpr")
+        self.left = left
+        self.right = right
+
+    def getLeft(self):
+        return self.left
+
+    def getRight(self):
+        return self.right
 
 
 class EqualityExpr(Expression):
@@ -687,9 +628,6 @@ class EqualityExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
-
 class ComparisonExpr(Expression):
     """
         Node that represents a comparison.
@@ -716,9 +654,6 @@ class ComparisonExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class AdditiveExpr(Expression):
@@ -749,9 +684,6 @@ class AdditiveExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
-
 class MultiplicativeExpr(Expression):
     """
         Node that represents a multiplication, division or modulo operation.
@@ -778,9 +710,6 @@ class MultiplicativeExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class CastExpr(Expression):
@@ -811,9 +740,6 @@ class CastExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
-
 class LogicNotExpr(Expression):
     """
         Node that represents a logical NOT expression.
@@ -831,9 +757,6 @@ class LogicNotExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class PrefixIncExpr(Expression):
@@ -855,8 +778,6 @@ class PrefixIncExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
 class PrefixDecExpr(Expression):
     """
         Node that represents "--x".
@@ -874,9 +795,6 @@ class PrefixDecExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class PostfixIncExpr(Expression):
@@ -897,9 +815,6 @@ class PostfixIncExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-
-# ENDCLASS
-
 class PostfixDecExpr(Expression):
     """
         Node that represents "x--".
@@ -917,9 +832,6 @@ class PostfixDecExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class PlusPrefixExpr(Expression):
@@ -941,9 +853,6 @@ class PlusPrefixExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
-
 class MinPrefixExpr(Expression):
     """
         Node that represents a minus prefix expression: "-x".
@@ -961,9 +870,6 @@ class MinPrefixExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class ArrayAccessExpr(Expression):
@@ -989,9 +895,6 @@ class ArrayAccessExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
-
 class PointerDerefExpr(Expression):
     """
         Node that represents a pointer dereference expression: "*target_ptr".
@@ -1011,9 +914,6 @@ class PointerDerefExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
-
 class AddressExpr(Expression):
     """
         Node that represents an address expression: "&x".
@@ -1030,7 +930,6 @@ class AddressExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-# ENDCLASS
 
 
 class FuncCallExpr(Expression):
@@ -1061,9 +960,6 @@ class FuncCallExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
-
 class IdentifierExpr(Expression):
     """
         Node that represents an identifier expression (different from the idenfier itself!)
@@ -1081,9 +977,6 @@ class IdentifierExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-
-
-# ENDCLASS
 
 
 class ConstantExpr(Expression):
@@ -1105,9 +998,6 @@ class ConstantExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-# ENDCLASS
-
-
 class IntegerConstantExpr(ConstantExpr):
     """
         Node that represents integer constants: "0123456789".
@@ -1118,9 +1008,6 @@ class IntegerConstantExpr(ConstantExpr):
 
     def getIntValue(self):
         return int(self.getValue())
-
-
-# ENDCLASS
 
 
 class FloatConstantExpr(ConstantExpr):
@@ -1135,9 +1022,6 @@ class FloatConstantExpr(ConstantExpr):
         return float(self.getValue())
 
 
-# ENDCLASS
-
-
 class StringConstantExpr(ConstantExpr):
     """
         Node that represents string constants: "abcdef".
@@ -1148,9 +1032,6 @@ class StringConstantExpr(ConstantExpr):
 
     def getStrValue(self):
         return str(self.getValue())
-
-
-# ENDCLASS
 
 
 class CharConstantExpr(ConstantExpr):
@@ -1165,9 +1046,6 @@ class CharConstantExpr(ConstantExpr):
         return str(self.getValue())
 
 
-# ENDCLASS
-
-
 class BoolConstantExpr(ConstantExpr):
     """
         Node that represents boolean constants: 'true', 'false'.
@@ -1179,127 +1057,3 @@ class BoolConstantExpr(ConstantExpr):
     def getBoolValue(self):
         return str(self.getValue()).lower() == "true"
 
-
-# ENDCLASS
-
-
-class TypeNode(ASTNode):
-    """
-        Node that represents a type.
-    """
-
-    def __init__(self, type_name):
-        super().__init__(node_name="Type:" + type_name)
-        self.type_name = type_name
-
-    def getTypeName(self):
-        return self.type_name
-
-
-# ENDCLASS
-
-
-class TypeVoid(TypeNode):
-    """
-        Node that represents the 'void' type.
-    """
-
-    def __init__(self):
-        super().__init__(type_name="void")
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-# ENDCLASS
-
-
-class TypeInt(TypeNode):
-    """
-        Node that represents the 'int' type.
-    """
-
-    def __init__(self):
-        super().__init__(type_name="int")
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-# ENDCLASS
-
-class TypeFloat(TypeNode):
-    """
-        Node that represents the 'float' type.
-    """
-
-    def __init__(self):
-        super().__init__(type_name="float")
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-# ENDCLASS
-
-
-class TypeBool(TypeNode):
-    """
-        Node that represents the 'bool' type.
-    """
-
-    def __init__(self):
-        super().__init__(type_name="bool")
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class TypeChar(TypeNode):
-    """
-        Node that represents the 'char' type.
-    """
-
-    def __init__(self):
-        super().__init__(type_name="char")
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-# ENDCLASS
-
-
-class IdentifierNode(ASTNode):
-    """
-        Node that represents an identifier (without pointer stars, and not an expression).
-    """
-
-    def __init__(self, identifier):
-        super().__init__(node_name="Identifier:'" + str(identifier) + "'")
-        self.identifier = identifier
-
-    def getID(self):
-        return self.identifier
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-# ENDCLASS

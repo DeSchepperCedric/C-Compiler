@@ -161,12 +161,21 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#block_item.
-    def enterBlock_item(self, ctx:CParser.Block_itemContext):
+    # Enter a parse tree produced by CParser#blockItemStatement.
+    def enterBlockItemStatement(self, ctx:CParser.BlockItemStatementContext):
         pass
 
-    # Exit a parse tree produced by CParser#block_item.
-    def exitBlock_item(self, ctx:CParser.Block_itemContext):
+    # Exit a parse tree produced by CParser#blockItemStatement.
+    def exitBlockItemStatement(self, ctx:CParser.BlockItemStatementContext):
+        pass
+
+
+    # Enter a parse tree produced by CParser#blockItemDeclaration.
+    def enterBlockItemDeclaration(self, ctx:CParser.BlockItemDeclarationContext):
+        pass
+
+    # Exit a parse tree produced by CParser#blockItemDeclaration.
+    def exitBlockItemDeclaration(self, ctx:CParser.BlockItemDeclarationContext):
         pass
 
 
@@ -305,24 +314,6 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#prefixDec.
-    def enterPrefixDec(self, ctx:CParser.PrefixDecContext):
-        pass
-
-    # Exit a parse tree produced by CParser#prefixDec.
-    def exitPrefixDec(self, ctx:CParser.PrefixDecContext):
-        pass
-
-
-    # Enter a parse tree produced by CParser#prefixInc.
-    def enterPrefixInc(self, ctx:CParser.PrefixIncContext):
-        pass
-
-    # Exit a parse tree produced by CParser#prefixInc.
-    def exitPrefixInc(self, ctx:CParser.PrefixIncContext):
-        pass
-
-
     # Enter a parse tree produced by CParser#unaryOp.
     def enterUnaryOp(self, ctx:CParser.UnaryOpContext):
         pass
@@ -395,12 +386,12 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#simpleId.
-    def enterSimpleId(self, ctx:CParser.SimpleIdContext):
+    # Enter a parse tree produced by CParser#idExpr.
+    def enterIdExpr(self, ctx:CParser.IdExprContext):
         pass
 
-    # Exit a parse tree produced by CParser#simpleId.
-    def exitSimpleId(self, ctx:CParser.SimpleIdContext):
+    # Exit a parse tree produced by CParser#idExpr.
+    def exitIdExpr(self, ctx:CParser.IdExprContext):
         pass
 
 
