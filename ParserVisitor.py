@@ -39,7 +39,7 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#top_level_node.
     def visitTop_level_node(self, ctx: CParser.Top_level_nodeContext):
         # top level node has
-        #	include: one child
+        #    include: one child
         #   func def: one child
         #   declaration: two children, only first one is useful
         # ==> take first child (#0), and return to parent.
@@ -58,6 +58,7 @@ class ParserVisitor(CVisitor):
     def visitDeclaration(self, ctx: CParser.DeclarationContext):
 
         # retrieve type: child #0
+        # this is a string that contains the name of the type.
         decl_type = self.manuallyVisitChild(ctx.getChild(0))
 
         # retrieve decl list: child #1-n
@@ -68,12 +69,12 @@ class ParserVisitor(CVisitor):
 
         declarators = [child for child in raw_decltr_list if child.getText() != ","]
 
+        # temporarily give the parse tree nodes type information.
+        for decltr_ctx in declarators:
+            decltr_ctx.temp_typeName = decl_type
+
         # turn the parse tree nodes into AST nodes by visiting them
         ast_node_list = [self.manuallyVisitChild(decltr) for decltr in declarators]
-
-        # hack: manually add the type since here we have the type
-        for decl_node in ast_node_list:
-            decl_node.symbol_type = decl_type
 
         return ast_node_list
 
@@ -89,14 +90,14 @@ class ParserVisitor(CVisitor):
 
         param_list = [self.manuallyVisitChild(decl) for decl in param_declarations]
 
-        return FuncDecl(None, id_with_ptr, param_list)
+        return FuncDecl(ctx.temp_typeName, id_with_ptr, param_list)
 
     # Visit a parse tree produced by CParser#varDeclSimple.
     def visitVarDeclSimple(self, ctx: CParser.VarDeclSimpleContext):
         id_with_ptr = self.manuallyVisitChild(ctx.getChild(0))
 
         # temporarily set type to None
-        return VarDeclDefault(None, id_with_ptr)
+        return VarDeclDefault(ctx.temp_typeName, id_with_ptr)
 
     # ENDCLASS
 
@@ -111,7 +112,7 @@ class ParserVisitor(CVisitor):
         size_expr = self.manuallyVisitChild(ctx.getChild(2))
 
         # temporarily set type to None
-        return ArrayDecl(None, id_with_ptr, size_expr)
+        return ArrayDecl(ctx.temp_typeName, id_with_ptr, size_expr)
 
     # Visit a parse tree produced by CParser#varDeclInit.
     def visitVarDeclInit(self, ctx: CParser.VarDeclInitContext):
@@ -123,7 +124,7 @@ class ParserVisitor(CVisitor):
         init_expr = self.manuallyVisitChild(ctx.getChild(2))
 
         # temporarily set type to None
-        return VarDeclWithInit(None, id_with_ptr, init_expr)
+        return VarDeclWithInit(ctx.temp_typeName, id_with_ptr, init_expr)
 
     # Visit a parse tree produced by CParser#param.
     def visitParam(self, ctx: CParser.ParamContext):
@@ -143,14 +144,14 @@ class ParserVisitor(CVisitor):
         # TODO cleaner algo for parameter extraction
         param_list = list()
         # first parameter
-        if len(ctx.getChildren()) >= 6:
+        if ctx.getChildCount() >= 6:
             param_list.append(self.manuallyVisitChild(ctx.getChild(3)))
 
-        if len(ctx.getChildren()) > 6:
-            for i in range(5, len(ctx.getChildren()) - 6, 2):
+        if ctx.getChildCount() > 6:
+            for i in range(5, ctx.getChildCount() - 6, 2):
                 param_list.append(self.manuallyVisitChild(ctx.getChild(i)))
 
-        body = self.manuallyVisitChild(ctx.getChild(len(ctx.getChildren() - 1)))
+        body = self.manuallyVisitChild(ctx.getChild(ctx.getChildCount() - 1))
         return FuncDef(return_type, func_id, param_list, body)
 
     # is het Body -> Compountstatement -> statements?
@@ -165,7 +166,7 @@ class ParserVisitor(CVisitor):
         cond_expr = self.manuallyVisitChild(ctx.getChild(2))
         if_body = self.manuallyVisitChild(ctx.getChild(4))
         else_body = None
-        if len(ctx.getChildren()) == 7:
+        if ctx.getChildCount() == 7:
             else_body = self.manuallyVisitChild(ctx.getChild(6))
         return BranchStmt(cond_expr, if_body, else_body)
 
@@ -194,8 +195,11 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#compound_statement.
     def visitCompound_statement(self, ctx: CParser.Compound_statementContext):
         stat_list = list()
-        for i in range(1, len(ctx.getChildren()) - 1):
-            stat_list.append(self.manuallyVisitChild(ctx.getChild(i)))
+        for i in range(1, ctx.getChildCount() - 1):
+            child_result = self.manuallyVisitChild(ctx.getChild(i))
+
+            # TODO finish this
+            # NOTE: this can be a statement or a 'declaration', which is a list of declarations
         return CompoundStmt(stat_list)
 
     # Visit a parse tree produced by CParser#block_item.
@@ -224,15 +228,16 @@ class ParserVisitor(CVisitor):
         # TODO which node? Expression statement has a list?
         expr_list = list()
 
-        for i in range(0, len(ctx.getChildren()), 2):
+        for i in range(0, ctx.getChildCount(), 2):
             expr_list.append(self.manuallyVisitChild(ctx.getChild(i)))
 
-        return 0
+        # TODO finish this
+        return ASTTestTermNode()
 
     # Visit a parse tree produced by CParser#assignment_eoonxpr.
     def visitAssignment_expr(self, ctx: CParser.Assignment_exprContext):
         # logical or expression
-        if len(ctx.getChildren()) == 1:
+        if ctx.getChildCount() == 1:
             return self.manuallyVisitChild(ctx.getChild(0))
 
         unary_expr = self.manuallyVisitChild(ctx.getChild(0))
@@ -259,8 +264,8 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#equality_expr.
     def visitEquality_expr(self, ctx: CParser.Equality_exprContext):
         # relational expression
-        if len(ctx.getChildren()) == 1:
-            return self.manuallyVisitChild(ctx.getChil(0))
+        if ctx.getChildCount() == 1:
+            return self.manuallyVisitChild(ctx.getChild(0))
 
         left = self.manuallyVisitChild(ctx.getChild(0))
         operator = ctx.getChild(1).getText()
@@ -270,7 +275,7 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#relational_expr.
     def visitRelational_expr(self, ctx: CParser.Relational_exprContext):
         # additive expression
-        if len(ctx.getChildren()) == 1:
+        if ctx.getChildCount() == 1:
             return self.manuallyVisitChild(ctx.getChild(0))
 
         left = self.manuallyVisitChild(ctx.getChild(0))
@@ -281,7 +286,7 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#additive_expr.
     def visitAdditive_expr(self, ctx: CParser.Additive_exprContext):
         # multiplicative expression
-        if len(ctx.getChildren()) == 1:
+        if ctx.getChildCount() == 1:
             return self.manuallyVisitChild(ctx.getChild(0))
 
         left = self.manuallyVisitChild(ctx.getChild(0))
@@ -292,7 +297,7 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#multiplicative_expr.
     def visitMultiplicative_expr(self, ctx: CParser.Multiplicative_exprContext):
         # cast expression
-        if len(ctx.getChildren()) == 1:
+        if ctx.getChildCount() == 1:
             return self.manuallyVisitChild(ctx.getChild(0))
 
         left = self.manuallyVisitChild(ctx.getChild(0))
@@ -302,9 +307,9 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#cast_expr.
     def visitCast_expr(self, ctx: CParser.Cast_exprContext):
-        cast_amount = int((len(ctx.getChildren()) - 1) / 3)
+        cast_amount = int((ctx.getChildCount() - 1) / 3)
         type_list = list()
-        expr = self.manuallyVisitChild(ctx.getChild(len(ctx.getChildren()) - 1))
+        expr = self.manuallyVisitChild(ctx.getChild(ctx.getChildCount() - 1))
 
         for i in range(0, cast_amount):
             type_list.append(self.manuallyVisitChild(ctx.getChild(2 + 3 * i)))
@@ -342,6 +347,12 @@ class ParserVisitor(CVisitor):
         elif operator == "*":
             return PointerDerefExpr(expr)
 
+        elif operator == "&":
+            return AddressExpr(expr)
+
+        else:
+            raise Exception("Invalid operator '{}'".format(operator))
+
     # Visit a parse tree produced by CParser#unary_operator.
     def visitUnary_operator(self, ctx: CParser.Unary_operatorContext):
         # return the operator to be checked in visitUnaryOp
@@ -352,7 +363,7 @@ class ParserVisitor(CVisitor):
         target_array = self.manuallyVisitChild(ctx.getChild(0))
         index_expr = self.manuallyVisitChild(ctx.getChild(2))
 
-        return FuncCallExpr(target_array, index_expr)
+        return ArraAccessExpr(target_array, index_expr)
 
     # Visit a parse tree produced by CParser#postfixDec.
     def visitPostfixDec(self, ctx: CParser.PostfixDecContext):
@@ -365,10 +376,12 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#funcCall.
     def visitFuncCall(self, ctx: CParser.FuncCallContext):
+        # function id is a string that contains the name of the function.
         function_id = self.manuallyVisitChild(ctx.getChild(0))
         arguments = list()
+        # TODO better param extraction.
         # ignore parentheses
-        for i in range(2, len(ctx.getChildren())):
+        for i in range(2, ctx.getChildCount()):
             arguments.append(self.manuallyVisitChild(ctx.getChild(i)))
         return FuncCallExpr(function_id, arguments)
 
@@ -379,14 +392,14 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#parenExpr.
     def visitParenExpr(self, ctx: CParser.ParenExprContext):
-        # ignore the parentheses
-        # TODO which return? is ParenExpression necessary (parentheses precedence is visi   ble in tree?)
-        expr = self.manuallyVisitChild(ctx.getChild(1))
-        return ParenExpression(expr)
+        # here we ignore the "(" and ")" and simply return the contained expression.
+        # this is because the goal of using parenthesis is altering
+        # precedence. Precedence is handled by the parser, not by the AST tree.
         return self.manuallyVisitChild(ctx.getChild(1))
 
     # Visit a parse tree produced by CParser#simpleId.
     def visitSimpleId(self, ctx: CParser.SimpleIdContext):
+        # returns a string that represents the identifier
         return self.manuallyVisitChild(ctx.getChild(0))
 
     # Visit a parse tree produced by CParser#constantExpr.
@@ -398,48 +411,45 @@ class ParserVisitor(CVisitor):
         # skip this node and just return the child.
         return self.manuallyVisitChild(ctx.getChild(0))
 
-        # Visit a parse tree produced by CParser#type_int.
-
-    # TODO replace types by string
+    # Visit a parse tree produced by CParser#type_int.
     def visitType_int(self, ctx: CParser.Type_intContext):
-        return TypeInt()
+        return "int"
 
     # Visit a parse tree produced by CParser#type_float.
     def visitType_float(self, ctx: CParser.Type_floatContext):
-        return TypeFloat()
+        return "float"
 
     # Visit a parse tree produced by CParser#type_char.
     def visitType_char(self, ctx: CParser.Type_charContext):
-        return TypeChar()
+        return "char"
 
     # Visit a parse tree produced by CParser#type_void.
     def visitType_void(self, ctx: CParser.Type_voidContext):
-        return TypeVoid()
+        return "void"
 
     # Visit a parse tree produced by CParser#type_bool.
     def visitType_bool(self, ctx: CParser.Type_boolContext):
-        return TypeBool()
+        return "bool"
 
     # Visit a parse tree produced by CParser#id_with_ptr.
     def visitId_with_ptr(self, ctx: CParser.Id_with_ptrContext):
-        pointer_amount = len(list(ctx.getChildren())) - 1  # -1 because of identifier
+        pointer_amount = ctx.getChildCount() - 1  # -1 because of identifier
 
-        # take child that contains the identifier
+        # take child that contains the identifier = last child
         identifier_child = ctx.getChild(pointer_amount)
 
-        # process child into AST node.
+        # process child. This will return a string
         identifier = self.manuallyVisitChild(identifier_child)
 
         return IdWithPtr(identifier, pointer_amount)
 
-    # TODO replace IdentifierNode with string.
     # Visit a parse tree produced by CParser#identifier.
     def visitIdentifier(self, ctx: CParser.IdentifierContext):
-        return IdentifierNode(ctx.getText())
+        return ctx.getText() # simply return the string representation of the identifier
 
     # Visit a parse tree produced by CParser#pointer.
     def visitPointer(self, ctx: CParser.PointerContext):
-        pass
+        raise Exception("'pointer' rule must node be visited during conversion to AST!")
 
     # Visit a parse tree produced by CParser#constant.
     def visitConstant(self, ctx: CParser.ConstantContext):

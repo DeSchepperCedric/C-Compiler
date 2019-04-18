@@ -3,7 +3,11 @@
 
 int a, b, c=2;
 
-char func(int x, float f);
+char func(int x, float f)
+{
+
+	int* x_addr = &x;
+}
 
 float c[5];
 

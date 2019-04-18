@@ -155,7 +155,7 @@ class SymbolDecl(TopLevelNode):
     """
 
     def __init__(self, symbol_class, symbol_type, symbol_id):
-        super().__init__(node_name="SymbolDecl:" + symbol_class)
+        super().__init__(node_name="Decl:{}\\nType:{}".format(symbol_class, symbol_type))
         self.symbol_type = symbol_type
         self.symbol_id = symbol_id
 
@@ -184,7 +184,7 @@ class ArrayDecl(SymbolDecl):
         return self.size_expr
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.symbol_type, self.symbol_id, self.size_expr],
+        return self.M_defaultToDotImpl(children=[self.symbol_id, self.size_expr],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
@@ -204,7 +204,7 @@ class VarDeclDefault(SymbolDecl):
                          symbol_id=var_id)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.symbol_type, self.symbol_id],
+        return self.M_defaultToDotImpl(children=[self.symbol_id],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
@@ -228,7 +228,7 @@ class VarDeclWithInit(SymbolDecl):
         return self.init_expr
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.symbol_type, self.symbol_id, self.init_expr],
+        return self.M_defaultToDotImpl(children=[self.symbol_id, self.init_expr],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
@@ -251,7 +251,7 @@ class FuncDecl(SymbolDecl):
         return self.param_list
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.symbol_type, self.symbol_id, *self.param_list],
+        return self.M_defaultToDotImpl(children=[self.symbol_id, *self.param_list],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
@@ -266,7 +266,7 @@ class FuncDef(TopLevelNode):
     """
 
     def __init__(self, return_type, func_id, param_list, body):
-        super().__init__(node_name="FuncDef")
+        super().__init__(node_name="FuncDef\\nType:'" + return_type + "'")
         self.return_type = return_type
         self.func_id = func_id
         self.param_list = param_list
@@ -285,7 +285,7 @@ class FuncDef(TopLevelNode):
         return self.body
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.return_type, self.func_id, *self.param_list, self.body],
+        return self.M_defaultToDotImpl(children=[self.func_id, *self.param_list, self.body],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
@@ -299,13 +299,13 @@ class IdWithPtr(ASTNode):
         Node that represents an identifier that can possibly be a pointer: "**id"; "id", "*id", etc.
     """
 
-    def __init__(self, identifier, pointer_count):
+    def __init__(self, identifier : str, pointer_count : int):
         """
             Params:
-                'identifier': An IdentifierNode object that represents the identifier.
+                'identifier': A string that represents the identifier.
                 'pointer_count': An integer that represents the number of pointer stars.
         """
-        super().__init__(node_name="IdWithPtr:" + str(pointer_count))
+        super().__init__(node_name="IdWithPtr\\nPtrs:{}\\nId:'{}'".format(pointer_count, identifier))
         self.identifier = identifier
         self.pointer_count = pointer_count
 
@@ -316,7 +316,7 @@ class IdWithPtr(ASTNode):
         return self.pointer_count
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.identifier],
+        return self.M_defaultToDotImpl(children=[],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
@@ -353,7 +353,7 @@ class FuncParam(ASTNode):
     """
 
     def __init__(self, param_type, param_id):
-        super().__init__(node_name="FuncParam")
+        super().__init__(node_name="FuncParam\\nType:'" + param_type + "'")
         self.param_type = param_type
         self.param_id = param_id
 
@@ -364,7 +364,7 @@ class FuncParam(ASTNode):
         return self.param_id
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.param_type, self.param_id],
+        return self.M_defaultToDotImpl(children=[self.param_id],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
@@ -597,28 +597,6 @@ class Expression(ASTNode):
 # ENDCLASS
 
 
-class ParenExpression(Expression):
-    """
-        Node that represents a parentheses expression: "(expr)".
-    """
-
-    def __init__(self, expression):
-        super().__init__(expression_type="ParenExpression")
-        self.expression = expression
-
-    def getExpr(self):
-        return self.expression
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.expression],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-# ENDCLASS
-
-
 class AssignmentExpr(Expression):
     """
         Node that represents assignment expression.
@@ -813,10 +791,10 @@ class CastExpr(Expression):
     def __init__(self, type_list, expression):
         """
         Params:
-            'type_list': list of TypeNode.
+            'type_list': list of str.
             'expression': The Expression that is cast to the specified types.
         """
-        super().__init__(expression_type="CastExpr")
+        super().__init__(expression_type="CastExpr\\nTypes:{}".format(type_list))
         self.type_list = type_list
         self.expression = expression
 
@@ -827,7 +805,7 @@ class CastExpr(Expression):
         return self.expression
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[*self.type_list, self.expression],
+        return self.M_defaultToDotImpl(children=[self.expression],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
@@ -1041,7 +1019,7 @@ class AddressExpr(Expression):
         Node that represents an address expression: "&x".
     """
     def __init__(self, target_expr):
-        super().__init(expressio_type="AddressExpr")
+        super().__init__(expression_type="AddressExpr")
         self.target_expr = target_expr
 
     def getTargetExpr(self):
@@ -1060,7 +1038,7 @@ class FuncCallExpr(Expression):
         Node that represents a function call: "identifier(params)".
     """
 
-    def __init__(self, function_identifier, argument_list):
+    def __init__(self, function_identifier : str, argument_list):
         """
         Params:
             'function_identifier': IdentifierNode object that represents the identifier of the function.
@@ -1077,7 +1055,7 @@ class FuncCallExpr(Expression):
         return self.argument_list
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.identifier, *self.argument_list],
+        return self.M_defaultToDotImpl(children=[*self.argument_list],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
@@ -1091,15 +1069,15 @@ class IdentifierExpr(Expression):
         Node that represents an identifier expression (different from the idenfier itself!)
     """
 
-    def __init__(self, identifier):
-        super().__init__(expression_type="IdentifierExpr")
+    def __init__(self, identifier : str):
+        super().__init__(expression_type="IdentifierExpr\\n"+identifier)
         self.identifier = identifier
 
     def getIdentifier(self):
         return self.identifier
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.identifier],
+        return self.M_defaultToDotImpl(children=[],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
