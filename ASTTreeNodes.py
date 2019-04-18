@@ -2,6 +2,7 @@ class ASTNode:
     """
         Base class for all nodes in AST Trees.
     """
+
     def __init__(self, node_name):
         self.node_name = node_name
 
@@ -79,14 +80,17 @@ class ASTTestTermNode(ASTNode):
     """
         A terminal node for testing purposes. Will always display as "TestNode" with no children.
     """
+
     def __init__(self):
         super().__init__(node_name="TestNode")
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[], 
-                                       parent_nr=parent_nr, 
-                                       begin_nr=begin_nr, 
+        return self.M_defaultToDotImpl(children=[],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -106,10 +110,12 @@ class ProgramNode(ASTNode):
         return self.children
 
     def toDot(self, parent_nr=None, begin_nr=1, add_open_close=False):
-        return self.M_defaultToDotImpl(children=self.children, 
-                                       parent_nr=parent_nr, 
-                                       begin_nr=begin_nr, 
+        return self.M_defaultToDotImpl(children=self.children,
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -134,10 +140,12 @@ class IncludeNode(TopLevelNode):
         super().__init__(node_name="Include")
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children       = [], 
-                                  parent_nr      = parent_nr, 
-                                  begin_nr       = begin_nr, 
-                                  add_open_close = add_open_close)
+        return self.M_defaultToDotImpl(children=[],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -176,10 +184,12 @@ class ArrayDecl(SymbolDecl):
         return self.size_expr
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children       = [self.symbol_type, self.symbol_id, self.size_expr], 
-                                  parent_nr      = parent_nr, 
-                                  begin_nr       = begin_nr, 
-                                  add_open_close = add_open_close)
+        return self.M_defaultToDotImpl(children=[self.symbol_type, self.symbol_id, self.size_expr],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -194,10 +204,12 @@ class VarDeclDefault(SymbolDecl):
                          symbol_id=var_id)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children       = [self.symbol_type, self.symbol_id], 
-                                  parent_nr      = parent_nr, 
-                                  begin_nr       = begin_nr, 
-                                  add_open_close = add_open_close)
+        return self.M_defaultToDotImpl(children=[self.symbol_type, self.symbol_id],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -216,10 +228,12 @@ class VarDeclWithInit(SymbolDecl):
         return self.init_expr
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children       = [self.symbol_type, self.symbol_id, self.init_expr], 
-                                  parent_nr      = parent_nr, 
-                                  begin_nr       = begin_nr, 
-                                  add_open_close = add_open_close)
+        return self.M_defaultToDotImpl(children=[self.symbol_type, self.symbol_id, self.init_expr],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 class FuncDecl(SymbolDecl):
@@ -237,10 +251,12 @@ class FuncDecl(SymbolDecl):
         return self.param_list
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children       = [self.symbol_type, self.symbol_id, *self.param_list], 
-                                       parent_nr      = parent_nr, 
-                                       begin_nr       = begin_nr, 
-                                       add_open_close = add_open_close)
+        return self.M_defaultToDotImpl(children=[self.symbol_type, self.symbol_id, *self.param_list],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -269,10 +285,12 @@ class FuncDef(TopLevelNode):
         return self.body
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children       = [self.return_type, self.func_id, *self.param_list, self.body], 
-                                       parent_nr      = parent_nr, 
-                                       begin_nr       = begin_nr, 
-                                       add_open_close = add_open_close)
+        return self.M_defaultToDotImpl(children=[self.return_type, self.func_id, *self.param_list, self.body],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -302,6 +320,8 @@ class IdWithPtr(ASTNode):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -322,6 +342,8 @@ class Body(ASTNode):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -346,6 +368,8 @@ class FuncParam(ASTNode):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -356,6 +380,8 @@ class Statement(ASTNode):
 
     def __init__(self, statement_type):
         super().__init__(node_name="Stmt:" + statement_type)
+
+
 # ENDCLASS
 
 
@@ -376,6 +402,8 @@ class CompoundStmt(Statement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -400,6 +428,8 @@ class WhileStmt(Statement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -432,8 +462,9 @@ class ForStmt(Statement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
-# ENDCLASS
 
+
+# ENDCLASS
 
 class BranchStmt(Statement):
     """
@@ -460,6 +491,8 @@ class BranchStmt(Statement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -488,12 +521,14 @@ class ReturnStatement(JumpStatement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
 class BreakStatement(JumpStatement):
     """
-        Node that represents a return statement.
+        Node that represents a break statement.
     """
 
     def __init__(self):
@@ -504,12 +539,14 @@ class BreakStatement(JumpStatement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
 class ContinueStatement(JumpStatement):
     """
-        Node that represents a return statement.
+        Node that represents a continue statement.
     """
 
     def __init__(self):
@@ -520,6 +557,8 @@ class ContinueStatement(JumpStatement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -541,6 +580,8 @@ class ExpressionStatement(Statement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -549,8 +590,10 @@ class Expression(ASTNode):
         Base class for all expression nodes.
     """
 
-    def __init__(self,  expression_type):
+    def __init__(self, expression_type):
         super().__init__(node_name=expression_type)
+
+
 # ENDCLASS
 
 
@@ -567,10 +610,12 @@ class ParenExpression(Expression):
         return self.expression
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children       = [self.expression],
-                                       parent_nr      = parent_nr, 
-                                       begin_nr       = begin_nr, 
-                                       add_open_close = add_open_close)
+        return self.M_defaultToDotImpl(children=[self.expression],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -600,6 +645,8 @@ class AssignmentExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -629,6 +676,8 @@ class LogicBinExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -658,6 +707,8 @@ class EqualityExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -687,6 +738,8 @@ class ComparisonExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -716,6 +769,8 @@ class AdditiveExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -745,6 +800,8 @@ class MultiplicativeExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -774,6 +831,8 @@ class CastExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -794,6 +853,8 @@ class LogicNotExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -814,6 +875,8 @@ class PrefixIncExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 class PrefixDecExpr(Expression):
@@ -833,6 +896,8 @@ class PrefixDecExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -854,6 +919,7 @@ class PostfixIncExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+
 # ENDCLASS
 
 class PostfixDecExpr(Expression):
@@ -873,6 +939,8 @@ class PostfixDecExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -893,6 +961,8 @@ class PlusPrefixExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -913,6 +983,8 @@ class MinPrefixExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -937,6 +1009,8 @@ class ArrayAccessExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -957,6 +1031,8 @@ class PointerDerefExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -986,6 +1062,8 @@ class FuncCallExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -1006,6 +1084,8 @@ class IdentifierExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -1015,7 +1095,7 @@ class ConstantExpr(Expression):
     """
 
     def __init__(self, constant_expr_type, value):
-        super().__init__(expression_type=constant_expr_type+":'" + str(value) + "'")
+        super().__init__(expression_type=constant_expr_type + ":'" + str(value) + "'")
         self.value = value
 
     def getValue(self):
@@ -1026,6 +1106,8 @@ class ConstantExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -1039,6 +1121,8 @@ class IntegerConstantExpr(ConstantExpr):
 
     def getIntValue(self):
         return int(self.getValue())
+
+
 # ENDCLASS
 
 
@@ -1052,6 +1136,8 @@ class FloatConstantExpr(ConstantExpr):
 
     def getFloatValue(self):
         return float(self.getValue())
+
+
 # ENDCLASS
 
 
@@ -1065,6 +1151,8 @@ class StringConstantExpr(ConstantExpr):
 
     def getStrValue(self):
         return str(self.getValue())
+
+
 # ENDCLASS
 
 
@@ -1078,6 +1166,8 @@ class CharConstantExpr(ConstantExpr):
 
     def getCharValue(self):
         return str(self.getValue())
+
+
 # ENDCLASS
 
 
@@ -1091,6 +1181,8 @@ class BoolConstantExpr(ConstantExpr):
 
     def getBoolValue(self):
         return str(self.getValue()).lower() == "true"
+
+
 # ENDCLASS
 
 
@@ -1105,6 +1197,7 @@ class TypeNode(ASTNode):
 
     def getTypeName(self):
         return self.type_name
+
 
 # ENDCLASS
 
@@ -1122,6 +1215,8 @@ class TypeVoid(TypeNode):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -1138,6 +1233,8 @@ class TypeInt(TypeNode):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 class TypeFloat(TypeNode):
@@ -1153,6 +1250,8 @@ class TypeFloat(TypeNode):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
@@ -1184,6 +1283,8 @@ class TypeChar(TypeNode):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+
 # ENDCLASS
 
 
