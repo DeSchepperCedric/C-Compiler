@@ -140,6 +140,7 @@ class ParserVisitor(CVisitor):
         return_type = self.manuallyVisitChild(ctx.getChild(0))
         func_id = self.manuallyVisitChild(ctx.getChild(1))
 
+        # TODO cleaner algo for parameter extraction
         param_list = list()
         # first parameter
         if len(ctx.getChildren()) >= 6:
@@ -171,6 +172,7 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#forLoop.
     def visitForLoop(self, ctx: CParser.ForLoopContext):
         # TODO init? both for declr and no declr?
+        # TODO finish this
         return self.visitChildren(ctx)
 
     # Visit a parse tree produced by CParser#whileLoop.
@@ -235,6 +237,7 @@ class ParserVisitor(CVisitor):
 
         unary_expr = self.manuallyVisitChild(ctx.getChild(0))
         operator = self.manuallyVisitChild(ctx.getChild(1))
+        # TODO check if type of operator is string
         assignment_expr = self.manuallyVisitChild(ctx.getChild(2))
 
         return AssignmentExpr(unary_expr, assignment_expr, operator)
@@ -245,10 +248,12 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#logical_or_expr.
     def visitLogical_or_expr(self, ctx: CParser.Logical_or_exprContext):
+        # TODO finish
         return self.visitChildren(ctx)
 
     # Visit a parse tree produced by CParser#logical_and_expr.
     def visitLogical_and_expr(self, ctx: CParser.Logical_and_exprContext):
+        # TODO finish
         return self.visitChildren(ctx)
 
     # Visit a parse tree produced by CParser#equality_expr.
@@ -395,6 +400,7 @@ class ParserVisitor(CVisitor):
 
         # Visit a parse tree produced by CParser#type_int.
 
+    # TODO replace types by string
     def visitType_int(self, ctx: CParser.Type_intContext):
         return TypeInt()
 
@@ -426,6 +432,7 @@ class ParserVisitor(CVisitor):
 
         return IdWithPtr(identifier, pointer_amount)
 
+    # TODO replace IdentifierNode with string.
     # Visit a parse tree produced by CParser#identifier.
     def visitIdentifier(self, ctx: CParser.IdentifierContext):
         return IdentifierNode(ctx.getText())
