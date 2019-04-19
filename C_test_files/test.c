@@ -17,7 +17,7 @@ char func()
         }
         else
         {
-            break;
+            //break;
         }
 
         continue; // mag weg indien else statement aanwezig is

@@ -468,12 +468,7 @@ class BranchStmt(Statement):
         return self.else_body
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        if self.else_body is None:
-            children = [self.cond_expr, self.if_body]
-        else:
-            children = [self.cond_expr, self.if_body, self.else_body]
-
-        return self.M_defaultToDotImpl(children=children,
+        return self.M_defaultToDotImpl(children=[self.cond_expr, self.if_body, self.else_body],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
