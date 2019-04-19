@@ -163,7 +163,7 @@ class ParserVisitor(CVisitor):
     def visitStatement(self, ctx: CParser.StatementContext):
         return self.manuallyVisitChild(ctx.getChild(0))
 
-    # TODO fix this: add Body object
+
     # Visit a parse tree produced by CParser#if_statement.
     def visitIf_statement(self, ctx: CParser.If_statementContext):
         # if ( expr ) statement
@@ -202,7 +202,6 @@ class ParserVisitor(CVisitor):
 
         return [BranchStmt(cond_expr, if_body, else_body)]
 
-    # TODO finish this
     # Visit a parse tree produced by CParser#forLoop.
     def visitForLoop(self, ctx: CParser.ForLoopContext):
         # FOR LEFT_PAREN for_condition RIGHT_PAREN statement # forLoop
@@ -225,46 +224,33 @@ class ParserVisitor(CVisitor):
         return [ForStmt(init_list, cond_expr, iter_list, body)]
 
     # Visit a parse tree produced by CParser#forCondWithDecl.
-    def visitForCondWithDecl(self, ctx: CParser.ForCondWithDeclContext):
+    def visitFor_condition(self, ctx: CParser.For_conditionContext):
         # declaration SC expression? SC expression? # forCondWithDecl
-
-        # child 0 = decl
-        decl_list = self.manuallyVisitChild(ctx.getChild(0))
-
-        # child 1 = ';'
-
-        # if child 2 = exactly one expr
-        if ctx.getChild(2).getText() != ";":
-            # TODO is this a list???
-            cond_expr = self.manuallyVisitChild(ctx.getChild(2))
-
-            # child 3 will now be ";"
-
-            # check if child 4 is present
-            if ctx.getChildren() == 5:
-                iter_list = self.manuallyVisitChild(ctx.getChild(4))
-            else:
-                iter_list = []
-        else:
-            cond_expr = None
-            # child 2 is ";"
-
-            # check if child 3 is present
-            if ctx.getChildren() == 4:
-                iter_list = self.manuallyVisitChild(ctx.getChild(3))
-            else:
-                iter_list = []
-
-        return (decl_list, cond_expr, iter_list)
-
-    # Visit a parse tree produced by CParser#forCondNoDecl.
-    def visitForCondNoDecl(self, ctx: CParser.ForCondNoDeclContext):
         # expression? SC assignment_expr? SC expression? # forCondNoDecl
-        pass
-        # TODO finish this, same as with decl, now conditional presence of first expr node.
 
+        targets = ["INIT", "COND", "ITER"]
+        cur_target = 0 # specifies what we're looking for
 
-    # TODO finish this: add Body object
+        init_list = [EmptyNode()]
+        cond_expr = EmptyNode()
+        iter_list = [EmptyNode()]
+
+        for i in range(0, ctx.getChildCount()):
+            if ctx.getChild(i).getText() == ";":
+                # separator
+                # go to next target
+                cur_target += 1
+            else:
+                # we found something: assign it to the target
+                if targets[cur_target] == "INIT":
+                    init_list = self.manuallyVisitChild(ctx.getChild(i))
+                elif targets[cur_target] == "COND":
+                    cond_expr = self.manuallyVisitChild(ctx.getChild(i))
+                elif targets[cur_target] == "ITER":
+                    iter_list = self.manuallyVisitChild(ctx.getChild(i))
+
+        return (init_list, cond_expr, iter_list)
+
     # Visit a parse tree produced by CParser#whileLoop.
     def visitWhileLoop(self, ctx: CParser.WhileLoopContext):
         # while ( expr ) statement
@@ -365,11 +351,22 @@ class ParserVisitor(CVisitor):
         if ctx.getChildCount() == 1:
             return self.manuallyVisitChild(ctx.getChild(0))
 
-        unary_expr = self.manuallyVisitChild(ctx.getChild(0))
+        left = self.manuallyVisitChild(ctx.getChild(0))
         operator = self.manuallyVisitChild(ctx.getChild(1))  # visits the operator node, and returns string
-        assignment_expr = self.manuallyVisitChild(ctx.getChild(2))
+        right = self.manuallyVisitChild(ctx.getChild(2))
 
-        return AssignmentExpr(unary_expr, assignment_expr, operator)
+        if operator == "=":
+            return AssignmentExpr(left, right)
+        elif operator == "+=":
+            return AddAssignmentExpr(left, right)
+        elif operator == "-=":
+            return SubAssignmentExpr(left, right)
+        elif operator == "*=":
+            return MulAssignmentExpr(left, right)
+        elif operator == "/=":
+            return DivAssignmentExpr(left, right)
+        else:
+            raise Exception("Invalid operator for assignment expr: {}".format(operator))
 
     # Visit a parse tree produced by CParser#assignment_operator.
     def visitAssignment_operator(self, ctx: CParser.Assignment_operatorContext):
@@ -413,7 +410,12 @@ class ParserVisitor(CVisitor):
         operator = ctx.getChild(1).getText()
         right = self.manuallyVisitChild(ctx.getChild(2))
 
-        return EqualityExpr(left, right, operator)
+        if operator == "==":
+            return EqualityExpr(left, right)
+        elif operator == "!=":
+            return InequalityExpr(left, right)
+        else:
+            raise Exception("Invalid operator for equality expr: {}".format(operator))
 
     # Visit a parse tree produced by CParser#relational_expr.
     def visitRelational_expr(self, ctx: CParser.Relational_exprContext):
@@ -425,7 +427,16 @@ class ParserVisitor(CVisitor):
         operator = ctx.getChild(1).getText()
         right = self.manuallyVisitChild(ctx.getChild(2))
 
-        return ComparisonExpr(left, right, operator)
+        if operator == ">":
+            return CompGreater(left, right)
+        elif operator == "<":
+            return CompLess(left, right)
+        elif operator == ">=":
+            return CompGreaterEqual(left, right)
+        elif operator == "<=":
+            return CompLessEqual(left, right)
+        else:
+            raise Exception("Invalid operator for comparison expr: {}".format(operator))
 
     # Visit a parse tree produced by CParser#additive_expr.
     def visitAdditive_expr(self, ctx: CParser.Additive_exprContext):
@@ -437,7 +448,12 @@ class ParserVisitor(CVisitor):
         operator = ctx.getChild(1).getText()
         right = self.manuallyVisitChild(ctx.getChild(2))
 
-        return AdditiveExpr(left, right, operator)
+        if operator == "+":
+            return AddExpr(left, right)
+        elif operator == "-":
+            return SubExpr(left, right)
+        else:
+            raise Exception("Invalid operator for additive expr: {}".format(operator))
 
     # Visit a parse tree produced by CParser#multiplicative_expr.
     def visitMultiplicative_expr(self, ctx: CParser.Multiplicative_exprContext):
@@ -449,7 +465,14 @@ class ParserVisitor(CVisitor):
         operator = ctx.getChild(1).getText()
         right = self.manuallyVisitChild(ctx.getChild(2))
 
-        return MultiplicativeExpr(left, right, operator)
+        if operator == "*":
+            return MulExpr(left, right)
+        elif operator == "/":
+            return DivExpr(left, right)
+        elif operator == "%":
+            return ModExpr(left, right)
+        else:
+            raise Exception("Invalid operator for multiplicative expr: {}".format(operator))
 
     # Visit a parse tree produced by CParser#cast_expr.
     def visitCast_expr(self, ctx: CParser.Cast_exprContext):
@@ -625,7 +648,8 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#str_constant.
     def visitStr_constant(self, ctx: CParser.Str_constantContext):
-        return StringConstantExpr(ctx.getText())
+        constant = ctx.getText().rstrip("\"").lstrip("\"") # remove "
+        return StringConstantExpr(constant)
 
     # Visit a parse tree produced by CParser#char_constant.
     def visitChar_constant(self, ctx: CParser.Char_constantContext):

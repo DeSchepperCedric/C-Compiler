@@ -47,8 +47,8 @@ iteration_statement
 // note: usually the conditions in forloops can be multiple expressions, but these
 // are ignored anyway so we leave them out.
 for_condition
-	: declaration SC assignment_expr? SC expression? # forCondWithDecl
-	| expression? SC assignment_expr? SC expression? # forCondNoDecl
+	: declaration SC assignment_expr? SC expression? 
+	| expression? SC assignment_expr? SC expression? 
 	;
 
 compound_statement : LEFT_BRACE block_item* RIGHT_BRACE ;

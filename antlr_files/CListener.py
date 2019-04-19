@@ -134,21 +134,12 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#forCondWithDecl.
-    def enterForCondWithDecl(self, ctx:CParser.ForCondWithDeclContext):
+    # Enter a parse tree produced by CParser#for_condition.
+    def enterFor_condition(self, ctx:CParser.For_conditionContext):
         pass
 
-    # Exit a parse tree produced by CParser#forCondWithDecl.
-    def exitForCondWithDecl(self, ctx:CParser.ForCondWithDeclContext):
-        pass
-
-
-    # Enter a parse tree produced by CParser#forCondNoDecl.
-    def enterForCondNoDecl(self, ctx:CParser.ForCondNoDeclContext):
-        pass
-
-    # Exit a parse tree produced by CParser#forCondNoDecl.
-    def exitForCondNoDecl(self, ctx:CParser.ForCondNoDeclContext):
+    # Exit a parse tree produced by CParser#for_condition.
+    def exitFor_condition(self, ctx:CParser.For_conditionContext):
         pass
 
 

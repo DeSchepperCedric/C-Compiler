@@ -1339,86 +1339,44 @@ class CParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
+        def declaration(self):
+            return self.getTypedRuleContext(CParser.DeclarationContext,0)
 
-        def getRuleIndex(self):
-            return CParser.RULE_for_condition
-
-     
-        def copyFrom(self, ctx:ParserRuleContext):
-            super().copyFrom(ctx)
-
-
-
-    class ForCondNoDeclContext(For_conditionContext):
-
-        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.For_conditionContext
-            super().__init__(parser)
-            self.copyFrom(ctx)
 
         def SC(self, i:int=None):
             if i is None:
                 return self.getTokens(CParser.SC)
             else:
                 return self.getToken(CParser.SC, i)
+
+        def assignment_expr(self):
+            return self.getTypedRuleContext(CParser.Assignment_exprContext,0)
+
+
         def expression(self, i:int=None):
             if i is None:
                 return self.getTypedRuleContexts(CParser.ExpressionContext)
             else:
                 return self.getTypedRuleContext(CParser.ExpressionContext,i)
 
-        def assignment_expr(self):
-            return self.getTypedRuleContext(CParser.Assignment_exprContext,0)
 
+        def getRuleIndex(self):
+            return CParser.RULE_for_condition
 
         def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterForCondNoDecl" ):
-                listener.enterForCondNoDecl(self)
+            if hasattr( listener, "enterFor_condition" ):
+                listener.enterFor_condition(self)
 
         def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitForCondNoDecl" ):
-                listener.exitForCondNoDecl(self)
+            if hasattr( listener, "exitFor_condition" ):
+                listener.exitFor_condition(self)
 
         def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitForCondNoDecl" ):
-                return visitor.visitForCondNoDecl(self)
+            if hasattr( visitor, "visitFor_condition" ):
+                return visitor.visitFor_condition(self)
             else:
                 return visitor.visitChildren(self)
 
-
-    class ForCondWithDeclContext(For_conditionContext):
-
-        def __init__(self, parser, ctx:ParserRuleContext): # actually a CParser.For_conditionContext
-            super().__init__(parser)
-            self.copyFrom(ctx)
-
-        def declaration(self):
-            return self.getTypedRuleContext(CParser.DeclarationContext,0)
-
-        def SC(self, i:int=None):
-            if i is None:
-                return self.getTokens(CParser.SC)
-            else:
-                return self.getToken(CParser.SC, i)
-        def assignment_expr(self):
-            return self.getTypedRuleContext(CParser.Assignment_exprContext,0)
-
-        def expression(self):
-            return self.getTypedRuleContext(CParser.ExpressionContext,0)
-
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterForCondWithDecl" ):
-                listener.enterForCondWithDecl(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitForCondWithDecl" ):
-                listener.exitForCondWithDecl(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitForCondWithDecl" ):
-                return visitor.visitForCondWithDecl(self)
-            else:
-                return visitor.visitChildren(self)
 
 
 
@@ -1432,7 +1390,6 @@ class CParser ( Parser ):
             self._errHandler.sync(self)
             token = self._input.LA(1)
             if token in [CParser.CHAR, CParser.INT, CParser.FLOAT, CParser.VOID, CParser.BOOL]:
-                localctx = CParser.ForCondWithDeclContext(self, localctx)
                 self.enterOuterAlt(localctx, 1)
                 self.state = 189
                 self.declaration()
@@ -1458,7 +1415,6 @@ class CParser ( Parser ):
 
                 pass
             elif token in [CParser.SC, CParser.INCREMENT, CParser.DECREMENT, CParser.PLUS, CParser.MINUS, CParser.STAR, CParser.LEFT_PAREN, CParser.NOT, CParser.AMPERSAND, CParser.BOOL_CONSTANT, CParser.INTEGER_CONSTANT, CParser.FLOAT_CONSTANT, CParser.CHAR_CONSTANT, CParser.STRING_CONSTANT, CParser.ID]:
-                localctx = CParser.ForCondNoDeclContext(self, localctx)
                 self.enterOuterAlt(localctx, 2)
                 self.state = 199
                 self._errHandler.sync(self)
