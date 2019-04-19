@@ -186,12 +186,16 @@ class ParserVisitor(CVisitor):
         # if it is a single compound statement -> unpack and add contents to body
         # if it is a list of statements -> add to body
         if len(if_body_list) == 1 and isinstance(if_body_list[0], CompoundStmt):
-            pass  # unpack
+            compound_statement = if_body_list[0]
+
+            if_body = Body(compound_statement.child_list)
         else:
             if_body = Body(if_body_list)
 
         if len(else_body_list) == 1 and isinstance(else_body_list[0], CompoundStmt):
-            pass  # unpack
+            compound_statement = if_body_list[0]
+
+            if_body = Body(compound_statement.child_list)
         else:
             else_body = Body(else_body_list)
 
