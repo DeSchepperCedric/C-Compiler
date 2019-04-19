@@ -61,11 +61,8 @@ class ASTNode:
         current_node_nr += 1
         new_children = list()
         for child in children:
-            if child is None:
-                continue
-
             if isinstance(child, list):
-                new_children.append(*child)
+                new_children.extend(child)
             else:
                 new_children.append(child)
 
@@ -405,11 +402,11 @@ class ForStmt(Statement):
         Node that represents a for loop.
     """
 
-    def __init__(self, init, condition_expr, iter_expr, body):
+    def __init__(self, init, condition_expr, iter_exprs, body):
         super().__init__(statement_type="ForStmt")
         self.init = init
         self.cond_expr = condition_expr
-        self.iter_expr = iter_expr
+        self.iter_exprs = iter_exprs
         self.body = body
 
     def getInit(self):
