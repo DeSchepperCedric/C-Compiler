@@ -512,7 +512,7 @@ class ExpressionStatement(Statement):
 
     def __init__(self, expression):
         super().__init__(statement_type="ExpressionStatement")
-        self.expressions = expression
+        self.expression = expression
 
     def getExpression(self):
         return self.expression
@@ -566,7 +566,7 @@ class LogicOrExpr(Expression):
         Node that represents OR expression.
     """
 
-    def __init__(self, left, right, operator):
+    def __init__(self, left, right):
         super().__init__(expression_type="LogicOrExpr")
         self.left = left
         self.right = right

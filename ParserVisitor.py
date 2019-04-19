@@ -1,10 +1,6 @@
 from antlr_files.CVisitor import CVisitor
-from antlr_files.CLexer import CLexer
-from antlr_files.CListener import CListener
 from antlr_files.CParser import CParser
 from ASTTreeNodes import *
-
-import sys
 
 
 class ParserVisitor(CVisitor):
@@ -171,6 +167,8 @@ class ParserVisitor(CVisitor):
     def visitIf_statement(self, ctx: CParser.If_statementContext):
         # if ( expr ) statement
         # if ( expr ) statement else statement
+        if_body = None
+        else_body = None
 
         # child #2 = expr
         cond_expr = self.manuallyVisitChild(ctx.getChild(2))
@@ -183,21 +181,19 @@ class ParserVisitor(CVisitor):
         if ctx.getChildCount() == 7:
             else_body_list = self.manuallyVisitChild(ctx.getChild(6))
 
-
         # if- and else-body are now (maybe empty) list of statement
 
         # if it is a single compound statement -> unpack and add contents to body
         # if it is a list of statements -> add to body
         if len(if_body_list) == 1 and isinstance(if_body_list[0], CompoundStmt):
-            pass # unpack
+            pass  # unpack
         else:
             if_body = Body(if_body_list)
 
         if len(else_body_list) == 1 and isinstance(else_body_list[0], CompoundStmt):
-            pass # unpack
+            pass  # unpack
         else:
             else_body = Body(else_body_list)
-
 
         return [BranchStmt(cond_expr, if_body, else_body)]
 
@@ -227,22 +223,18 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#compound_statement.
     def visitCompound_statement(self, ctx: CParser.Compound_statementContext):
-        stat_list = list()
-
         # n children
-        #    each child is a list of either statement or declaration
+        # each child is a list of either statement or declaration
 
         block_item_list = [self.manuallyVisitChild(child) for child in ctx.getChildren()]
-        
-        statement_list = []
 
         # each block_item is a list of statements
-        statement_list = [*block_item for block_item in block_item_list]
+        statement_list = [block_item for block_item in block_item_list]
 
         return [CompoundStmt(statement_list)]
 
     # Visit a parse tree produced by CParser#blockItemStatement.
-    def visitBlockItemStatement(self, ctx:CParser.BlockItemStatementContext):
+    def visitBlockItemStatement(self, ctx: CParser.BlockItemStatementContext):
         # this rule will return to Compound statement, it returns a list
         # child 0 = statement
 
@@ -251,12 +243,12 @@ class ParserVisitor(CVisitor):
         # each child is a list (this is since expressionStatement in C can have multiple expressions)
         # we extends the statement list with each child
 
-        stat_list = [*child for child in processed_children]
+        stat_list = [child for child in processed_children]
 
         return stat_list
 
     # Visit a parse tree produced by CParser#blockItemDeclaration.
-    def visitBlockItemDeclaration(self, ctx:CParser.BlockItemDeclarationContext):
+    def visitBlockItemDeclaration(self, ctx: CParser.BlockItemDeclarationContext):
         # this rule will return to Compound statement, it returns a list
         # child 0 = decls (can be multple -> list of decl)
         # child 1 = SC
@@ -293,7 +285,7 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#expression.
     def visitExpression(self, ctx: CParser.ExpressionContext):
         # filter out all useless children.
-        expr_children = filter(lamda c: c.getText() != ",", ctx.getChildren())
+        expr_children = filter(lambda c: c.getText() != ",", ctx.getChildren())
 
         expr_list = [self.manuallyVisitChild(child) for child in expr_children]
 
@@ -306,7 +298,7 @@ class ParserVisitor(CVisitor):
             return self.manuallyVisitChild(ctx.getChild(0))
 
         unary_expr = self.manuallyVisitChild(ctx.getChild(0))
-        operator = self.manuallyVisitChild(ctx.getChild(1)) # visits the operator node, and returns string
+        operator = self.manuallyVisitChild(ctx.getChild(1))  # visits the operator node, and returns string
         assignment_expr = self.manuallyVisitChild(ctx.getChild(2))
 
         return AssignmentExpr(unary_expr, assignment_expr, operator)
@@ -485,7 +477,7 @@ class ParserVisitor(CVisitor):
         return self.manuallyVisitChild(ctx.getChild(1))
 
     # Visit a parse tree produced by CParser#idExpr.
-    def visitIdExpr(self, ctx:CParser.IdExprContext):
+    def visitIdExpr(self, ctx: CParser.IdExprContext):
         # return an identifier expression
 
         id_str = self.manuallyVisitChild(ctx.getChild(0))
@@ -533,7 +525,7 @@ class ParserVisitor(CVisitor):
 
         # return a tuple that contains the information
         # an AST node is not needed
-        return (identifier, pointer_amount)
+        return identifier, pointer_amount
 
     # Visit a parse tree produced by CParser#identifier.
     def visitIdentifier(self, ctx: CParser.IdentifierContext):
@@ -567,4 +559,3 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#bool_constant.
     def visitBool_constant(self, ctx: CParser.Bool_constantContext):
         return BoolConstantExpr(ctx.getText())
-

@@ -58,7 +58,7 @@ def rec_visit(cur_node, cur_id):
 
 
 class PrintListener(CListener):
-    def enterProgram(self, ctx:CParser.ProgramContext):
+    def enterProgram(self, ctx: CParser.ProgramContext):
         rec_visit(ctx, 0)
     # ENDMETHOD
 # ENDCLASS
