@@ -45,6 +45,29 @@ class SymbolTable:
         self.children.append(child)
         return child
 
+    def isGlobal(self, symbol):
+        """
+                Lookup a symbol in the symbol table
+                :param symbol: The symbol to be found
+                :param own_scope_only: only check own scope or also parents
+                :return: 0 when not found, symbol type when found
+                """
+        # symbol found in current scope, and is global
+        if symbol in self.symbols and self.parent is None:
+            return True
+
+        # symbol found in current scope, isn't global
+        elif symbol in self.symbols:
+            return False
+
+        # look for symbol in parent symbol table
+        elif self.parent is not None:
+            return self.parent.isGlobal(symbol)
+
+        # symbol isn't found
+        else:
+            return 0
+
 
 def print_symbol_table_to_dot(root):
     """

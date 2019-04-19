@@ -560,7 +560,6 @@ class ParserVisitor(CVisitor):
         for arg_expr_list in argument_exprs:
             argument_nodes.extend(arg_expr_list)
 
-
         return FuncCallExpr(function_id, argument_nodes)
 
     # Visit a parse tree produced by CParser#postfixInc.

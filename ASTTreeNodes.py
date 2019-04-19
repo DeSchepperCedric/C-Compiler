@@ -78,7 +78,7 @@ class ASTNode:
         if add_open_close:
             dotdata = "digraph ast_tree {\nsplines=ortho;\n" + dotdata + "}\n"
 
-        return (current_node_nr, dotdata)
+        return current_node_nr, dotdata
 
 
 class ASTTestTermNode(ASTNode):
@@ -200,7 +200,7 @@ class ArrayDecl(SymbolDecl):
         Node that represents an array declaration: "type id[size_expr];"
     """
 
-    def __init__(self, array_type : str, array_id : str, ptr_count : int, size_expr):
+    def __init__(self, array_type: str, array_id: str, ptr_count: int, size_expr):
         super().__init__(symbol_class="Array",
                          symbol_type=array_type,
                          symbol_id=array_id,
@@ -1068,6 +1068,7 @@ class PostfixIncExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
 
 class PostfixDecExpr(Expression):
     """
