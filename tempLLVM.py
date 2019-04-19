@@ -6,6 +6,7 @@ class LLVMGeneratorExpressions:
         self.cur_reg = 0
 
     def additiveExpr(self, expr):
+        # add (int) or fadd (float)
         code = ""
         left = ""
         right = ""
@@ -25,42 +26,10 @@ class LLVMGeneratorExpressions:
 
         code += "%{} = {} {} {}".format(self.cur_reg, add, left, right)
 
+
 def astNodeToLLVM(node):
     # TODO large if/elif statement containing all the different options
     pass
-
-
-def include():
-    return ""
-
-
-def identifier(id_):
-    """
-    transform IdentifierNode to llvm code string
-    :param id_: identifier
-    :return: LLVM string
-    """
-    return "%{}".format(id_.getID())
-
-
-def getType(type_):
-    """
-    transform TypeNode to llvm code string
-    :param type_: type node
-    :return: LLVM string
-    """
-
-    if isinstance(type_, TypeBool):
-        return "i1"
-    elif isinstance(type_, TypeChar):
-        # TODO how to represent chars?
-        return
-    elif isinstance(type_, TypeFloat):
-        return "float"
-    elif isinstance(type_, TypeInt):
-        return "i32"
-    elif isinstance(type_, TypeVoid):
-        return "void"
 
 
 def isConstant(node):
