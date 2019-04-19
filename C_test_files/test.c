@@ -5,18 +5,12 @@ int a, b, c=2;
 
 char func(int x, float f)
 {
-	float y;
+	int x = 0;
 
-	y = (float) z;
-
-	f(x);
-
-	int* x_addr = &x;
-
-	x--;
-	x++;
-	++x;
-	--x;
+	for(int i = 0; i < 60; i++)
+	{
+		printf("%d", i);
+	}
 }
 
 float c[5];

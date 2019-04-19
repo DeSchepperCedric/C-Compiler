@@ -402,27 +402,33 @@ class ForStmt(Statement):
         Node that represents a for loop.
     """
 
-    def __init__(self, init, condition_expr, iter_exprs, body):
+    def __init__(self, init_list, condition_expr, iter_list, body):
+        """
+            'init_list': a list of declarations, or expressions.
+            'condition_expr': an expression that will be evaluated to determine whether or not to 
+            continue iterating, or None.
+            'iter_list': a list of expressions that will be performed at the end of each iteration.
+        """
         super().__init__(statement_type="ForStmt")
-        self.init = init
+        self.init_list = init_list
         self.cond_expr = condition_expr
-        self.iter_exprs = iter_exprs
+        self.iter_list = iter_list
         self.body = body
 
-    def getInit(self):
-        return self.init
+    def getInitList(self):
+        return self.init_list
 
     def getCondExpr(self):
         return self.cond_expr
 
-    def getIterExpr(self):
-        return self.iter_expr
+    def getIterList(self):
+        return self.iter_list
 
     def getBody(self):
         return self.body
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.init, self.cond_expr, self.iter_expr, self.body],
+        return self.M_defaultToDotImpl(children=[*self.init_list, self.cond_expr, *self.iter_list, self.body],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
@@ -961,7 +967,7 @@ class FuncCallExpr(Expression):
         return self.argument_list
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[*self.argument_list],
+        return self.M_defaultToDotImpl(children=[self.identifier, *self.argument_list],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)

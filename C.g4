@@ -40,13 +40,15 @@ statement
 if_statement: IF LEFT_PAREN expression RIGHT_PAREN statement (ELSE statement)? ;
 
 iteration_statement
-        : WHILE LEFT_PAREN expression RIGHT_PAREN statement  # forLoop
-	    | FOR LEFT_PAREN for_condition RIGHT_PAREN statement # whileLoop
+        : WHILE LEFT_PAREN expression RIGHT_PAREN statement  # WhileLoop
+	    | FOR LEFT_PAREN for_condition RIGHT_PAREN statement # forLoop
 	    ;
 
+// note: usually the conditions in forloops can be multiple expressions, but these
+// are ignored anyway so we leave them out.
 for_condition
-	: declaration SC expression? SC expression? # forCondWithDecl
-	| expression? SC expression? SC expression? # forCondNoDecl
+	: declaration SC assignment_expr? SC expression? # forCondWithDecl
+	| expression? SC assignment_expr? SC expression? # forCondNoDecl
 	;
 
 compound_statement : LEFT_BRACE block_item* RIGHT_BRACE ;

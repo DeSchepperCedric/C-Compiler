@@ -116,21 +116,21 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#WhileLoop.
+    def enterWhileLoop(self, ctx:CParser.WhileLoopContext):
+        pass
+
+    # Exit a parse tree produced by CParser#WhileLoop.
+    def exitWhileLoop(self, ctx:CParser.WhileLoopContext):
+        pass
+
+
     # Enter a parse tree produced by CParser#forLoop.
     def enterForLoop(self, ctx:CParser.ForLoopContext):
         pass
 
     # Exit a parse tree produced by CParser#forLoop.
     def exitForLoop(self, ctx:CParser.ForLoopContext):
-        pass
-
-
-    # Enter a parse tree produced by CParser#whileLoop.
-    def enterWhileLoop(self, ctx:CParser.WhileLoopContext):
-        pass
-
-    # Exit a parse tree produced by CParser#whileLoop.
-    def exitWhileLoop(self, ctx:CParser.WhileLoopContext):
         pass
 
 

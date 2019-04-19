@@ -69,13 +69,13 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#forLoop.
-    def visitForLoop(self, ctx:CParser.ForLoopContext):
+    # Visit a parse tree produced by CParser#WhileLoop.
+    def visitWhileLoop(self, ctx:CParser.WhileLoopContext):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#whileLoop.
-    def visitWhileLoop(self, ctx:CParser.WhileLoopContext):
+    # Visit a parse tree produced by CParser#forLoop.
+    def visitForLoop(self, ctx:CParser.ForLoopContext):
         return self.visitChildren(ctx)
 
 

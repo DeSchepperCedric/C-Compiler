@@ -137,23 +137,27 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#func_def.
     def visitFunc_def(self, ctx: CParser.Func_defContext):
+        # type id_with_ptr ( param , param ) compound_statement
         return_type = self.manuallyVisitChild(ctx.getChild(0))
 
         # tuple that contains the declared identifier and the pointer count
         func_id, ptr_count = self.manuallyVisitChild(ctx.getChild(1))
 
-        # TODO cleaner algo for parameter extraction
-        param_list = list()
-        # first parameter
-        if ctx.getChildCount() >= 6:
-            param_list.append(self.manuallyVisitChild(ctx.getChild(3)))
 
-        if ctx.getChildCount() > 6:
-            for i in range(5, ctx.getChildCount() - 6, 2):
-                param_list.append(self.manuallyVisitChild(ctx.getChild(i)))
+        # the body is the last statement
+        body_child = ctx.getChild(ctx.getChildCount()-1)
+        compound_statement = self.manuallyVisitChild(body_child)[0]
+        body = Body(compound_statement.child_list)
 
-        body = self.manuallyVisitChild(ctx.getChild(ctx.getChildCount() - 1))
-        return FuncDef(return_type, func_id, ptr_count, param_list, body)
+        # the parameter part of the function def is the entire
+        # child list without the first and last child
+        param_section = list(ctx.getChildren())[2:-1]
+
+        param_children = filter(lambda c : not c.getText() in ['(', ',', ')'], param_section)
+
+        param_nodes = [self.manuallyVisitChild(child) for child in param_children]
+
+        return FuncDef(return_type, func_id, ptr_count, param_nodes, body)
 
     # Visit a parse tree produced by CParser#statement.
     def visitStatement(self, ctx: CParser.StatementContext):
@@ -201,9 +205,64 @@ class ParserVisitor(CVisitor):
     # TODO finish this
     # Visit a parse tree produced by CParser#forLoop.
     def visitForLoop(self, ctx: CParser.ForLoopContext):
-        # TODO init? both for declr and no declr?
-        # TODO finish this
-        return self.visitChildren(ctx)
+        # FOR LEFT_PAREN for_condition RIGHT_PAREN statement # forLoop
+
+        # add body!
+
+        init_list, cond_expr, iter_list = self.manuallyVisitChild(ctx.getChild(2))
+
+        body_statements = self.manuallyVisitChild(ctx.getChild(4))
+        
+        # if the statement after the forloop loop, is a compound statement
+        # we use its contents instead of the compound itself.
+        if len(body_statements) == 1 and isinstance(body_statements[0], CompoundStmt):
+            compound_statement = body_statements[0]
+
+            body = Body(compound_statement.child_list)
+        else:
+            body = Body(body_statements)
+
+        return [ForStmt(init_list, cond_expr, iter_list, body)]
+
+    # Visit a parse tree produced by CParser#forCondWithDecl.
+    def visitForCondWithDecl(self, ctx: CParser.ForCondWithDeclContext):
+        # declaration SC expression? SC expression? # forCondWithDecl
+
+        # child 0 = decl
+        decl_list = self.manuallyVisitChild(ctx.getChild(0))
+
+        # child 1 = ';'
+
+        # if child 2 = exactly one expr
+        if ctx.getChild(2).getText() != ";":
+            # TODO is this a list???
+            cond_expr = self.manuallyVisitChild(ctx.getChild(2))
+
+            # child 3 will now be ";"
+
+            # check if child 4 is present
+            if ctx.getChildren() == 5:
+                iter_list = self.manuallyVisitChild(ctx.getChild(4))
+            else:
+                iter_list = []
+        else:
+            cond_expr = None
+            # child 2 is ";"
+
+            # check if child 3 is present
+            if ctx.getChildren() == 4:
+                iter_list = self.manuallyVisitChild(ctx.getChild(3))
+            else:
+                iter_list = []
+
+        return (decl_list, cond_expr, iter_list)
+
+    # Visit a parse tree produced by CParser#forCondNoDecl.
+    def visitForCondNoDecl(self, ctx: CParser.ForCondNoDeclContext):
+        # expression? SC assignment_expr? SC expression? # forCondNoDecl
+        pass
+        # TODO finish this, same as with decl, now conditional presence of first expr node.
+
 
     # TODO finish this: add Body object
     # Visit a parse tree produced by CParser#whileLoop.
@@ -223,25 +282,22 @@ class ParserVisitor(CVisitor):
 
         return [WhileStmt(cond_expr, body)]
 
-    # Visit a parse tree produced by CParser#forCondWithDecl.
-    def visitForCondWithDecl(self, ctx: CParser.ForCondWithDeclContext):
-        # TODO how to? own node?
-        return self.visitChildren(ctx)
-
-    # Visit a parse tree produced by CParser#forCondNoDecl.
-    def visitForCondNoDecl(self, ctx: CParser.ForCondNoDeclContext):
-        # TODO how to? own node?
-        return self.visitChildren(ctx)
-
     # Visit a parse tree produced by CParser#compound_statement.
     def visitCompound_statement(self, ctx: CParser.Compound_statementContext):
+        # { child, child, child }
         # n children
         # each child is a list of either statement or declaration
 
-        block_item_list = [self.manuallyVisitChild(child) for child in ctx.getChildren()]
+        # remove braces
+        child_part = list(ctx.getChildren())[1:-1]
+
+        block_item_list = [self.manuallyVisitChild(child) for child in child_part]
 
         # each block_item is a list of statements
-        statement_list = [block_item for block_item in block_item_list]
+        statement_list = []
+
+        for block_item in block_item_list:
+            statement_list.extend(block_item)
 
         return [CompoundStmt(statement_list)]
 
@@ -474,7 +530,13 @@ class ParserVisitor(CVisitor):
 
         arg_ctx_list = [node for node in list(ctx.getChildren())[1:] if not node.getText() in [',', '(', ')']]
 
-        argument_nodes = [self.manuallyVisitChild(arg_ctx) for arg_ctx in arg_ctx_list]
+        argument_exprs = [self.manuallyVisitChild(arg_ctx) for arg_ctx in arg_ctx_list]
+
+        # arguments come from expression visit method, which returns lists
+        argument_nodes = []
+        for arg_expr_list in argument_exprs:
+            argument_nodes.extend(arg_expr_list)
+
 
         return FuncCallExpr(function_id, argument_nodes)
 

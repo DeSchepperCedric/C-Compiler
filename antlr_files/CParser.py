@@ -101,14 +101,14 @@ def serializedATN():
         buf.write("\2\u00b8\u00b9\7\32\2\2\u00b9\u00ba\5\26\f\2\u00ba\u00bb")
         buf.write("\7\33\2\2\u00bb\u00bc\5\20\t\2\u00bc\u00be\3\2\2\2\u00bd")
         buf.write("\u00b1\3\2\2\2\u00bd\u00b7\3\2\2\2\u00be\25\3\2\2\2\u00bf")
-        buf.write("\u00c0\5\b\5\2\u00c0\u00c2\7\13\2\2\u00c1\u00c3\5 \21")
+        buf.write("\u00c0\5\b\5\2\u00c0\u00c2\7\13\2\2\u00c1\u00c3\5\"\22")
         buf.write("\2\u00c2\u00c1\3\2\2\2\u00c2\u00c3\3\2\2\2\u00c3\u00c4")
         buf.write("\3\2\2\2\u00c4\u00c6\7\13\2\2\u00c5\u00c7\5 \21\2\u00c6")
         buf.write("\u00c5\3\2\2\2\u00c6\u00c7\3\2\2\2\u00c7\u00d4\3\2\2\2")
         buf.write("\u00c8\u00ca\5 \21\2\u00c9\u00c8\3\2\2\2\u00c9\u00ca\3")
         buf.write("\2\2\2\u00ca\u00cb\3\2\2\2\u00cb\u00cd\7\13\2\2\u00cc")
-        buf.write("\u00ce\5 \21\2\u00cd\u00cc\3\2\2\2\u00cd\u00ce\3\2\2\2")
-        buf.write("\u00ce\u00cf\3\2\2\2\u00cf\u00d1\7\13\2\2\u00d0\u00d2")
+        buf.write("\u00ce\5\"\22\2\u00cd\u00cc\3\2\2\2\u00cd\u00ce\3\2\2")
+        buf.write("\2\u00ce\u00cf\3\2\2\2\u00cf\u00d1\7\13\2\2\u00d0\u00d2")
         buf.write("\5 \21\2\u00d1\u00d0\3\2\2\2\u00d1\u00d2\3\2\2\2\u00d2")
         buf.write("\u00d4\3\2\2\2\u00d3\u00bf\3\2\2\2\u00d3\u00c9\3\2\2\2")
         buf.write("\u00d4\27\3\2\2\2\u00d5\u00d9\7\36\2\2\u00d6\u00d8\5\32")
@@ -1222,12 +1222,12 @@ class CParser ( Parser ):
             super().__init__(parser)
             self.copyFrom(ctx)
 
-        def FOR(self):
-            return self.getToken(CParser.FOR, 0)
+        def WHILE(self):
+            return self.getToken(CParser.WHILE, 0)
         def LEFT_PAREN(self):
             return self.getToken(CParser.LEFT_PAREN, 0)
-        def for_condition(self):
-            return self.getTypedRuleContext(CParser.For_conditionContext,0)
+        def expression(self):
+            return self.getTypedRuleContext(CParser.ExpressionContext,0)
 
         def RIGHT_PAREN(self):
             return self.getToken(CParser.RIGHT_PAREN, 0)
@@ -1256,12 +1256,12 @@ class CParser ( Parser ):
             super().__init__(parser)
             self.copyFrom(ctx)
 
-        def WHILE(self):
-            return self.getToken(CParser.WHILE, 0)
+        def FOR(self):
+            return self.getToken(CParser.FOR, 0)
         def LEFT_PAREN(self):
             return self.getToken(CParser.LEFT_PAREN, 0)
-        def expression(self):
-            return self.getTypedRuleContext(CParser.ExpressionContext,0)
+        def for_condition(self):
+            return self.getTypedRuleContext(CParser.For_conditionContext,0)
 
         def RIGHT_PAREN(self):
             return self.getToken(CParser.RIGHT_PAREN, 0)
@@ -1294,7 +1294,7 @@ class CParser ( Parser ):
             self._errHandler.sync(self)
             token = self._input.LA(1)
             if token in [CParser.WHILE]:
-                localctx = CParser.ForLoopContext(self, localctx)
+                localctx = CParser.WhileLoopContext(self, localctx)
                 self.enterOuterAlt(localctx, 1)
                 self.state = 175
                 self.match(CParser.WHILE)
@@ -1308,7 +1308,7 @@ class CParser ( Parser ):
                 self.statement()
                 pass
             elif token in [CParser.FOR]:
-                localctx = CParser.WhileLoopContext(self, localctx)
+                localctx = CParser.ForLoopContext(self, localctx)
                 self.enterOuterAlt(localctx, 2)
                 self.state = 181
                 self.match(CParser.FOR)
@@ -1366,6 +1366,9 @@ class CParser ( Parser ):
             else:
                 return self.getTypedRuleContext(CParser.ExpressionContext,i)
 
+        def assignment_expr(self):
+            return self.getTypedRuleContext(CParser.Assignment_exprContext,0)
+
 
         def enterRule(self, listener:ParseTreeListener):
             if hasattr( listener, "enterForCondNoDecl" ):
@@ -1396,11 +1399,11 @@ class CParser ( Parser ):
                 return self.getTokens(CParser.SC)
             else:
                 return self.getToken(CParser.SC, i)
-        def expression(self, i:int=None):
-            if i is None:
-                return self.getTypedRuleContexts(CParser.ExpressionContext)
-            else:
-                return self.getTypedRuleContext(CParser.ExpressionContext,i)
+        def assignment_expr(self):
+            return self.getTypedRuleContext(CParser.Assignment_exprContext,0)
+
+        def expression(self):
+            return self.getTypedRuleContext(CParser.ExpressionContext,0)
 
 
         def enterRule(self, listener:ParseTreeListener):
@@ -1440,7 +1443,7 @@ class CParser ( Parser ):
                 _la = self._input.LA(1)
                 if (((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << CParser.INCREMENT) | (1 << CParser.DECREMENT) | (1 << CParser.PLUS) | (1 << CParser.MINUS) | (1 << CParser.STAR) | (1 << CParser.LEFT_PAREN) | (1 << CParser.NOT) | (1 << CParser.AMPERSAND) | (1 << CParser.BOOL_CONSTANT) | (1 << CParser.INTEGER_CONSTANT) | (1 << CParser.FLOAT_CONSTANT) | (1 << CParser.CHAR_CONSTANT) | (1 << CParser.STRING_CONSTANT) | (1 << CParser.ID))) != 0):
                     self.state = 191
-                    self.expression()
+                    self.assignment_expr()
 
 
                 self.state = 194
@@ -1472,7 +1475,7 @@ class CParser ( Parser ):
                 _la = self._input.LA(1)
                 if (((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << CParser.INCREMENT) | (1 << CParser.DECREMENT) | (1 << CParser.PLUS) | (1 << CParser.MINUS) | (1 << CParser.STAR) | (1 << CParser.LEFT_PAREN) | (1 << CParser.NOT) | (1 << CParser.AMPERSAND) | (1 << CParser.BOOL_CONSTANT) | (1 << CParser.INTEGER_CONSTANT) | (1 << CParser.FLOAT_CONSTANT) | (1 << CParser.CHAR_CONSTANT) | (1 << CParser.STRING_CONSTANT) | (1 << CParser.ID))) != 0):
                     self.state = 202
-                    self.expression()
+                    self.assignment_expr()
 
 
                 self.state = 205
