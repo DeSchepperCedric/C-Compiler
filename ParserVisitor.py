@@ -155,9 +155,6 @@ class ParserVisitor(CVisitor):
         body = self.manuallyVisitChild(ctx.getChild(ctx.getChildCount() - 1))
         return FuncDef(return_type, func_id, ptr_count, param_list, body)
 
-    # is het Body -> Compountstatement -> statements?
-    # of Body -> statements?
-
     # Visit a parse tree produced by CParser#statement.
     def visitStatement(self, ctx: CParser.StatementContext):
         return self.manuallyVisitChild(ctx.getChild(0))
@@ -211,9 +208,20 @@ class ParserVisitor(CVisitor):
     # TODO finish this: add Body object
     # Visit a parse tree produced by CParser#whileLoop.
     def visitWhileLoop(self, ctx: CParser.WhileLoopContext):
-        expr = self.manuallyVisitChild(ctx.getChild(2))
-        body = self.manuallyVisitChild(ctx.getChild(4))
-        return [WhileStmt(expr, body)]
+        # while ( expr ) statement
+        cond_expr = self.manuallyVisitChild(ctx.getChild(2))
+        body_statements = self.manuallyVisitChild(ctx.getChild(4))
+        
+        # if the statement after the while loop, is a compound statement
+        # we use its contents instead of the compound itself.
+        if len(body_statements) == 1 and isinstance(body_statements[0], CompoundStmt):
+            compound_statement = body_statements[0]
+
+            body = Body(compound_statement.child_list)
+        else:
+            body = Body(body_statements)
+
+        return [WhileStmt(cond_expr, body)]
 
     # Visit a parse tree produced by CParser#forCondWithDecl.
     def visitForCondWithDecl(self, ctx: CParser.ForCondWithDeclContext):
