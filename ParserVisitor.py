@@ -385,6 +385,8 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#cast_expr.
     def visitCast_expr(self, ctx: CParser.Cast_exprContext):
+        if ctx.getChildCount() == 1:
+            return self.manuallyVisitChild(ctx.getChild(0))
 
         # the last child contains the expression
         expr = self.manuallyVisitChild(ctx.getChild(ctx.getChildCount() - 1))

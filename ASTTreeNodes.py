@@ -59,10 +59,20 @@ class ASTNode:
             dotdata += "{}:s -> {}:n\n".format(parent_nr, current_node_nr)
 
         current_node_nr += 1
-
+        new_children = list()
         for child in children:
+            if child is None:
+                continue
+
+            if isinstance(child, list):
+                new_children.append(*child)
+            else:
+                new_children.append(child)
+
+        for child in new_children:
             # the child should have node number 'current_node_nr+1'
             # update the current node number
+
             current_node_nr, child_dotdata = child.toDot(parent_nr=begin_nr, begin_nr=current_node_nr + 1)
 
             # add the dotfile data to the current data

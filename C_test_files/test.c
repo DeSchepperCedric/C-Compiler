@@ -7,7 +7,7 @@ char func(int x, float f)
 {
 	float y;
 
-	y = z;
+	y = (float) z;
 
 	f(x);
 
