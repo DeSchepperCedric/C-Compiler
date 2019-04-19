@@ -96,6 +96,20 @@ class ASTTestTermNode(ASTNode):
                                        add_open_close=add_open_close)
 
 
+class EmptyNode(ASTNode):
+    """
+        Node that represents missing statement. Useful for displaying optional components in the AST tree.
+    """
+    def __init__(self):
+        super().__init__(node_name="Ø")
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
 class ProgramNode(ASTNode):
     """
         Node that represents the entire program.
@@ -325,7 +339,7 @@ class FuncParam(ASTNode):
     """
 
     def __init__(self, param_type : str, param_id : str, ptr_count : int):
-        super().__init__(node_name="FuncParam\\nType:'" + param_type + "'")
+        super().__init__(node_name="FuncParam\\nId: '" + param_id + "'\\nType:'" + param_type + "'")
         self.param_type = param_type
         self.param_id = param_id
         self.ptr_count = ptr_count
@@ -548,15 +562,13 @@ class Expression(ASTNode):
 
 class AssignmentExpr(Expression):
     """
-        Node that represents assignment expression.
+        Node that represents a normal assignment expression.
     """
 
-    def __init__(self, left, right, operator):
-        super().__init__(expression_type="AssignmentExpr:" + str(operator))
+    def __init__(self, left, right):
+        super().__init__(expression_type="AssignmentExpr")
         self.left = left
         self.right = right
-
-        self.operator = operator
 
     def getLeft(self):
         return self.left
@@ -564,8 +576,93 @@ class AssignmentExpr(Expression):
     def getRight(self):
         return self.right
 
-    def getOperator(self):
-        return self.operator
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[self.left, self.right],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+class AddAssignmentExpr(Expression):
+    """
+        Node that represents an addition assignment expression: "a += b;".
+    """
+
+    def __init__(self, left, right):
+        super().__init__(expression_type="AddAssign")
+        self.left = left
+        self.right = right
+
+    def getLeft(self):
+        return self.left
+
+    def getRight(self):
+        return self.right
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[self.left, self.right],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+class SubAssignmentExpr(Expression):
+    """
+        Node that represents a subtraction assignment expression: "a -= b;".
+    """
+
+    def __init__(self, left, right):
+        super().__init__(expression_type="SubAssign")
+        self.left = left
+        self.right = right
+
+    def getLeft(self):
+        return self.left
+
+    def getRight(self):
+        return self.right
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[self.left, self.right],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+class MulAssignmentExpr(Expression):
+    """
+        Node that represents a multiplication assignment expression: "a *= b;".
+    """
+
+    def __init__(self, left, right):
+        super().__init__(expression_type="MulAssign")
+        self.left = left
+        self.right = right
+
+    def getLeft(self):
+        return self.left
+
+    def getRight(self):
+        return self.right
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[self.left, self.right],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+class DivAssignExpr(Expression):
+    """
+        Node that represents a division assignment expression: "a /= b;".
+    """
+
+    def __init__(self, left, right):
+        super().__init__(expression_type="DivAssign")
+        self.left = left
+        self.right = right
+
+    def getLeft(self):
+        return self.left
+
+    def getRight(self):
+        return self.right
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -576,7 +673,7 @@ class AssignmentExpr(Expression):
 
 class LogicOrExpr(Expression):
     """
-        Node that represents OR expression.
+        Node that represents an OR expression.
     """
 
     def __init__(self, left, right):
@@ -599,7 +696,7 @@ class LogicOrExpr(Expression):
 
 class LogicAndExpr(Expression):
     """
-        Node that represents AND expression.
+        Node that represents an AND expression.
     """
     def __init__(self, left, right):
         super().__init__(expression_type="LogicAndExpr")
@@ -615,24 +712,19 @@ class LogicAndExpr(Expression):
 
 class EqualityExpr(Expression):
     """
-        Node that represents equality or inequality expression.
+        Node that represents an equality expression.
     """
 
-    def __init__(self, left, right, operator):
-        super().__init__(expression_type="EqualityExpr:" + str(operator))
+    def __init__(self, left, right):
+        super().__init__(expression_type="EqualityExpr")
         self.left = left
         self.right = right
-
-        self.operator = operator
 
     def getLeft(self):
         return self.left
 
     def getRight(self):
         return self.right
-
-    def getOperator(self):
-        return self.operator
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -641,26 +733,21 @@ class EqualityExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-class ComparisonExpr(Expression):
+class InequalityExpr(Expression):
     """
-        Node that represents a comparison.
+        Node that represents an inequality expression.
     """
 
-    def __init__(self, left, right, operator):
-        super().__init__(expression_type="ComparisonExpr:" + str(operator))
+    def __init__(self, left, right):
+        super().__init__(expression_type="InequalityExpr")
         self.left = left
         self.right = right
-
-        self.operator = operator
 
     def getLeft(self):
         return self.left
 
     def getRight(self):
         return self.right
-
-    def getOperator(self):
-        return self.operator
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -669,26 +756,21 @@ class ComparisonExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-class AdditiveExpr(Expression):
+class CompGreater(Expression):
     """
-        Node that represents an addition or subtraction.
+        Node that represents a greater-than comparison expression: "a > b".
     """
 
-    def __init__(self, left, right, operator):
-        super().__init__(expression_type="AdditiveExpr:" + str(operator))
+    def __init__(self, left, right):
+        super().__init__(expression_type="CompGreater")
         self.left = left
         self.right = right
-
-        self.operator = operator
 
     def getLeft(self):
         return self.left
 
     def getRight(self):
         return self.right
-
-    def getOperator(self):
-        return self.operator
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -697,17 +779,15 @@ class AdditiveExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-class MultiplicativeExpr(Expression):
+class CompLess(Expression):
     """
-        Node that represents a multiplication, division or modulo operation.
+        Node that represents a less-than comparison expression: "a < b".
     """
 
-    def __init__(self, left, right, operator):
-        super().__init__(expression_type="MultiplicativeExpr:" + str(operator))
+    def __init__(self, left, right):
+        super().__init__(expression_type="CompLess")
         self.left = left
         self.right = right
-
-        self.operator = operator
 
     def getLeft(self):
         return self.left
@@ -715,8 +795,164 @@ class MultiplicativeExpr(Expression):
     def getRight(self):
         return self.right
 
-    def getOperator(self):
-        return self.operator
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[self.left, self.right],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
+class CompGreaterEqual(Expression):
+    """
+        Node that represents a greater-than-or-equal comparison expression: "a >= b".
+    """
+
+    def __init__(self, left, right):
+        super().__init__(expression_type="CompGreaterEqual")
+        self.left = left
+        self.right = right
+
+    def getLeft(self):
+        return self.left
+
+    def getRight(self):
+        return self.right
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[self.left, self.right],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
+class CompLessEqual(Expression):
+    """
+        Node that represents a less-than-or-equal comparison expression: "a <= b".
+    """
+
+    def __init__(self, left, right):
+        super().__init__(expression_type="CompLessEqual")
+        self.left = left
+        self.right = right
+
+    def getLeft(self):
+        return self.left
+
+    def getRight(self):
+        return self.right
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[self.left, self.right],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
+class AddExpr(Expression):
+    """
+        Node that represents an addition expression.
+    """
+    def __init__(self, left, right):
+        super().__init__(expression_type="AddExpr")
+        self.left = left
+        self.right = right
+
+    def getLeft(self):
+        return self.left
+
+    def getRight(self):
+        return self.right
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[self.left, self.right],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
+class SubExpr(Expression):
+    """
+        Node that represents an subtraction expression.
+    """
+    def __init__(self, left, right):
+        super().__init__(expression_type="SubExpr")
+        self.left = left
+        self.right = right
+
+    def getLeft(self):
+        return self.left
+
+    def getRight(self):
+        return self.right
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[self.left, self.right],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
+class MulExpr(Expression):
+    """
+        Node that represents a multiplication expression: "a * b".
+    """
+
+    def __init__(self, left, right):
+        super().__init__(expression_type="MulExpr")
+        self.left = left
+        self.right = right
+
+    def getLeft(self):
+        return self.left
+
+    def getRight(self):
+        return self.right
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[self.left, self.right],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
+class DivExpr(Expression):
+    """
+        Node that represents a division expression: "a / b".
+    """
+
+    def __init__(self, left, right):
+        super().__init__(expression_type="ModExpr")
+        self.left = left
+        self.right = right
+
+    def getLeft(self):
+        return self.left
+
+    def getRight(self):
+        return self.right
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[self.left, self.right],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
+
+
+class ModExpr(Expression):
+    """
+        Node that represents a modulo expression: "a % b".
+    """
+
+    def __init__(self, left, right):
+        super().__init__(expression_type="ModExpr")
+        self.left = left
+        self.right = right
+
+    def getLeft(self):
+        return self.left
+
+    def getRight(self):
+        return self.right
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -979,7 +1215,7 @@ class IdentifierExpr(Expression):
     """
 
     def __init__(self, identifier : str):
-        super().__init__(expression_type="IdentifierExpr\\n"+identifier)
+        super().__init__(expression_type="IdentifierExpr\\n'"+identifier+"'")
         self.identifier = identifier
 
     def getIdentifier(self):
@@ -998,7 +1234,7 @@ class ConstantExpr(Expression):
     """
 
     def __init__(self, constant_expr_type, value):
-        super().__init__(expression_type=constant_expr_type + ":'" + str(value) + "'")
+        super().__init__(expression_type=constant_expr_type + "\\n'" + str(value) + "'")
         self.value = value
 
     def getValue(self):
