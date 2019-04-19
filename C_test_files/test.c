@@ -1,28 +1,31 @@
 
 #include <stdio.h>
 
-int a, b, c=2;
-
-char func(int x, float f)
+char func()
 {
-	int x = 0;
+    while(x > 5)
+    {
+        x++;
 
-	x += a + b * 9 / 32 * (a+b);
+        if(x > 33000)
+        {
+            int  i = 0;
 
-	bool b = a == b;
-	bool c = a != b;
-	bool d = a > b;
-	bool e = a < b;
-	bool f = a >= b;
-	bool g = a <= b;
+            break;
 
-	for(int i = 0;;)
-	{
-		printf("%d", i);
-	}
+            i += 6; // mag weg
+        }
+        else
+        {
+            break;
+        }
+
+        continue; // mag weg indien else statement aanwezig is
+
+        x--; // mag weg
+    }
 }
 
-float c[5];
 
 
 
