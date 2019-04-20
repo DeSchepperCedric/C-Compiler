@@ -194,9 +194,9 @@ class ParserVisitor(CVisitor):
             if_body = Body(if_body_list)
 
         if len(else_body_list) == 1 and isinstance(else_body_list[0], CompoundStmt):
-            compound_statement = if_body_list[0]
+            compound_statement = else_body_list[0]
 
-            if_body = Body(compound_statement.child_list)
+            else_body = Body(compound_statement.child_list)
         else:
             else_body = Body(else_body_list)
 
