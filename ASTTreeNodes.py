@@ -126,6 +126,22 @@ class ProgramNode(ASTNode):
     def getChildren(self):
         return self.children
 
+    def getSymbolTable(self):
+    	"""
+			Recursively traverse the tree and create a symbol table for each scope.
+    	"""
+
+    	# create table for self by iterating over statements
+
+    	# if a declaration is encountered, add it as new symbol
+
+    	# if a statement that introduces a new scope is encountered -> call getSymbolTable(), and add
+    	# it as child to the current table
+
+    	# return table
+
+    	return None
+
     def toDot(self, parent_nr=None, begin_nr=1, add_open_close=False):
         return self.M_defaultToDotImpl(children=self.children,
                                        parent_nr=parent_nr,
@@ -328,6 +344,10 @@ class Body(ASTNode):
     def getChildren(self):
         return self.child_list
 
+    # TODO implement
+    def getSymbolTable(self):
+    	pass
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=self.child_list,
                                        parent_nr=parent_nr,
@@ -383,6 +403,10 @@ class CompoundStmt(Statement):
     def getChildList(self):
         return self.child_list
 
+    # TODO implement
+    def getSymbolTable(self):
+    	pass
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=self.child_list,
                                        parent_nr=parent_nr,
@@ -405,6 +429,10 @@ class WhileStmt(Statement):
 
     def getBody(self):
         return self.body
+
+    # TODO implement
+    def getSymbolTable(self):
+    	pass
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.cond_expr, self.body],
