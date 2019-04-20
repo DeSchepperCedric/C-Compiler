@@ -58,10 +58,10 @@ block_item
         ;
 
 jump_statement
-	    : RETURN SC                        # jumpReturn
-        | RETURN assignment_expression? SC # jumpReturnWithExpr
-	    | BREAK SC                         # jumpBreak
-        | CONTINUE SC                      # jumpContinue
+	    : RETURN SC                  # jumpReturn
+        | RETURN assignment_expr? SC # jumpReturnWithExpr
+	    | BREAK SC                   # jumpBreak
+        | CONTINUE SC                # jumpContinue
         ;
 
 expression_statement : expression? SC ;
