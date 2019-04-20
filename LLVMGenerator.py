@@ -1,1306 +1,179 @@
 from ASTTreeNodes import *
 
-def boolConstantExpr(expr, register):
-    """
-    Return a constant bool with its type
-    """
-    return "i1 {} \n".format(expr.getBoolValue()), register
 
+class LLVMGenerator:
+    def __init__(self, symbol_table):
+        self.cur_reg = 0
+        self.symbol_table = symbol_table
 
-def floatConstantExpr(expr, register):
-    """
-    Return a constant float with its type
-    """
-    return "float {} \n".format(expr.getFloatValue()), register
-
-
-def integerConstantExpr(expr, register):
-    """
-    Return a constant integer with its type
-    """
-    return "i32 {} \n".format(expr.getIntValue()), register
-
-
-def loadGlobalVariableInto(var_id, var_type, register):
-    """
-    Load a global variable into a scoped register
-    """
-    return "%{} = load {}, {}* @{} \n".format(register, var_type, var_type, var_id), register
-
-
-def storeGlobalVariableFromRegister(var_id, var_type, register):
-    return "store {} %{}, {}* @{} \n".format(var_type, register, var_type, var_id)
-
-
-def varDeclDefault(decl, symbol_table, register):
-    # default initialization to 0. Might be improved later
-    var_type = decl.getType() + str(decl.getPointerCount())
-    var_id = decl.getID()
-    code = ""
-    if symbol_table.isGlobal(var_id):
-
-        code += "store {} 0, {}* @{}".format(var_type, var_type, var_id)
-    else:
-        code += "%{} = {} 0".format(var_id, var_type)
-
-    code += "\n"
-    return code, register
-
-
-def varDeclWithInit(decl, symbol_table, register):
-    var_type = decl.getType() + str(decl.getPointerCount())
-    var_id = decl.getID()
-    code, register = astNodeToLLVM(decl.getInitExpr(), register)
-    if symbol_table.isGlobal(var_id):
-        code += storeGlobalVariableFromRegister(var_id, var_type, register)
-    else:
-        code += "%{} = {} %{}".format(var_id, var_type, register)
-
-    code += "\n"
-    return code, register + 1
-
-
-def branchStatement(stat, symbol_table, register):
-    code, register = astNodeToLLVM(stat.getCondExpr(), symbol_table, register)
-    code = "br i1 %{}, label %{}, label %{}".format(register, register + 1, register + 2)
-    # add code blocks
-
-
-def astNodeToLLVM(node, symbol_table=None,current_register= 0):
-    """
-    Returns LLVM code string + register number
-    """
-    # TODO large if/elif statement containing all the different options
-    if isinstance(node, BoolConstantExpr):
-        return boolConstantExpr(node)
-    elif isinstance(node, FloatConstantExpr):
-        return floatConstantExpr(node)
-    elif isinstance(node, IntegerConstantExpr):
-        return integerConstantExpr(node)
-
-    elif isinstance(node, VarDeclDefault):
-        return varDeclDefault(node, symbol_table)
-    elif isinstance(node, VarDeclWithInit):
-        return varDeclWithInit(node, symbol_table, current_register)
-
-    return "", current_register
-
-
-def isConstant(node):
-    return isinstance(node, ConstantExpr)
-
-
-class ASTNode:
-    """
-        Base class for all nodes in AST Trees.
-    """
-
-    def __init__(self, node_name):
-        self.node_name = node_name
-
-    def getNodeName(self):
-        return self.node_name
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+    def boolConstantExpr(self, expr):
         """
-            Gives a dot presententation for this node/branch/tree.
-
-            The opening and closing statements "digraph graphName{", "splines=ortho;", and "}" will only
-            be included of 'add_open_close' is set to true.
-
-            Example with add_open_close=False:
-                1 [label="20"];
-                2 [label="30"];
-                1 -> 2;
-
-            Example with add_open_close=True:
-                digraph ast_tree {
-                splines=ortho;
-                1 [label="20"];
-                2 [label="30"];
-                1 -> 2;
-                }
-
-            Params:
-                'parent_nr': An integer that specifies the number of the parent node.
-                'begin_nr': An integer that specifies what number the beginning dot-node should have.
-                'add_open_close': Whether or not the open and closing statements must be added.
-
-            The exact return value is a tuple. The first member is the number of the node that was last added
-            to the dot file, the second member is a string that contains the dot contents of this branch.
+        Return a constant bool with its type and the register it's stored in
         """
-        raise NotImplementedError()
+        register = self.cur_reg
+        self.cur_reg += 1
+        code = "%{} = i1 {} \n".format(register, expr.getBoolValue())
 
-    def M_defaultToDotImpl(self, children, parent_nr, begin_nr, add_open_close):
+        return code, register
+
+    def floatConstantExpr(self, expr):
         """
-            Default implementation for the toDot() method. This method can be called
-            from a toDot() method. The children on which the recursion will be performed
-            are passed to the parameter 'children'.
+        Return a constant float with its type and the register it's stored in
         """
-        # nr [label="ProgramNode"]
-        # nr -> parent_nr
+        register = self.cur_reg
+        self.cur_reg += 1
+        code = "%{} = float {} \n".format(register, expr.getFloatValue())
 
-        dotdata = ""
+        return code, register
 
-        current_node_nr = begin_nr
+    def integerConstantExpr(self, expr):
+        """
+        Return a constant integer with its type and the register it's stored in
+        """
+        register = self.cur_reg
+        self.cur_reg += 1
+        code = "%{} = i32 {} \n".format(register, expr.getIntValue())
 
-        # add self
-        dotdata += "{} [label=\"{}\", shape=box]\n".format(current_node_nr, self.getNodeName())
+        return code, register
 
-        if parent_nr is not None:
-            dotdata += "{}:s -> {}:n\n".format(parent_nr, current_node_nr)
+    def loadGlobalVariableInto(self, var_id, var_type):
+        """
+        Load a global variable into a scoped register
+        """
+        register = self.cur_reg
+        self.cur_reg += 1
+        return "%{} = load {}, {}* @{} \n".format(register, var_type, var_type, var_id), register
 
-        current_node_nr += 1
-        new_children = list()
-        for child in children:
-            if isinstance(child, list):
-                new_children.extend(child)
+    def storeGlobalVariableFromRegister(self, var_id, var_type):
+        register = self.cur_reg
+        self.cur_reg += 1
+        return "store {} %{}, {}* @{} \n".format(var_type, register, var_type, var_id)
+
+    def varDeclDefault(self, decl):
+        # default initialization to 0. Might be improved later
+        var_type = decl.getType() + str(decl.getPointerCount())
+        var_id = decl.getID()
+        code = ""
+
+        if self.symbol_table.isGlobal(var_id):
+
+            code += "store {} 0, {}* @{}".format(var_type, var_type, var_id)
+        else:
+            code += "%{} = {} 0".format(var_id, var_type)
+
+        code += "\n"
+        return code
+
+    def varDeclWithInit(self, decl):
+        var_type = decl.getType() + str(decl.getPointerCount())
+        var_id = decl.getID()
+        register = self.cur_reg
+        self.cur_reg += 1
+        code, register = self.astNodeToLLVM(decl.getInitExpr(), register)
+        if self.symbol_table.isGlobal(var_id):
+            code += self.storeGlobalVariableFromRegister(var_id, var_type)
+        else:
+            code += "%{} = {} %{}".format(var_id, var_type, register)
+
+        code += "\n"
+        return code
+
+    def branchStatement(self, stat):
+        # WIP
+        code, register = self.astNodeToLLVM(stat.getCondExpr())
+        code = "br i1 %{}, label %{}, label %{}".format(register, register + 1, register + 2)
+        # add code blocks
+
+    def programNode(self, node):
+        code = ""
+        for child in node.getChildren():
+            code += self.astNodeToLLVM(child)
+
+        return code
+
+    def body(self, node):
+        code = ""
+        for child in node.getChildren():
+            code += self.astNodeToLLVM(child)
+
+        return code
+
+    def funcParam(self, node):
+        param_type = self.getLLVMType(node.getParamType()) + node.getPointerCount() * "*"
+        param_name = " %" + node.getParamID() if node.getParamID() is not None else ""
+        return param_type + param_name
+
+    def funcDecl(self, node):
+        return_type = node.getType() + node.getPointerCount() * "*"
+        function_name = "@" + node.getID()
+
+        code = "declare " + return_type + function_name + "("
+        first_param = True
+        for param in node.getParams():
+            if not first_param:
+                code += ","
             else:
-                new_children.append(child)
+                first_param = False
 
-        for child in new_children:
-            # the child should have node number 'current_node_nr+1'
-            # update the current node number
+            code += self.funcParam(param)
 
-            current_node_nr, child_dotdata = child.toDot(parent_nr=begin_nr, begin_nr=current_node_nr + 1)
+        code += ")\n"
+        return code
 
-            # add the dotfile data to the current data
-            dotdata += child_dotdata
+    def funcDef(self, node):
+        return_type = node.getReturnType() + node.getPointerCount() * "*"
+        function_name = "@" + node.getFuncID()
 
-        if add_open_close:
-            dotdata = "digraph ast_tree {\nsplines=ortho;\n" + dotdata + "}\n"
+        code = "define " + return_type + function_name + "("
+        first_param = True
+        for param in node.getParamList():
+            if not first_param:
+                code += ","
+            else:
+                first_param = False
 
-        return current_node_nr, dotdata
+            code += self.funcParam(param)
 
+        code += "){\n"
+        code += self.astNodeToLLVM(node.getBody())
+        code += "}\n"
+        return code
 
-class ASTTestTermNode(ASTNode):
-    """
-        A terminal node for testing purposes. Will always display as "TestNode" with no children.
-    """
-
-    def __init__(self):
-        super().__init__(node_name="TestNode")
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class EmptyNode(ASTNode):
-    """
-        Node that represents missing statement. Useful for displaying optional components in the AST tree.
-    """
-
-    def __init__(self):
-        super().__init__(node_name="Ø")
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class ProgramNode(ASTNode):
-    """
-        Node that represents the entire program.
-    """
-
-    def __init__(self):
-        super().__init__(node_name="Program")
-        self.children = []
-
-    def addChild(self, child):
-        self.children.append(child)
-
-    def getChildren(self):
-        return self.children
-
-    def toDot(self, parent_nr=None, begin_nr=1, add_open_close=False):
-        return self.M_defaultToDotImpl(children=self.children,
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class TopLevelNode(ASTNode):
-    """
-        Base class for nodes that appear directly underneath the program node.
-    """
-
-    def __init__(self, node_name):
-        super().__init__(node_name=node_name)
-
-
-class IncludeNode(TopLevelNode):
-    """
-        Node that represents "#include <stdio.h>"
-    """
-
-    def __init__(self):
-        super().__init__(node_name="Include <stdio.h>")
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class SymbolDecl(TopLevelNode):
-    """
-        Base class for variable declaration nodes.
-    """
-
-    def __init__(self, symbol_class: str, symbol_type: str, symbol_id: str, symbol_ptr_cnt: int):
+    def astNodeToLLVM(self, node):
         """
-        Params:
-            'symbol_class': Whether the symbol is an array, variable, function, etc.
-            'symbol_type': A string that contains the name of the type of the symbol.
-            'symbol_id': String that represents the name of the symbol.
-            'symbol_ptr_count': Integer that denotes the amount of pointer levels. Can be set to zero if the symbol is not a pointer.
+        Returns LLVM code string + register number
         """
-        # string that represents the node in dot-format.
-        full_node_name = "Decl:{}\\nId:{}\\nPtrCount:{}\\nType:{}".format(symbol_class, symbol_id, symbol_ptr_cnt,
-                                                                          symbol_type)
-        super().__init__(node_name=full_node_name)
-        self.symbol_type = symbol_type
-        self.symbol_id = symbol_id
-        self.symbol_ptr_cnt = symbol_ptr_cnt
-
-    def getType(self):
-        """
-           Retrieve a string that contains the name of the type of the symbol.
-        """
-        return self.symbol_type
-
-    def getID(self):
-        """
-            Retrieve a string that contains the name of the identifier.
-        """
-        return self.symbol_id
-
-    def getPointerCount(self):
-        """
-            Retrieve the number of pointer levels the identifier of the symbol has.
-        """
-        return self.symbol_ptr_cnt
-
-
-class ArrayDecl(SymbolDecl):
-    """
-        Node that represents an array declaration: "type id[size_expr];"
-    """
-
-    def __init__(self, array_type: str, array_id: str, ptr_count: int, size_expr):
-        super().__init__(symbol_class="Array",
-                         symbol_type=array_type,
-                         symbol_id=array_id,
-                         symbol_ptr_cnt=ptr_count)
-        self.size_expr = size_expr
-
-    def getSizeExp(self):
-        return self.size_expr
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.size_expr],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class FuncDecl(SymbolDecl):
-    """
-        Node that represents a function declaration: "type func(type param);"
-    """
-
-    def __init__(self, return_type: str, func_id: str, ptr_count: int, param_list):
-        super().__init__(symbol_class="FuncDecl",
-                         symbol_type=return_type,
-                         symbol_id=func_id,
-                         symbol_ptr_cnt=ptr_count)
-        self.param_list = param_list
-
-    def getParams(self):
-        return self.param_list
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[*self.param_list],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class FuncDef(TopLevelNode):
-    """
-    Node that represents a function definition: "type func(param) { <statements> }"
-    """
-
-    def __init__(self, return_type: str, func_id: str, ptr_count: int, param_list: list, body):
-        super().__init__(node_name="FuncDef\\nType:'" + return_type + "'")
-        self.return_type = return_type
-        self.func_id = func_id
-        self.ptr_count = ptr_count
-        self.param_list = param_list
-        self.body = body
-
-    def getReturnType(self):
-        return self.return_type
-
-    def getFuncID(self):
-        return self.func_id
-
-    def getPointerCount(self):
-        return self.ptr_count
-
-    def getParamList(self):
-        return self.param_list
-
-    def getBody(self):
-        return self.body
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[*self.param_list, self.body],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class Body(ASTNode):
-    """
-        Node that represents the body of statement (e.g. forloop, whileloop, etc). This is simply a list of statements.
-    """
-
-    def __init__(self, child_list):
-        super().__init__(node_name="Body")
-        self.child_list = child_list
-
-    def getChildren(self):
-        return self.child_list
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=self.child_list,
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class FuncParam(ASTNode):
-    """
-        Node that represents a function param: "type id_with_ptr".
-    """
-
-    def __init__(self, param_type: str, param_id: str, ptr_count: int):
-        super().__init__(node_name="FuncParam\\nId: '" + param_id + "'\\nType:'" + param_type + "'")
-        self.param_type = param_type
-        self.param_id = param_id
-        self.ptr_count = ptr_count
-
-    def getParamType(self):
-        return self.param_type
-
-    def getParamID(self):
-        return self.param_id
-
-    def getPointerCount(self):
-        return self.ptr_count
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class Statement(ASTNode):
-    """
-        Base class for statements nodes.
-    """
-
-    def __init__(self, statement_type):
-        super().__init__(node_name="Stmt:" + statement_type)
-
-
-class CompoundStmt(Statement):
-    """
-    Node that represents a compound statement: "{ <statements> }".
-    """
-
-    def __init__(self, child_list):
-        super().__init__(statement_type="CompoundStmt")
-        self.child_list = child_list
-
-    def getChildList(self):
-        return self.child_list
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=self.child_list,
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class WhileStmt(Statement):
-    """
-        Node that represents a while loop.
-    """
-
-    def __init__(self, condition_expr, body):
-        super().__init__(statement_type="WhileStmt")
-        self.cond_expr = condition_expr
-        self.body = body
-
-    def getCondExpr(self):
-        return self.cond_expr
-
-    def getBody(self):
-        return self.body
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.cond_expr, self.body],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class ForStmt(Statement):
-    """
-        Node that represents a for loop.
-    """
-
-    def __init__(self, init_list, condition_expr, iter_list, body):
-        """
-            'init_list': a list of declarations, or expressions.
-            'condition_expr': an expression that will be evaluated to determine whether or not to
-            continue iterating, or None.
-            'iter_list': a list of expressions that will be performed at the end of each iteration.
-        """
-        super().__init__(statement_type="ForStmt")
-        self.init_list = init_list
-        self.cond_expr = condition_expr
-        self.iter_list = iter_list
-        self.body = body
-
-    def getInitList(self):
-        return self.init_list
-
-    def getCondExpr(self):
-        return self.cond_expr
-
-    def getIterList(self):
-        return self.iter_list
-
-    def getBody(self):
-        return self.body
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[*self.init_list, self.cond_expr, *self.iter_list, self.body],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class BranchStmt(Statement):
-    """
-        Node that represents an if statement.
-    """
-
-    def __init__(self, condition_expr, if_body, else_body):
-        super().__init__(statement_type="BranchStmt")
-        self.cond_expr = condition_expr
-        self.if_body = if_body
-        self.else_body = else_body
-
-    def getCondExpr(self):
-        return self.cond_expr
-
-    def getIfBody(self):
-        return self.if_body
-
-    def getElseBody(self):
-        return self.else_body
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.cond_expr, self.if_body, self.else_body],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class ReturnStatement(JumpStatement):
-    """
-        Node that represents a return statement.
-    """
-
-    def __init__(self):
-        super().__init__(jump_type="return")
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class BreakStatement(JumpStatement):
-    """
-        Node that represents a break statement.
-    """
-
-    def __init__(self):
-        super().__init__(jump_type="break")
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class ContinueStatement(JumpStatement):
-    """
-        Node that represents a continue statement.
-    """
-
-    def __init__(self):
-        super().__init__(jump_type="continue")
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class ExpressionStatement(Statement):
-    """
-        Node that represents an expression statement.
-        An expression statement contains exactly one expression.
-    """
-
-    def __init__(self, expression):
-        super().__init__(statement_type="ExpressionStatement")
-        self.expression = expression
-
-    def getExpression(self):
-        return self.expression
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.expression],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class Expression(ASTNode):
-    """
-        Base class for all expression nodes.
-    """
-
-    def __init__(self, expression_type):
-        super().__init__(node_name=expression_type)
-
-
-class AssignmentExpr(Expression):
-    """
-        Node that represents a normal assignment expression.
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="AssignmentExpr")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class AddAssignmentExpr(Expression):
-    """
-        Node that represents an addition assignment expression: "a += b;".
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="AddAssign")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class SubAssignmentExpr(Expression):
-    """
-        Node that represents a subtraction assignment expression: "a -= b;".
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="SubAssign")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class MulAssignmentExpr(Expression):
-    """
-        Node that represents a multiplication assignment expression: "a *= b;".
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="MulAssign")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class DivAssignmentExpr(Expression):
-    """
-        Node that represents a division assignment expression: "a /= b;".
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="DivAssign")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class LogicOrExpr(Expression):
-    """
-        Node that represents an OR expression.
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="LogicOrExpr")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class LogicAndExpr(Expression):
-    """
-        Node that represents an AND expression.
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="LogicAndExpr")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-
-class EqualityExpr(Expression):
-    """
-        Node that represents an equality expression.
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="EqualityExpr")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class InequalityExpr(Expression):
-    """
-        Node that represents an inequality expression.
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="InequalityExpr")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class CompGreater(Expression):
-    """
-        Node that represents a greater-than comparison expression: "a > b".
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="CompGreater")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class CompLess(Expression):
-    """
-        Node that represents a less-than comparison expression: "a < b".
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="CompLess")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class CompGreaterEqual(Expression):
-    """
-        Node that represents a greater-than-or-equal comparison expression: "a >= b".
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="CompGreaterEqual")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class CompLessEqual(Expression):
-    """
-        Node that represents a less-than-or-equal comparison expression: "a <= b".
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="CompLessEqual")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class AddExpr(Expression):
-    """
-        Node that represents an addition expression.
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="AddExpr")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class SubExpr(Expression):
-    """
-        Node that represents an subtraction expression.
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="SubExpr")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class MulExpr(Expression):
-    """
-        Node that represents a multiplication expression: "a * b".
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="MulExpr")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class DivExpr(Expression):
-    """
-        Node that represents a division expression: "a / b".
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="ModExpr")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class ModExpr(Expression):
-    """
-        Node that represents a modulo expression: "a % b".
-    """
-
-    def __init__(self, left, right):
-        super().__init__(expression_type="ModExpr")
-        self.left = left
-        self.right = right
-
-    def getLeft(self):
-        return self.left
-
-    def getRight(self):
-        return self.right
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.left, self.right],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class CastExpr(Expression):
-    """
-        Node that represents a cast expression.
-    """
-
-    def __init__(self, type_list, expression):
-        """
-        Params:
-            'type_list': list of str.
-            'expression': The Expression that is cast to the specified types.
-        """
-        super().__init__(expression_type="CastExpr\\nTypes:{}".format(type_list))
-        self.type_list = type_list
-        self.expression = expression
-
-    def getTypeList(self):
-        return self.type_list
-
-    def getExpr(self):
-        return self.expression
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.expression],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class LogicNotExpr(Expression):
-    """
-        Node that represents a logical NOT expression.
-    """
-
-    def __init__(self, expression):
-        super().__init__(expression_type="LogicNotExpr")
-        self.expression = expression
-
-    def getExpr(self):
-        return self.expression
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.expression],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class PrefixIncExpr(Expression):
-    """
-        Node that represents "++x".
-    """
-
-    def __init__(self, expression):
-        super().__init__(expression_type="PrefixIncExpr")
-        self.expression = expression
-
-    def getExpr(self):
-        return self.expression
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.expression],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class PrefixDecExpr(Expression):
-    """
-        Node that represents "--x".
-    """
-
-    def __init__(self, expression):
-        super().__init__(expression_type="PrefixDecExpr")
-        self.expression = expression
-
-    def getExpr(self):
-        return self.expression
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.expression],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class PostfixIncExpr(Expression):
-    """
-        Node that represents "x++".
-    """
-
-    def __init__(self, expression):
-        super().__init__(expression_type="PostfixIncExpr")
-        self.expression = expression
-
-    def getExpr(self):
-        return self.expression
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.expression],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class PostfixDecExpr(Expression):
-    """
-        Node that represents "x--".
-    """
-
-    def __init__(self, expression):
-        super().__init__(expression_type="PostfixDecExpr")
-        self.expression = expression
-
-    def getExpr(self):
-        return self.expression
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.expression],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class PlusPrefixExpr(Expression):
-    """
-        Node that represents a plus prefix expression: "+x".
-    """
-
-    def __init__(self, expression):
-        super().__init__(expression_type="PlusPrefixExpr")
-        self.expression = expression
-
-    def getExpr(self):
-        return self.expression
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.expression],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class MinPrefixExpr(Expression):
-    """
-        Node that represents a minus prefix expression: "-x".
-    """
-
-    def __init__(self, expression):
-        super().__init__(expression_type="MinPrefixExpr")
-        self.expression = expression
-
-    def getExpr(self):
-        return self.expression
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.expression],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class ArrayAccessExpr(Expression):
-    """
-        Node that represent an array access expression: "target_array[index_expr]".
-    """
-
-    def __init__(self, target_array, index_expr):
-        super().__init__(expression_type="ArrayAccessExpr")
-        self.target_array = target_array
-        self.index_expr = index_expr
-
-    def getTargetArray(self):
-        return self.target_array
-
-    def getIndexArray(self):
-        return self.index_expr
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.target_array, self.index_expr],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class PointerDerefExpr(Expression):
-    """
-        Node that represents a pointer dereference expression: "*target_ptr".
-    """
-
-    def __init__(self, target_ptr):
-        super().__init__(expression_type="PointerDerefExpr")
-        self.target_ptr = target_ptr
-
-    def getTargetPtr(self):
-        return self.target_ptr
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.target_ptr],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class AddressExpr(Expression):
-    """
-        Node that represents an address expression: "&x".
-    """
-
-    def __init__(self, target_expr):
-        super().__init__(expression_type="AddressExpr")
-        self.target_expr = target_expr
-
-    def getTargetExpr(self):
-        return self.target_expr
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.target_expr],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class FuncCallExpr(Expression):
-    """
-        Node that represents a function call: "identifier(params)".
-    """
-
-    def __init__(self, function_identifier: str, argument_list):
-        """
-        Params:
-            'function_identifier': IdentifierNode object that represents the identifier of the function.
-            'argument_list': list of Expression
-        """
-        super().__init__(expression_type="FuncCallExpr")
-        self.identifier = function_identifier
-        self.argument_list = argument_list
-
-    def getFunctionID(self):
-        return self.identifier
-
-    def getArguments(self):
-        return self.argument_list
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.identifier, *self.argument_list],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class IdentifierExpr(Expression):
-    """
-        Node that represents an identifier expression (different from the idenfier itself!)
-    """
-
-    def __init__(self, identifier: str):
-        super().__init__(expression_type="IdentifierExpr\\n'" + identifier + "'")
-        self.identifier = identifier
-
-    def getIdentifier(self):
-        return self.identifier
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class StringConstantExpr(ConstantExpr):
-    """
-        Node that represents string constants: "abcdef".
-    """
-
-    def __init__(self, str_value):
-        super().__init__(constant_expr_type="StrConstant", value=str_value)
-
-    def getStrValue(self):
-        return str(self.getValue())
-
-
-class CharConstantExpr(ConstantExpr):
-    """
-        Node that represents character constants: 'a', 'b', 'abc'.
-    """
-
-    def __init__(self, char_value):
-        super().__init__(constant_expr_type="CharConstant", value=char_value)
-
-    def getCharValue(self):
-        return str(self.getValue())
-
-
+        # TODO large if/elif statement containing all the different options
+        if isinstance(node, BoolConstantExpr):
+            return self.boolConstantExpr(node)
+        elif isinstance(node, FloatConstantExpr):
+            return self.floatConstantExpr(node)
+        elif isinstance(node, IntegerConstantExpr):
+            return self.integerConstantExpr(node)
+
+        elif isinstance(node, VarDeclDefault):
+            return self.varDeclDefault(node)
+        elif isinstance(node, VarDeclWithInit):
+            return self.varDeclWithInit(node)
+
+        elif isinstance(node, FuncParam):
+            return self.funcParam(node)
+
+        elif isinstance(node, Body):
+            return self.body(node)
+        elif isinstance(node, ProgramNode):
+            return self.programNode(node)
+        return "", self.cur_reg
+
+    def isConstant(self, node):
+        return isinstance(node, ConstantExpr)
+
+    def getLLVMType(self, type):
+        # TODO add char/string
+        if type == "float":
+            return "float"
+        elif type == "int":
+            return "i32"
+        elif type == "bool":
+            return "i1"
+        return ""
