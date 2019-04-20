@@ -6,6 +6,36 @@ class LLVMGenerator:
         self.cur_reg = 0
         self.symbol_table = symbol_table
 
+    def astNodeToLLVM(self, node):
+        """
+        Returns LLVM code string + register number
+        """
+        # TODO large if/elif statement containing all the different options
+        if isinstance(node, BoolConstantExpr):
+            return self.boolConstantExpr(node)
+        elif isinstance(node, FloatConstantExpr):
+            return self.floatConstantExpr(node)
+        elif isinstance(node, IntegerConstantExpr):
+            return self.integerConstantExpr(node)
+
+        elif isinstance(node, VarDeclDefault):
+            return self.varDeclDefault(node)
+        elif isinstance(node, VarDeclWithInit):
+            return self.varDeclWithInit(node)
+
+        elif isinstance(node, FuncParam):
+            return self.funcParam(node)
+        elif isinstance(node, FuncDecl):
+            return self.funcDecl(node)
+        elif isinstance(node, FuncDef):
+            return self.funcDef(node)
+
+        elif isinstance(node, Body):
+            return self.body(node)
+        elif isinstance(node, ProgramNode):
+            return self.programNode(node)
+        return "", self.cur_reg
+
     def boolConstantExpr(self, expr):
         """
         Return a constant bool with its type and the register it's stored in
@@ -138,32 +168,6 @@ class LLVMGenerator:
         code += self.astNodeToLLVM(node.getBody())
         code += "}\n"
         return code
-
-    def astNodeToLLVM(self, node):
-        """
-        Returns LLVM code string + register number
-        """
-        # TODO large if/elif statement containing all the different options
-        if isinstance(node, BoolConstantExpr):
-            return self.boolConstantExpr(node)
-        elif isinstance(node, FloatConstantExpr):
-            return self.floatConstantExpr(node)
-        elif isinstance(node, IntegerConstantExpr):
-            return self.integerConstantExpr(node)
-
-        elif isinstance(node, VarDeclDefault):
-            return self.varDeclDefault(node)
-        elif isinstance(node, VarDeclWithInit):
-            return self.varDeclWithInit(node)
-
-        elif isinstance(node, FuncParam):
-            return self.funcParam(node)
-
-        elif isinstance(node, Body):
-            return self.body(node)
-        elif isinstance(node, ProgramNode):
-            return self.programNode(node)
-        return "", self.cur_reg
 
     def isConstant(self, node):
         return isinstance(node, ConstantExpr)
