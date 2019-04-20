@@ -9,8 +9,8 @@ class LLVMGenerator:
     def astNodeToLLVM(self, node):
         """
         Returns LLVM code string + register number
+        Only function to call outside the class
         """
-        # TODO large if/elif statement containing all the different options
         if isinstance(node, BoolConstantExpr):
             return self.boolConstantExpr(node)
         elif isinstance(node, FloatConstantExpr):
@@ -74,9 +74,7 @@ class LLVMGenerator:
         self.cur_reg += 1
         return "%{} = load {}, {}* @{} \n".format(register, var_type, var_type, var_id), register
 
-    def storeGlobalVariableFromRegister(self, var_id, var_type):
-        register = self.cur_reg
-        self.cur_reg += 1
+    def storeGlobalVariableFromRegister(self, var_id, var_type, register):
         return "store {} %{}, {}* @{} \n".format(var_type, register, var_type, var_id)
 
     def varDeclDefault(self, decl):
@@ -97,14 +95,12 @@ class LLVMGenerator:
     def varDeclWithInit(self, decl):
         var_type = decl.getType() + str(decl.getPointerCount())
         var_id = decl.getID()
-        register = self.cur_reg
-        self.cur_reg += 1
-        code, register = self.astNodeToLLVM(decl.getInitExpr(), register)
+        code, register = self.astNodeToLLVM(decl.getInitExpr())
         if self.symbol_table.isGlobal(var_id):
-            code += self.storeGlobalVariableFromRegister(var_id, var_type)
+            code += self.storeGlobalVariableFromRegister(var_id, var_type, register)
         else:
             code += "%{} = {} %{}".format(var_id, var_type, register)
-
+        self.cur_reg += 1
         code += "\n"
         return code
 

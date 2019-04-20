@@ -1,8 +1,12 @@
 
 
 class SymbolTable:
-    def __init__(self, name, parent=None):
-        self.name = name
+
+    table_counter = 0  # to name the tables
+
+    def __init__(self, parent=None):
+        self.name = 'T' + str(self.table_counter)
+        self.table_counter += 1
         self.parent = parent
         self.children = list()
         self.symbols = dict()
@@ -16,7 +20,7 @@ class SymbolTable:
         """
         # symbol found in current scope
         if symbol in self.symbols:
-            return self.symbols[symbol]
+            return self.symbols[symbol], self.name
 
         # look for symbol in parent symbol table
         elif self.parent is not None and not own_scope_only:
@@ -24,7 +28,7 @@ class SymbolTable:
 
         # symbol isn't found
         else:
-            return 0
+            return 0, None
 
     def insert(self, symbol, sym_type):
         """
@@ -35,13 +39,13 @@ class SymbolTable:
         """
         self.symbols[symbol] = sym_type
 
-    def allocate(self, name):
+    def allocate(self):
         """
         Allocate a new symbol table (new scope)
         :param name: table name
         :return: new symbol table
         """
-        child = SymbolTable(name, self)
+        child = SymbolTable(self)
         self.children.append(child)
         return child
 
@@ -120,16 +124,16 @@ def print_symbol_table_node_to_dot(node, cur_id):
 
 
 def main():
-    root = SymbolTable("root")
+    root = SymbolTable()
     root.insert("i", "int")
     root.insert("b", "float")
 
-    child1 = root.allocate("child1")
+    child1 = root.allocate()
 
-    child2 = child1.allocate("child2")
+    child2 = child1.allocate()
     child2.insert("p", "int")
 
-    child3 = root.allocate("child3")
+    child3 = root.allocate()
     child3.insert("i", "float")
 
     print_symbol_table_to_dot(root)

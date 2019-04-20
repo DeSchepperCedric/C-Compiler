@@ -5,25 +5,20 @@ char func()
 {
     while(x > 5)
     {
-        x++;
 
-        if(x > 33000)
+        while(a && b)
         {
-            int  i = 0;
 
-            break;
-
-            i += 6; // mag weg
-        }
-        else
-        {
-            //break;
+            return; // het kan zijn dat een complexe evaluatie ervoor zorgt
+            // dat de while loop niet uitgevoerd wordt
+            // de enige pruning die moet gebeuren is binnen 1 loop.
         }
 
-        continue; // mag weg indien else statement aanwezig is
+        while(a);
 
-        x--; // mag weg
     }
+
+    return a + b;
 }
 
 

@@ -179,6 +179,15 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#jumpReturnWithExpr.
+    def enterJumpReturnWithExpr(self, ctx:CParser.JumpReturnWithExprContext):
+        pass
+
+    # Exit a parse tree produced by CParser#jumpReturnWithExpr.
+    def exitJumpReturnWithExpr(self, ctx:CParser.JumpReturnWithExprContext):
+        pass
+
+
     # Enter a parse tree produced by CParser#jumpBreak.
     def enterJumpBreak(self, ctx:CParser.JumpBreakContext):
         pass
