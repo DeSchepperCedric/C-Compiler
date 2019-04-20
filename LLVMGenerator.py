@@ -42,6 +42,26 @@ class LLVMGenerator:
             return self.arithmeticExpr(node, "mul")
         elif isinstance(node, DivExpr):
             return self.arithmeticExpr(node, "div")
+        elif isinstance(node, ModExpr):
+            return self.arithmeticExpr(node, "srem")
+
+        elif isinstance(node, EqualityExpr):
+            return self.comparisonExpr(node, "eq", "eq")
+        elif isinstance(node, InequalityExpr):
+            return self.comparisonExpr(node, "ne", "ne")
+        elif isinstance(node, CompGreater):
+            return self.comparisonExpr(node, "sgt", "ogt")
+        elif isinstance(node, CompLess):
+            return self.comparisonExpr(node, "slt", "olt")
+        elif isinstance(node, CompGreaterEqual):
+            return self.comparisonExpr(node, "sge", "oge")
+        elif isinstance(node, CompLessEqual):
+            return self.comparisonExpr(node, "sle", "ole")
+
+        elif isinstance(node, ReturnStatement):
+            return self.returnStatement()
+        elif isinstance(node, ReturnWithExprStatement):
+            return self.returnWithExprStatement(node)
 
         elif isinstance(node, Body):
             return self.body(node)
@@ -288,3 +308,39 @@ class LLVMGenerator:
         else:
             # what with other types?
             return reg
+
+    def returnStatement(self):
+        self.code += "ret void"
+
+    def returnWithExprStatement(self, node):
+        return_type = node.getType()
+        register = self.astNodeToLLVM(node.getExpression())
+        self.code += "ret {} %{}".format(return_type, register)
+
+    def comparisonExpr(self, node, int_op, float_op):
+        type_left = node.getLeft().getType()
+        type_right = node.getRight().getType()
+
+        reg_left = self.astNodeToLLVM(node.getLeft())
+        reg_right = self.astNodeToLLVM(node.getRight())
+
+        strongest_type = self.getStrongestType(type_left, type_right)
+
+        if strongest_type == "float":
+            reg_left = self.convertToFloat(reg_left, type_left)
+            reg_right = self.convertToFloat(reg_right, type_right)
+
+            self.code += "%{} = {} float %{}, %{}\n".format(self.cur_reg, float_op, reg_left, reg_right)
+        else:
+            reg_left = self.convertToInt(reg_left, type_left)
+            reg_right = self.convertToInt(reg_right, type_right)
+
+            self.code += "%{} = {} i32 %{}, %{}\n".format(self.cur_reg, int_op, reg_left, reg_right)
+
+        self.cur_reg += 1
+
+
+        #   %10 = icmp sgt i32 %8, %9
+        return self.cur_reg - 1
+
+

@@ -538,6 +538,9 @@ class ReturnWithExprStatement(JumpStatement):
         super().__init__(jump_type="returnWithExpr")
         self.expression = expression
 
+    def getExpression(self):
+        return self.expression
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
                                        parent_nr=parent_nr,
