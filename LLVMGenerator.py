@@ -1,40 +1,89 @@
 from ASTTreeNodes import *
 
-
-def boolConstantExpr(expr):
+def boolConstantExpr(expr, register):
     """
     Return a constant bool with its type
     """
-    return "i1 {}".format(expr.getBoolValue())
+    return "i1 {} \n".format(expr.getBoolValue()), register
 
 
-def floatConstantExpr(expr):
+def floatConstantExpr(expr, register):
     """
     Return a constant float with its type
     """
-    return "float {}".format(expr.getFloatValue())
+    return "float {} \n".format(expr.getFloatValue()), register
 
 
-def intConstantExpr(expr):
+def integerConstantExpr(expr, register):
     """
     Return a constant integer with its type
     """
-    return "i32 {}".format(expr.getIntValue())
+    return "i32 {} \n".format(expr.getIntValue()), register
 
 
-def loadGlobalVariable(variable, type):
+def loadGlobalVariableInto(var_id, var_type, register):
     """
     Load a global variable into a scoped register
     """
-    return "%{} = load {}, {}* @{}".format(variable, type, type, variable)
-
-def VarDeclDefault():
+    return "%{} = load {}, {}* @{} \n".format(register, var_type, var_type, var_id), register
 
 
+def storeGlobalVariableFromRegister(var_id, var_type, register):
+    return "store {} %{}, {}* @{} \n".format(var_type, register, var_type, var_id)
 
-def astNodeToLLVM(node):
+
+def varDeclDefault(decl, symbol_table, register):
+    # default initialization to 0. Might be improved later
+    var_type = decl.getType() + str(decl.getPointerCount())
+    var_id = decl.getID()
+    code = ""
+    if symbol_table.isGlobal(var_id):
+
+        code += "store {} 0, {}* @{}".format(var_type, var_type, var_id)
+    else:
+        code += "%{} = {} 0".format(var_id, var_type)
+
+    code += "\n"
+    return code, register
+
+
+def varDeclWithInit(decl, symbol_table, register):
+    var_type = decl.getType() + str(decl.getPointerCount())
+    var_id = decl.getID()
+    code, register = astNodeToLLVM(decl.getInitExpr(), register)
+    if symbol_table.isGlobal(var_id):
+        code += storeGlobalVariableFromRegister(var_id, var_type, register)
+    else:
+        code += "%{} = {} %{}".format(var_id, var_type, register)
+
+    code += "\n"
+    return code, register + 1
+
+
+def branchStatement(stat, symbol_table, register):
+    code, register = astNodeToLLVM(stat.getCondExpr(), symbol_table, register)
+    code = "br i1 %{}, label %{}, label %{}".format(register, register + 1, register + 2)
+    # add code blocks
+
+
+def astNodeToLLVM(node, symbol_table=None,current_register= 0):
+    """
+    Returns LLVM code string + register number
+    """
     # TODO large if/elif statement containing all the different options
-    pass
+    if isinstance(node, BoolConstantExpr):
+        return boolConstantExpr(node)
+    elif isinstance(node, FloatConstantExpr):
+        return floatConstantExpr(node)
+    elif isinstance(node, IntegerConstantExpr):
+        return integerConstantExpr(node)
+
+    elif isinstance(node, VarDeclDefault):
+        return varDeclDefault(node, symbol_table)
+    elif isinstance(node, VarDeclWithInit):
+        return varDeclWithInit(node, symbol_table, current_register)
+
+    return "", current_register
 
 
 def isConstant(node):
@@ -262,46 +311,6 @@ class ArrayDecl(SymbolDecl):
                                        add_open_close=add_open_close)
 
 
-class VarDeclDefault(SymbolDecl):
-    """
-        Node that represents a variable declaration without initializer: "type id;"
-    """
-
-    def __init__(self, var_type: str, var_id: str, ptr_count: int):
-        super().__init__(symbol_class="VarDefault",
-                         symbol_type=var_type,
-                         symbol_id=var_id,
-                         symbol_ptr_cnt=ptr_count)
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
-class VarDeclWithInit(SymbolDecl):
-    """
-        Node that represents a variabele declaration with initializer: "type id = init_expr;"
-    """
-
-    def __init__(self, var_type: str, var_id: str, ptr_count: int, init_expr):
-        super().__init__(symbol_class="VarWithInit",
-                         symbol_type=var_type,
-                         symbol_id=var_id,
-                         symbol_ptr_cnt=ptr_count)
-        self.init_expr = init_expr
-
-    def getInitExpr(self):
-        return self.init_expr
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[self.init_expr],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-
 class FuncDecl(SymbolDecl):
     """
         Node that represents a function declaration: "type func(type param);"
@@ -520,18 +529,6 @@ class BranchStmt(Statement):
                                        add_open_close=add_open_close)
 
 
-class JumpStatement(Statement):
-    """
-        Base class for jump statements.
-    """
-
-    def __init__(self, jump_type):
-        super().__init__(statement_type="JumpStmt:" + jump_type)
-
-
-# ENDCLASS
-
-
 class ReturnStatement(JumpStatement):
     """
         Node that represents a return statement.
@@ -698,7 +695,7 @@ class MulAssignmentExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-class DivAssignExpr(Expression):
+class DivAssignmentExpr(Expression):
     """
         Node that represents a division assignment expression: "a /= b;".
     """

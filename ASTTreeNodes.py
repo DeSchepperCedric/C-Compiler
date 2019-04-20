@@ -100,6 +100,7 @@ class EmptyNode(ASTNode):
     """
         Node that represents missing statement. Useful for displaying optional components in the AST tree.
     """
+
     def __init__(self):
         super().__init__(node_name="Ø")
 
@@ -161,7 +162,7 @@ class SymbolDecl(TopLevelNode):
         Base class for variable declaration nodes.
     """
 
-    def __init__(self, symbol_class : str, symbol_type : str, symbol_id : str, symbol_ptr_cnt : int):
+    def __init__(self, symbol_class: str, symbol_type: str, symbol_id: str, symbol_ptr_cnt: int):
         """
         Params:
             'symbol_class': Whether the symbol is an array, variable, function, etc.
@@ -170,7 +171,8 @@ class SymbolDecl(TopLevelNode):
             'symbol_ptr_count': Integer that denotes the amount of pointer levels. Can be set to zero if the symbol is not a pointer.
         """
         # string that represents the node in dot-format.
-        full_node_name = "Decl:{}\\nId:{}\\nPtrCount:{}\\nType:{}".format(symbol_class, symbol_id, symbol_ptr_cnt, symbol_type)
+        full_node_name = "Decl:{}\\nId:{}\\nPtrCount:{}\\nType:{}".format(symbol_class, symbol_id, symbol_ptr_cnt,
+                                                                          symbol_type)
         super().__init__(node_name=full_node_name)
         self.symbol_type = symbol_type
         self.symbol_id = symbol_id
@@ -222,7 +224,7 @@ class VarDeclDefault(SymbolDecl):
         Node that represents a variable declaration without initializer: "type id;"
     """
 
-    def __init__(self, var_type : str, var_id : str, ptr_count : int):
+    def __init__(self, var_type: str, var_id: str, ptr_count: int):
         super().__init__(symbol_class="VarDefault",
                          symbol_type=var_type,
                          symbol_id=var_id,
@@ -240,7 +242,7 @@ class VarDeclWithInit(SymbolDecl):
         Node that represents a variabele declaration with initializer: "type id = init_expr;"
     """
 
-    def __init__(self, var_type : str, var_id : str, ptr_count : int, init_expr):
+    def __init__(self, var_type: str, var_id: str, ptr_count: int, init_expr):
         super().__init__(symbol_class="VarWithInit",
                          symbol_type=var_type,
                          symbol_id=var_id,
@@ -262,7 +264,7 @@ class FuncDecl(SymbolDecl):
         Node that represents a function declaration: "type func(type param);"
     """
 
-    def __init__(self, return_type : str, func_id : str, ptr_count : int, param_list):
+    def __init__(self, return_type: str, func_id: str, ptr_count: int, param_list):
         super().__init__(symbol_class="FuncDecl",
                          symbol_type=return_type,
                          symbol_id=func_id,
@@ -284,7 +286,7 @@ class FuncDef(TopLevelNode):
     Node that represents a function definition: "type func(param) { <statements> }"
     """
 
-    def __init__(self, return_type : str, func_id : str, ptr_count : int, param_list : list, body):
+    def __init__(self, return_type: str, func_id: str, ptr_count: int, param_list: list, body):
         super().__init__(node_name="FuncDef\\nType:'" + return_type + "'")
         self.return_type = return_type
         self.func_id = func_id
@@ -338,7 +340,7 @@ class FuncParam(ASTNode):
         Node that represents a function param: "type id_with_ptr".
     """
 
-    def __init__(self, param_type : str, param_id : str, ptr_count : int):
+    def __init__(self, param_type: str, param_id: str, ptr_count: int):
         super().__init__(node_name="FuncParam\\nId: '" + param_id + "'\\nType:'" + param_type + "'")
         self.param_type = param_type
         self.param_id = param_id
@@ -446,6 +448,7 @@ class ForStmt(Statement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
 
 class BranchStmt(Statement):
     """
@@ -582,6 +585,7 @@ class AssignmentExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+
 class AddAssignmentExpr(Expression):
     """
         Node that represents an addition assignment expression: "a += b;".
@@ -603,6 +607,7 @@ class AddAssignmentExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
 
 class SubAssignmentExpr(Expression):
     """
@@ -626,6 +631,7 @@ class SubAssignmentExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+
 class MulAssignmentExpr(Expression):
     """
         Node that represents a multiplication assignment expression: "a *= b;".
@@ -648,7 +654,8 @@ class MulAssignmentExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-class DivAssignExpr(Expression):
+
+class DivAssignmentExpr(Expression):
     """
         Node that represents a division assignment expression: "a /= b;".
     """
@@ -698,6 +705,7 @@ class LogicAndExpr(Expression):
     """
         Node that represents an AND expression.
     """
+
     def __init__(self, left, right):
         super().__init__(expression_type="LogicAndExpr")
         self.left = left
@@ -852,6 +860,7 @@ class AddExpr(Expression):
     """
         Node that represents an addition expression.
     """
+
     def __init__(self, left, right):
         super().__init__(expression_type="AddExpr")
         self.left = left
@@ -874,6 +883,7 @@ class SubExpr(Expression):
     """
         Node that represents an subtraction expression.
     """
+
     def __init__(self, left, right):
         super().__init__(expression_type="SubExpr")
         self.left = left
@@ -1168,6 +1178,7 @@ class AddressExpr(Expression):
     """
         Node that represents an address expression: "&x".
     """
+
     def __init__(self, target_expr):
         super().__init__(expression_type="AddressExpr")
         self.target_expr = target_expr
@@ -1187,7 +1198,7 @@ class FuncCallExpr(Expression):
         Node that represents a function call: "identifier(params)".
     """
 
-    def __init__(self, function_identifier : str, argument_list):
+    def __init__(self, function_identifier: str, argument_list):
         """
         Params:
             'function_identifier': IdentifierNode object that represents the identifier of the function.
@@ -1215,8 +1226,8 @@ class IdentifierExpr(Expression):
         Node that represents an identifier expression (different from the idenfier itself!)
     """
 
-    def __init__(self, identifier : str):
-        super().__init__(expression_type="IdentifierExpr\\n'"+identifier+"'")
+    def __init__(self, identifier: str):
+        super().__init__(expression_type="IdentifierExpr\\n'" + identifier + "'")
         self.identifier = identifier
 
     def getIdentifier(self):
@@ -1306,4 +1317,3 @@ class BoolConstantExpr(ConstantExpr):
 
     def getBoolValue(self):
         return str(self.getValue()).lower() == "true"
-
