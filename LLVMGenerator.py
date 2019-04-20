@@ -5,6 +5,7 @@ class LLVMGenerator:
     def __init__(self, symbol_table):
         self.cur_reg = 0
         self.symbol_table = symbol_table
+        self.code = ""
 
     def astNodeToLLVM(self, node):
         """
@@ -34,7 +35,7 @@ class LLVMGenerator:
             return self.body(node)
         elif isinstance(node, ProgramNode):
             return self.programNode(node)
-        return "", self.cur_reg
+        return self.cur_reg
 
     def boolConstantExpr(self, expr):
         """
@@ -42,9 +43,9 @@ class LLVMGenerator:
         """
         register = self.cur_reg
         self.cur_reg += 1
-        code = "%{} = i1 {} \n".format(register, expr.getBoolValue())
+        self.code += "%{} = i1 {} \n".format(register, expr.getBoolValue())
 
-        return code, register
+        return register
 
     def floatConstantExpr(self, expr):
         """
@@ -52,9 +53,9 @@ class LLVMGenerator:
         """
         register = self.cur_reg
         self.cur_reg += 1
-        code = "%{} = float {} \n".format(register, expr.getFloatValue())
+        self.code += "%{} = float {} \n".format(register, expr.getFloatValue())
 
-        return code, register
+        return register
 
     def integerConstantExpr(self, expr):
         """
@@ -62,11 +63,11 @@ class LLVMGenerator:
         """
         register = self.cur_reg
         self.cur_reg += 1
-        code = "%{} = i32 {} \n".format(register, expr.getIntValue())
+        self.code += "%{} = i32 {} \n".format(register, expr.getIntValue())
 
-        return code, register
+        return register
 
-    def loadGlobalVariableInto(self, var_id, var_type):
+    def loadGlobalVariable(self, var_id, var_type):
         """
         Load a global variable into a scoped register
         """
@@ -75,54 +76,55 @@ class LLVMGenerator:
         return "%{} = load {}, {}* @{} \n".format(register, var_type, var_type, var_id), register
 
     def storeGlobalVariableFromRegister(self, var_id, var_type, register):
-        return "store {} %{}, {}* @{} \n".format(var_type, register, var_type, var_id)
+        self.code += "store {} %{}, {}* @{} \n".format(var_type, register, var_type, var_id)
 
-    def varDeclDefault(self, decl):
+    def varDeclDefault(self, node):
         # default initialization to 0. Might be improved later
-        var_type = decl.getType() + str(decl.getPointerCount())
-        var_id = decl.getID()
-        code = ""
+        var_type = node.getType() + str(node.getPointerCount())
+        var_id = node.getID()
 
         if self.symbol_table.isGlobal(var_id):
-
-            code += "store {} 0, {}* @{}".format(var_type, var_type, var_id)
+            self.code += "@{} = global {} 0".format(var_id, var_type)
+            # self.code += "store {} 0, {}* @{}".format(var_type, var_type, var_id)
         else:
-            code += "%{} = {} 0".format(var_id, var_type)
+            t, table = self.symbol_table.lookup(var_id)
+            reg_name = table + "." + var_id
+            self.code += "%{} = {} 0".format(reg_name, var_type)
 
-        code += "\n"
-        return code
+        self.code += "\n"
+        return
 
-    def varDeclWithInit(self, decl):
-        var_type = decl.getType() + str(decl.getPointerCount())
-        var_id = decl.getID()
-        code, register = self.astNodeToLLVM(decl.getInitExpr())
+    def varDeclWithInit(self, node):
+        var_type = node.getType() + str(node.getPointerCount())
+        var_id = node.getID()
+        self.code, register = self.astNodeToLLVM(node.getInitExpr())
         if self.symbol_table.isGlobal(var_id):
-            code += self.storeGlobalVariableFromRegister(var_id, var_type, register)
+            self.code += self.storeGlobalVariableFromRegister(var_id, var_type, register)
         else:
-            code += "%{} = {} %{}".format(var_id, var_type, register)
-        self.cur_reg += 1
-        code += "\n"
-        return code
+            t, table = self.symbol_table.lookup(var_id)
+            reg_name = table + "." + var_id
+            self.code += "%{} = {} %{}".format(reg_name, var_type, register)
 
-    def branchStatement(self, stat):
+        self.code += "\n"
+        return
+
+    def branchStatement(self, node):
         # WIP
-        code, register = self.astNodeToLLVM(stat.getCondExpr())
-        code = "br i1 %{}, label %{}, label %{}".format(register, register + 1, register + 2)
-        # add code blocks
+        register = self.astNodeToLLVM(node.getCondExpr())
+        self.code += "br i1 %{}, label %{}, label %{}".format(register, register + 1, register + 2)
+        # add self.code blocks
 
     def programNode(self, node):
-        code = ""
         for child in node.getChildren():
-            code += self.astNodeToLLVM(child)
+            self.code += self.astNodeToLLVM(child)
 
-        return code
+        return self.code
 
     def body(self, node):
-        code = ""
         for child in node.getChildren():
-            code += self.astNodeToLLVM(child)
+            self.code += self.astNodeToLLVM(child)
 
-        return code
+        return self.code
 
     def funcParam(self, node):
         param_type = self.getLLVMType(node.getParamType()) + node.getPointerCount() * "*"
@@ -133,37 +135,65 @@ class LLVMGenerator:
         return_type = node.getType() + node.getPointerCount() * "*"
         function_name = "@" + node.getID()
 
-        code = "declare " + return_type + function_name + "("
+        self.code += "declare " + return_type + function_name + "("
         first_param = True
         for param in node.getParams():
             if not first_param:
-                code += ","
+                self.code += ","
             else:
                 first_param = False
 
-            code += self.funcParam(param)
+            self.code += self.funcParam(param)
 
-        code += ")\n"
-        return code
+        self.code += ")\n"
+        return self.code
 
     def funcDef(self, node):
         return_type = node.getReturnType() + node.getPointerCount() * "*"
         function_name = "@" + node.getFuncID()
 
-        code = "define " + return_type + function_name + "("
+        self.code += "define " + return_type + function_name + "("
         first_param = True
         for param in node.getParamList():
             if not first_param:
-                code += ","
+                self.code += ","
             else:
                 first_param = False
 
-            code += self.funcParam(param)
+            self.code += self.funcParam(param)
 
-        code += "){\n"
-        code += self.astNodeToLLVM(node.getBody())
-        code += "}\n"
-        return code
+        self.code += "){\n"
+        self.code += self.astNodeToLLVM(node.getBody())
+        self.code += "}\n"
+        return
+
+    def funcCallExpr(self, node):
+        # "%retval = call i32 @test(i32 %argc)"
+        # first load the correct variables to use as arguments
+        first_arg = True
+        arg_list = "("
+        for arg in node.getArguments():
+            if not first_arg:
+                arg_list += ","
+            else:
+                first_arg = False
+            arg_code, arg_reg = self.astNodeToLLVM(arg)
+            self.code += arg_code
+
+            arg_type = self.getLLVMType(arg.getType())
+            arg_list += "{} %{}".format(arg_type, arg_reg)
+        arg_list += ")"
+
+        func_reg = self.cur_reg
+        self.cur_reg += 1
+        self.code += "%{} = call ".format(func_reg)
+
+        return_type = node.getType()
+        self.code += "{} @{}".format(return_type, node.getFunctionID())
+        self.code += arg_list
+        self.code += "\n"
+
+        return self.code, func_reg
 
     def isConstant(self, node):
         return isinstance(node, ConstantExpr)
@@ -177,3 +207,11 @@ class LLVMGenerator:
         elif type == "bool":
             return "i1"
         return ""
+
+    def identifierExpr(self, expr):
+        """
+        Returns register number the indentifier is located in
+        """
+        identifier = expr.getIdentifier()
+        t, table = self.symbol_table.lookup(identifier)
+        return "%" + table + "." + identifier
