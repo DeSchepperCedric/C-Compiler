@@ -7,6 +7,9 @@ class LLVMGenerator:
         self.symbol_table = symbol_table
         self.code = ""
 
+    def getCode(self):
+        return self.code
+
     def astNodeToLLVM(self, node):
         """
         Returns LLVM code string + register number
@@ -30,6 +33,15 @@ class LLVMGenerator:
             return self.funcDecl(node)
         elif isinstance(node, FuncDef):
             return self.funcDef(node)
+
+        elif isinstance(node, AddExpr):
+            return self.arithmeticExpr(node, "add")
+        elif isinstance(node, SubExpr):
+            return self.arithmeticExpr(node, "sub")
+        elif isinstance(node, MulExpr):
+            return self.arithmeticExpr(node, "mul")
+        elif isinstance(node, DivExpr):
+            return self.arithmeticExpr(node, "div")
 
         elif isinstance(node, Body):
             return self.body(node)
@@ -97,7 +109,7 @@ class LLVMGenerator:
     def varDeclWithInit(self, node):
         var_type = node.getType() + str(node.getPointerCount())
         var_id = node.getID()
-        self.code, register = self.astNodeToLLVM(node.getInitExpr())
+        register = self.astNodeToLLVM(node.getInitExpr())
         if self.symbol_table.isGlobal(var_id):
             self.code += self.storeGlobalVariableFromRegister(var_id, var_type, register)
         else:
@@ -118,13 +130,9 @@ class LLVMGenerator:
         for child in node.getChildren():
             self.code += self.astNodeToLLVM(child)
 
-        return self.code
-
     def body(self, node):
         for child in node.getChildren():
             self.code += self.astNodeToLLVM(child)
-
-        return self.code
 
     def funcParam(self, node):
         param_type = self.getLLVMType(node.getParamType()) + node.getPointerCount() * "*"
@@ -146,7 +154,6 @@ class LLVMGenerator:
             self.code += self.funcParam(param)
 
         self.code += ")\n"
-        return self.code
 
     def funcDef(self, node):
         return_type = node.getReturnType() + node.getPointerCount() * "*"
@@ -193,7 +200,7 @@ class LLVMGenerator:
         self.code += arg_list
         self.code += "\n"
 
-        return self.code, func_reg
+        return func_reg
 
     def isConstant(self, node):
         return isinstance(node, ConstantExpr)
@@ -208,10 +215,76 @@ class LLVMGenerator:
             return "i1"
         return ""
 
-    def identifierExpr(self, expr):
+    def identifierExpr(self, node):
         """
         Returns register number the indentifier is located in
         """
-        identifier = expr.getIdentifier()
+        identifier = node.getIdentifier()
         t, table = self.symbol_table.lookup(identifier)
         return "%" + table + "." + identifier
+
+    def arithmeticExpr(self, node, operation):
+        type_left = node.getLeft().getType()
+        type_right = node.getRight().getType()
+
+        reg_left = self.astNodeToLLVM(node.getLeft())
+        reg_right = self.astNodeToLLVM(node.getRight())
+
+        strongest_type = self.getStrongestType(type_left, type_right)
+
+        if strongest_type == "float":
+            reg_left = self.convertToFloat(reg_left, type_left)
+            reg_right = self.convertToFloat(reg_right, type_right)
+
+            self.code += "%{} = f{} float %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
+        else:
+            reg_left = self.convertToInt(reg_left, type_left)
+            reg_right = self.convertToInt(reg_right, type_right)
+
+            self.code += "%{} = {} i32 %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
+
+        self.cur_reg += 1
+        return self.cur_reg - 1
+
+    def getStrongestType(self, a, b):
+        if a == "float" or b == "float":
+            return "float"
+        elif a == "int" or b == "int":
+            return "int"
+        else:
+            return "char"
+
+    def convertToFloat(self, reg, type):
+        if type == "float":
+            return reg
+
+        elif type == "char":
+            self.code += "%{} = sext i8 %{} to i32\n".format(self.cur_reg, reg)
+            self.code += "%{} = sitofp i32 %{} to float\n".format(self.cur_reg + 1, self.cur_reg)
+            self.cur_reg += 2
+            return self.cur_reg - 1
+        elif type == "int":
+            self.code += "%{} = sitofp i32 %{} to float\n".format(self.cur_reg, reg)
+            self.cur_reg += 1
+            return self.cur_reg - 1
+        else:
+            # what with other types?
+            return reg
+
+    def convertToInt(self, reg, type):
+        if type == "int":
+            return reg
+
+        elif type == "char":
+            self.code += "%{} = sext i8 %{} to i32\n".format(self.cur_reg, reg)
+            self.cur_reg += 1
+            return self.cur_reg - 1
+
+        elif type == "float":
+            self.code += " %{} = fptosi float %{} to i32\n".format(self.cur_reg, reg)
+            self.cur_reg += 1
+            return self.cur_reg - 1
+
+        else:
+            # what with other types?
+            return reg
