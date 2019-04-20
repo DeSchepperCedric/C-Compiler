@@ -104,6 +104,11 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by CParser#jumpReturnWithExpr.
+    def visitJumpReturnWithExpr(self, ctx:CParser.JumpReturnWithExprContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by CParser#jumpBreak.
     def visitJumpBreak(self, ctx:CParser.JumpBreakContext):
         return self.visitChildren(ctx)

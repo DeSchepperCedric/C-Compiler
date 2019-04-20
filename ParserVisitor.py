@@ -313,6 +313,17 @@ class ParserVisitor(CVisitor):
     def visitJumpReturn(self, ctx: CParser.JumpReturnContext):
         return [ReturnStatement()]
 
+    # Visit a parse tree produced by CParser#jumpReturnWithExpr.
+    def visitJumpReturnWithExpr(self, ctx:CParser.JumpReturnWithExprContext):
+
+        # child 0: 'return'
+        # child 1: return value
+        return_value = self.manuallyVisitChild(ctx.getChild(1))
+        
+        # child 2: ';'
+
+        return [ReturnWithExprStatement(return_value)]
+
     # Visit a parse tree produced by CParser#jumpBreak.
     def visitJumpBreak(self, ctx: CParser.JumpBreakContext):
         return [BreakStatement()]

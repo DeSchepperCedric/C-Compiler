@@ -483,12 +483,9 @@ class JumpStatement(Statement):
         super().__init__(statement_type="JumpStmt:" + jump_type)
 
 
-# ENDCLASS
-
-
 class ReturnStatement(JumpStatement):
     """
-        Node that represents a return statement.
+        Node that represents a return statement without return value.
     """
 
     def __init__(self):
@@ -500,6 +497,20 @@ class ReturnStatement(JumpStatement):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+
+class ReturnWithExprStatement(JumpStatement):
+    """
+        Node that represents a return statement with return value.
+    """
+    def __init__(self, expression):
+        super().__init__(jump_type="returnWithExpr")
+        self.expression = expression
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[self.expression],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
 
 class BreakStatement(JumpStatement):
     """
@@ -708,6 +719,12 @@ class LogicAndExpr(Expression):
 
     def getRight(self):
         return self.right
+
+    def toDot(self, parent_nr, begin_nr, add_open_close=False):
+        return self.M_defaultToDotImpl(children=[self.left, self.right],
+                                       parent_nr=parent_nr,
+                                       begin_nr=begin_nr,
+                                       add_open_close=add_open_close)
 
 
 class EqualityExpr(Expression):
