@@ -58,16 +58,17 @@ block_item
         ;
 
 jump_statement
-	    : RETURN SC                  # jumpReturn
+	    : RETURN SC                        # jumpReturn
         | RETURN assignment_expr? SC # jumpReturnWithExpr
-	    | BREAK SC                   # jumpBreak
-        | CONTINUE SC                # jumpContinue
+	    | BREAK SC                         # jumpBreak
+        | CONTINUE SC                      # jumpContinue
         ;
 
 expression_statement : expression? SC ;
 
 // expression
 expression : assignment_expr (COMMA expression)* ;
+
 
 assignment_expr
         : logical_or_expr

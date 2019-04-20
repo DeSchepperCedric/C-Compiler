@@ -533,6 +533,7 @@ class ReturnWithExprStatement(JumpStatement):
     """
         Node that represents a return statement with return value.
     """
+
     def __init__(self, expression):
         super().__init__(jump_type="returnWithExpr")
         self.expression = expression
@@ -542,6 +543,7 @@ class ReturnWithExprStatement(JumpStatement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
 
 class BreakStatement(JumpStatement):
     """
