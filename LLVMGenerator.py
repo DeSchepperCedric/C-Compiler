@@ -4,6 +4,7 @@ from ASTTreeNodes import *
 class LLVMGenerator:
     def __init__(self):
         self.cur_reg = 0
+        self.variable_reg = dict()
 
     def astNodeToLLVM(self, node):
         """
@@ -126,7 +127,9 @@ class LLVMGenerator:
         else:
             t, table = node.getSymbolTable().lookup(var_id)
             reg_name = table + "." + var_id
-            code += "%{} = {} 0".format(reg_name, var_type)
+            self.variable_reg[reg_name] = self.cur_reg
+            code += "%{} = {} 0".format(self.cur_reg, var_type)
+            self.cur_reg += 1
 
         code += "\n"
         return code
@@ -140,7 +143,9 @@ class LLVMGenerator:
         else:
             t, table = node.getSymbolTable().lookup(var_id)
             reg_name = table + "." + var_id
-            code += "%{} = {} %{}".format(reg_name, var_type, register)
+            self.variable_reg[reg_name] = self.cur_reg
+            code += "%{} = {} %{}".format(self.cur_reg, var_type, register)
+            self.cur_reg += 1
 
         code += "\n"
         return code
@@ -283,11 +288,13 @@ class LLVMGenerator:
 
     def identifierExpr(self, node):
         """
-        Returns register number the indentifier is located in
+        Returns register number the identifier is located in
         """
         identifier = node.getIdentifier()
         t, table = node.getSymbolTable().lookup(identifier)
-        return "%" + table + "." + identifier
+        var_name = table + "." + identifier
+        reg = self.variable_reg.get(var_name)
+        return "%{}".format(reg)
 
     def arithmeticExpr(self, node, operation):
         code = ""
