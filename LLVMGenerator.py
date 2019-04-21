@@ -5,6 +5,7 @@ class LLVMGenerator:
     def __init__(self):
         self.cur_reg = 0
         self.variable_reg = dict()
+        self.reg_stack = list()
 
     def astNodeToLLVM(self, node):
         """
@@ -247,6 +248,11 @@ class LLVMGenerator:
         return code
 
     def funcDef(self, node):
+        # enter new scope
+        self.reg_stack.append(self.cur_reg)
+        # %0 is return type
+        # %1 ... are args
+        self.cur_reg = len(node.getParamList()) + 1
         code = ""
         return_type = node.getReturnType() + node.getPointerCount() * "*"
         function_name = "@" + node.getFuncID()
@@ -262,9 +268,25 @@ class LLVMGenerator:
             code += self.funcParam(param)
 
         code += "){\n"
+
+        # allocate parameters
+        for param in node.getParamList():
+            param_type = self.getLLVMType(param.getParamType()) + param.getPointerCount() * "*"
+            code += "%{} = alloca {},".format(self.cur_reg, param_type)
+            self.cur_reg += 1
+        # store parameters
+        counter = 1
+        for param in node.getParamList():
+            param_type = self.getLLVMType(param.getParamType()) + param.getPointerCount() * "*"
+            self.storeLocalVariableFromRegister(counter, param_type, self.cur_reg)
+            self.cur_reg += 1
+# store i32 %0, i32* %2, align 4
         new_code, reg = self.astNodeToLLVM(node.getBody())
         code += new_code
         code += "}\n"
+
+        # exit scope
+        self.cur_reg = self.reg_stack.pop()
         return code
 
     def funcCallExpr(self, node):
