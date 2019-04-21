@@ -1,0 +1,34 @@
+digraph G {
+	0 [
+ shape=plaintext 
+label=< <table border='0' cellborder='1' cellspacing='0'
+>	<tr><td colspan="2"> T0 </td></tr>
+	<tr>	<td>void()</td>
+	<td>printf</td>
+	</tr>
+	<tr>	<td>void()</td>
+	<td>scanf</td>
+	</tr>
+	<tr>	<td>int(['int', 'char'])</td>
+	<td>main</td>
+	</tr>
+	</table>  >];
+	0 -> 1;
+	1 [
+ shape=plaintext 
+label=< <table border='0' cellborder='1' cellspacing='0'
+>	<tr><td colspan="2"> T1 </td></tr>
+	<tr>	<td>int</td>
+	<td>arc</td>
+	</tr>
+	<tr>	<td>char**</td>
+	<td>argv</td>
+	</tr>
+	<tr>	<td>int</td>
+	<td>some_integer</td>
+	</tr>
+	<tr>	<td>int[]</td>
+	<td>a</td>
+	</tr>
+	</table>  >];
+}

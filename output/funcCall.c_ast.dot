@@ -1,0 +1,66 @@
+digraph ast_tree {
+splines=ortho;
+1 [label="Program", shape=box]
+3 [label="Include <stdio.h>", shape=box]
+1:s -> 3:n
+5 [label="FuncDef\n'func'\nType:'float'", shape=box]
+1:s -> 5:n
+7 [label="FuncParam\nId: 'a'\nPtrCount:0\nType:'int'", shape=box]
+5:s -> 7:n
+9 [label="FuncParam\nId: 'c'\nPtrCount:0\nType:'char'", shape=box]
+5:s -> 9:n
+11 [label="Body", shape=box]
+5:s -> 11:n
+13 [label="Stmt:ExpressionStatement", shape=box]
+11:s -> 13:n
+15 [label="FuncCallExpr", shape=box]
+13:s -> 15:n
+17 [label="IdentifierExpr\n'printf'", shape=box]
+15:s -> 17:n
+19 [label="StrConstant\n'param a: %d'", shape=box]
+15:s -> 19:n
+21 [label="IdentifierExpr\n'a'", shape=box]
+15:s -> 21:n
+23 [label="Stmt:ExpressionStatement", shape=box]
+11:s -> 23:n
+25 [label="FuncCallExpr", shape=box]
+23:s -> 25:n
+27 [label="IdentifierExpr\n'printf'", shape=box]
+25:s -> 27:n
+29 [label="StrConstant\n'param c: %c'", shape=box]
+25:s -> 29:n
+31 [label="IdentifierExpr\n'c'", shape=box]
+25:s -> 31:n
+33 [label="Stmt:JumpStmt:returnWithExpr", shape=box]
+11:s -> 33:n
+35 [label="FloatConstant\n'5.3'", shape=box]
+33:s -> 35:n
+37 [label="FuncDef\n'main'\nType:'int'", shape=box]
+1:s -> 37:n
+39 [label="FuncParam\nId: 'arc'\nPtrCount:0\nType:'int'", shape=box]
+37:s -> 39:n
+41 [label="FuncParam\nId: 'argv'\nPtrCount:2\nType:'char'", shape=box]
+37:s -> 41:n
+43 [label="Body", shape=box]
+37:s -> 43:n
+45 [label="Decl:VarWithInit\nId:retval\nPtrCount:0\nType:float", shape=box]
+43:s -> 45:n
+47 [label="FuncCallExpr", shape=box]
+45:s -> 47:n
+49 [label="IdentifierExpr\n'func'", shape=box]
+47:s -> 49:n
+51 [label="IntConstant\n'20'", shape=box]
+47:s -> 51:n
+53 [label="CharConstant\n''b''", shape=box]
+47:s -> 53:n
+55 [label="Stmt:ExpressionStatement", shape=box]
+43:s -> 55:n
+57 [label="FuncCallExpr", shape=box]
+55:s -> 57:n
+59 [label="IdentifierExpr\n'printf'", shape=box]
+57:s -> 59:n
+61 [label="StrConstant\n'%f'", shape=box]
+57:s -> 61:n
+63 [label="IdentifierExpr\n'retval'", shape=box]
+57:s -> 63:n
+}

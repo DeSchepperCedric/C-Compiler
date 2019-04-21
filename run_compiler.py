@@ -8,6 +8,8 @@ from antlr_files.CParser import CParser
 from ParserVisitor import ParserVisitor
 from ParserErrorListener import ParserErrorListener
 from Logger import Logger
+from CompilerException import CompilerException
+from CompilerException import ParserException
 
 def run_compiler(source_file_path, output_name):
     in_stream = FileStream(source_file_path)
@@ -47,7 +49,7 @@ def main(argv):
 
     try:
         run_compiler(source_file_path = argv[1], output_name=output_name)
-    except:
+    except CompilerException:
         Logger.error("Compiler was terminated due to errors.")
 
 if __name__ == "__main__":

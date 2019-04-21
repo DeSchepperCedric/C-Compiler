@@ -18,8 +18,8 @@ declaration : prim_type declarator (COMMA declarator)*;
 declarator
         : id_with_ptr LEFT_PAREN (param (COMMA param)*)? RIGHT_PAREN  # funcDecl
         | id_with_ptr                                                 # varDeclSimple
-        | id_with_ptr LEFT_BRACKET expression RIGHT_BRACKET           # varDeclArray
-        | id_with_ptr ASSIGNMENT expression                           # varDeclInit
+        | id_with_ptr LEFT_BRACKET assignment_expr RIGHT_BRACKET      # varDeclArray
+        | id_with_ptr ASSIGNMENT assignment_expr                      # varDeclInit
         ; 
 
 // function declarator
@@ -59,7 +59,7 @@ block_item
 
 jump_statement
 	    : RETURN SC                        # jumpReturn
-        | RETURN assignment_expr? SC # jumpReturnWithExpr
+        | RETURN assignment_expr? SC       # jumpReturnWithExpr
 	    | BREAK SC                         # jumpBreak
         | CONTINUE SC                      # jumpContinue
         ;
@@ -138,11 +138,11 @@ unary_operator
         ;
 
 postfix_expr
-        : postfix_expr LEFT_BRACKET expression RIGHT_BRACKET # arrayAccesExpr
-        | postfix_expr DECREMENT                             # postfixDec
-        | postfix_expr INCREMENT                             # postfixInc
-        | postfix_expr LEFT_PAREN expression? RIGHT_PAREN    # funcCall
-        | prim_expr                                          # primitiveExpr
+        : postfix_expr LEFT_BRACKET assignment_expr RIGHT_BRACKET # arrayAccesExpr // we use assignment_expr here since "expression" is a list
+        | postfix_expr DECREMENT                                  # postfixDec
+        | postfix_expr INCREMENT                                  # postfixInc
+        | postfix_expr LEFT_PAREN expression? RIGHT_PAREN         # funcCall
+        | prim_expr                                               # primitiveExpr
         ;
 
 prim_expr : LEFT_PAREN expression RIGHT_PAREN # parenExpr

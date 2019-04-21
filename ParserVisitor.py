@@ -557,7 +557,7 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#funcCall.
     def visitFuncCall(self, ctx: CParser.FuncCallContext):
-        # function id is a string that contains the name of the function.
+        # function id is a IdentifierExpression
         function_id = self.manuallyVisitChild(ctx.getChild(0))
 
         arg_ctx_list = [node for node in list(ctx.getChildren())[1:] if not node.getText() in [',', '(', ')']]

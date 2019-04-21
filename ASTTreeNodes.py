@@ -8,9 +8,13 @@ class ASTNode:
 
     def __init__(self, node_name):
         self.node_name = node_name
+        self.symbol_table = None
 
     def getNodeName(self):
-        return self.node_name
+        if self.symbol_table is None:
+            return self.node_name
+        else: # if the symbol table is present, annotate with star
+            return "*"+self.node_name
 
     def getSymbolTable(self):
         """
@@ -72,14 +76,15 @@ class ASTNode:
             dotdata += "{}:s -> {}:n\n".format(parent_nr, current_node_nr)
 
         current_node_nr += 1
-        new_children = list()
-        for child in children:
-            if isinstance(child, list):
-                new_children.extend(child)
-            else:
-                new_children.append(child)
+        # new_children = list()
+        # this is disabled since 'list' as a child can be an indication of a ParserVisitor error
+        # for child in children:
+        #     if isinstance(child, list):
+        #         new_children.extend(child)
+        #     else:
+        #         new_children.append(child)
 
-        for child in new_children:
+        for child in children:
             # the child should have node number 'current_node_nr+1'
             # update the current node number
 
@@ -267,6 +272,7 @@ class ArrayDecl(SymbolDecl):
 
     def addToSymbolTable(self, symbol_table):
         self.setSymbolTable(symbol_table)
+        self.size_expr.setExprTreeSymbolTable(symbol_table)
         symbol_table.insert(self.symbol_id, "{}{}[]".format(self.symbol_type, "*" * self.symbol_ptr_cnt))
 
 
@@ -315,6 +321,7 @@ class VarDeclWithInit(SymbolDecl):
 
     def addToSymbolTable(self, symbol_table):
         self.setSymbolTable(symbol_table)
+        self.init_expr.setExprTreeSymbolTable(symbol_table)
         symbol_table.insert(self.symbol_id, "{}{}".format(self.symbol_type, "*" * self.symbol_ptr_cnt))
 
 
@@ -501,6 +508,10 @@ class StatementContainer:
                 # add contents as child
                 # note: this also sets the symbol table for the body
                 child.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
+
+            elif isinstance(child, ExpressionStatement): # expression statement: annotate the expression tree with the symbol table
+                child.getExpression().setExprTreeSymbolTable(symbol_table)
+
 
         return symbol_table
 
@@ -769,6 +780,12 @@ class Expression(ASTNode):
     def __init__(self, expression_type):
         super().__init__(node_name=expression_type)
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	"""
+			Sets the symbol table for all in the expression tree with this expression as root.
+    	"""
+    	pass
+
     def checkIdentifierExistance(self, symbol_table):
         """
             Determine whether or not all identifier used in the expression are present in
@@ -795,6 +812,12 @@ class AssignmentExpr(Expression):
     def getRight(self):
         return self.right
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
                                        parent_nr=parent_nr,
@@ -817,6 +840,12 @@ class AddAssignmentExpr(Expression):
 
     def getRight(self):
         return self.right
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -841,6 +870,12 @@ class SubAssignmentExpr(Expression):
     def getRight(self):
         return self.right
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
                                        parent_nr=parent_nr,
@@ -863,6 +898,12 @@ class MulAssignmentExpr(Expression):
 
     def getRight(self):
         return self.right
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -887,6 +928,12 @@ class DivAssignmentExpr(Expression):
     def getRight(self):
         return self.right
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
                                        parent_nr=parent_nr,
@@ -909,6 +956,12 @@ class LogicOrExpr(Expression):
 
     def getRight(self):
         return self.right
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -933,6 +986,12 @@ class LogicAndExpr(Expression):
     def getRight(self):
         return self.right
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
                                        parent_nr=parent_nr,
@@ -955,6 +1014,12 @@ class EqualityExpr(Expression):
 
     def getRight(self):
         return self.right
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -979,6 +1044,12 @@ class InequalityExpr(Expression):
     def getRight(self):
         return self.right
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
                                        parent_nr=parent_nr,
@@ -1001,6 +1072,12 @@ class CompGreater(Expression):
 
     def getRight(self):
         return self.right
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1025,6 +1102,12 @@ class CompLess(Expression):
     def getRight(self):
         return self.right
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
                                        parent_nr=parent_nr,
@@ -1047,6 +1130,12 @@ class CompGreaterEqual(Expression):
 
     def getRight(self):
         return self.right
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1071,6 +1160,12 @@ class CompLessEqual(Expression):
     def getRight(self):
         return self.right
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
                                        parent_nr=parent_nr,
@@ -1093,6 +1188,12 @@ class AddExpr(Expression):
 
     def getRight(self):
         return self.right
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1117,6 +1218,12 @@ class SubExpr(Expression):
     def getRight(self):
         return self.right
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
                                        parent_nr=parent_nr,
@@ -1139,6 +1246,12 @@ class MulExpr(Expression):
 
     def getRight(self):
         return self.right
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1163,6 +1276,12 @@ class DivExpr(Expression):
     def getRight(self):
         return self.right
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
                                        parent_nr=parent_nr,
@@ -1185,6 +1304,12 @@ class ModExpr(Expression):
 
     def getRight(self):
         return self.right
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.left.setExprTreeSymbolTable(symbol_table)
+    	self.right.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1214,6 +1339,11 @@ class CastExpr(Expression):
     def getExpr(self):
         return self.expression
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.expression.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
                                        parent_nr=parent_nr,
@@ -1232,6 +1362,11 @@ class LogicNotExpr(Expression):
 
     def getExpr(self):
         return self.expression
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.expression.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
@@ -1252,6 +1387,11 @@ class PrefixIncExpr(Expression):
     def getExpr(self):
         return self.expression
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.expression.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
                                        parent_nr=parent_nr,
@@ -1270,6 +1410,11 @@ class PrefixDecExpr(Expression):
 
     def getExpr(self):
         return self.expression
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.expression.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
@@ -1290,6 +1435,11 @@ class PostfixIncExpr(Expression):
     def getExpr(self):
         return self.expression
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.expression.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
                                        parent_nr=parent_nr,
@@ -1308,6 +1458,11 @@ class PostfixDecExpr(Expression):
 
     def getExpr(self):
         return self.expression
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.expression.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
@@ -1328,6 +1483,11 @@ class PlusPrefixExpr(Expression):
     def getExpr(self):
         return self.expression
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.expression.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
                                        parent_nr=parent_nr,
@@ -1346,6 +1506,11 @@ class MinPrefixExpr(Expression):
 
     def getExpr(self):
         return self.expression
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.expression.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
@@ -1370,6 +1535,12 @@ class ArrayAccessExpr(Expression):
     def getIndexArray(self):
         return self.index_expr
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.target_array.setExprTreeSymbolTable(symbol_table)
+    	self.index_expr.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.target_array, self.index_expr],
                                        parent_nr=parent_nr,
@@ -1388,6 +1559,11 @@ class PointerDerefExpr(Expression):
 
     def getTargetPtr(self):
         return self.target_ptr
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.target_ptr.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.target_ptr],
@@ -1408,6 +1584,11 @@ class AddressExpr(Expression):
     def getTargetExpr(self):
         return self.target_expr
 
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.target_expr.setExprTreeSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.target_expr],
                                        parent_nr=parent_nr,
@@ -1420,10 +1601,10 @@ class FuncCallExpr(Expression):
         Node that represents a function call: "identifier(params)".
     """
 
-    def __init__(self, function_identifier: str, argument_list):
+    def __init__(self, function_identifier, argument_list):
         """
         Params:
-            'function_identifier': IdentifierNode object that represents the identifier of the function.
+            'function_identifier': IdentifierExpr object that represents the identifier of the function.
             'argument_list': list of Expression
         """
         super().__init__(expression_type="FuncCallExpr")
@@ -1435,6 +1616,14 @@ class FuncCallExpr(Expression):
 
     def getArguments(self):
         return self.argument_list
+
+    def setExprTreeSymbolTable(self, symbol_table):
+    	self.setSymbolTable(symbol_table)
+
+    	self.identifier.setExprTreeSymbolTable(symbol_table)
+
+    	for arg in self.argument_list:
+    		arg.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.identifier, *self.argument_list],
@@ -1455,6 +1644,9 @@ class IdentifierExpr(Expression):
     def getIdentifier(self):
         return self.identifier
 
+    def setExprTreeSymbolTable(self, symbol_table):
+        self.setSymbolTable(symbol_table)
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[],
                                        parent_nr=parent_nr,
@@ -1468,11 +1660,20 @@ class ConstantExpr(Expression):
     """
 
     def __init__(self, constant_expr_type, value):
+        """
+            Constructor.
+
+            Params:
+                value: the value of the constant. These are not Expression objects.
+        """
         super().__init__(expression_type=constant_expr_type + "\\n'" + str(value) + "'")
         self.value = value
 
     def getValue(self):
         return self.value
+
+    def setExprTreeSymbolTable(self, symbol_table):
+        self.setSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[],
