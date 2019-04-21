@@ -2,9 +2,8 @@ from ASTTreeNodes import *
 
 
 class LLVMGenerator:
-    def __init__(self, symbol_table):
+    def __init__(self):
         self.cur_reg = 0
-        self.symbol_table = symbol_table
 
     def astNodeToLLVM(self, node):
         """
@@ -121,11 +120,11 @@ class LLVMGenerator:
         var_type = node.getType() + str(node.getPointerCount())
         var_id = node.getID()
         code = ""
-        if self.symbol_table.isGlobal(var_id):
+        if node.getSymbolTable().isGlobal(var_id):
             code += "@{} = global {} 0".format(var_id, var_type)
             # code += "store {} 0, {}* @{}".format(var_type, var_type, var_id)
         else:
-            t, table = self.symbol_table.lookup(var_id)
+            t, table = node.getSymbolTable().lookup(var_id)
             reg_name = table + "." + var_id
             code += "%{} = {} 0".format(reg_name, var_type)
 
@@ -136,10 +135,10 @@ class LLVMGenerator:
         var_type = node.getType() + str(node.getPointerCount())
         var_id = node.getID()
         code, register = self.astNodeToLLVM(node.getInitExpr())
-        if self.symbol_table.isGlobal(var_id):
+        if node.getSymbolTable().isGlobal(var_id):
             code += self.storeGlobalVariableFromRegister(var_id, var_type, register)
         else:
-            t, table = self.symbol_table.lookup(var_id)
+            t, table = node.getSymbolTable().lookup(var_id)
             reg_name = table + "." + var_id
             code += "%{} = {} %{}".format(reg_name, var_type, register)
 
@@ -287,7 +286,7 @@ class LLVMGenerator:
         Returns register number the indentifier is located in
         """
         identifier = node.getIdentifier()
-        t, table = self.symbol_table.lookup(identifier)
+        t, table = node.getSymbolTable().lookup(identifier)
         return "%" + table + "." + identifier
 
     def arithmeticExpr(self, node, operation):
