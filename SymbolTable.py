@@ -73,19 +73,18 @@ class SymbolTable:
             return 0
 
 
-def print_symbol_table_to_dot(root):
-    """
-    Print the symbol table in dot
-    :param root: Symbol table root
-    :return: None
-    """
-    dot = "digraph G {\n"
+    def toDot(self):
+        """
+        Print the symbol table in dot
+        :return: A string that contains the representation of the symbol
+        table in dot-format.
+        """
+        dot = "digraph G {\n"
 
-    cur_id = 0
-    new_dot, i = recursive_symbol_table(root, cur_id)
-    dot += new_dot
-    dot += "}\n"
-    return dot
+        new_dot, i = recursive_symbol_table(parent=self, cur_id=0)
+        dot += new_dot
+        dot += "}\n"
+        return dot
 
 
 def recursive_symbol_table(parent, cur_id):
