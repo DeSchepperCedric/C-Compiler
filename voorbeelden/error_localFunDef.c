@@ -3,6 +3,8 @@
  * definitions are not allowed.
  */
 
+#include <stdio.h>
+
 void global_func()
 {
     int local_func()

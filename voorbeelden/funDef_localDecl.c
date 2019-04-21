@@ -3,6 +3,8 @@
  * local declarations work.
  */
 
+#include <stdio.h>
+
 // function with no parameters
 int func()
 {

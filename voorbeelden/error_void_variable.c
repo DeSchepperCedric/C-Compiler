@@ -3,6 +3,8 @@
  * However, void pointers and void functions are supported.
  */
 
+#include <stdio.h>
+
 // fine
 void f();
 void* polymorphic_ptr;

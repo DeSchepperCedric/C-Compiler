@@ -3,6 +3,8 @@
  * detected and reported.
  */
 
+#include <stdio.h>
+
 void func()
 {
     int i = 60;

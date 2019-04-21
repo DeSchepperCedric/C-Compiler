@@ -2,6 +2,7 @@
  * @file: file to demonstate that loops work as intended.
  */
 
+#include <stdio.h>
 
 int main(int arc, char** argv)
 {

@@ -10,6 +10,8 @@
  * Note: only global declarations are tested here!
  */
 
+#include <stdio.h>
+
 // array of 50 floats.
 float a[50];
 

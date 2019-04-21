@@ -3,6 +3,8 @@
  * and retrieving the address with the '&' operator.
  */
 
+#include <stdio.h>
+
 int main(int arc, char** argv)
 {
     int i = 6;
