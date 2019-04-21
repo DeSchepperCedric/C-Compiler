@@ -168,8 +168,6 @@ class ParserVisitor(CVisitor):
     def visitIf_statement(self, ctx: CParser.If_statementContext):
         # if ( expr ) statement
         # if ( expr ) statement else statement
-        if_body = None
-        else_body = None
 
         # child #2 = expr
         cond_expr = self.manuallyVisitChild(ctx.getChild(2))
