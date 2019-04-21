@@ -6,7 +6,6 @@ from antlr_files.CLexer import CLexer
 from antlr_files.CParser import CParser
 
 from ParserVisitor import ParserVisitor
-from SymbolTable import print_symbol_table_to_dot
 from ParserErrorListener import ParserErrorListener
 from Logger import Logger
 
@@ -38,9 +37,9 @@ def run_compiler(source_file_path, output_name):
         ast_dot_repr = ast_tree.toDot(add_open_close=True)[1]
         ast_dotfile.write(ast_dot_repr)
 
-    # with open("./output/" + output_name + "_symboltable.dot", 'w') as symboltable_dotfile:
-    #     symboltable_dot_repr = symbol_table.toDot()
-    #     symboltable_dotfile.write(symboltable_dot_repr)
+    with open("./output/" + output_name + "_symboltable.dot", 'w') as symboltable_dotfile:
+        symboltable_dot_repr = symbol_table.toDot()
+        symboltable_dotfile.write(symboltable_dot_repr)
 
 def main(argv):
     # the name that will be used to form output files
