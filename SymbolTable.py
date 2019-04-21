@@ -114,7 +114,7 @@ def print_symbol_table_node_to_dot(node, cur_id):
     :param cur_id: current node id
     :return: dot string
     """
-    dot = "\t{} [\n shape=plaintext \nlabel=< <table border=\'0\' cellborder=\'1\' cellspacing=\'0\'\n>".format(cur_id)
+    dot = "\t{} [\n\t shape=plaintext \n \tlabel=< <table border=\'0\' cellborder=\'1\' cellspacing=\'0\'\n\t>".format(cur_id)
 
     dot += "\t<tr><td colspan=\"2\"> {} </td></tr>\n".format(node.name)
     for symbol, sym_type in node.symbols.items():
