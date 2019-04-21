@@ -6,7 +6,7 @@ class SymbolTable:
 
     def __init__(self, parent=None):
         self.name = 'T' + str(self.table_counter)
-        self.table_counter += 1
+        SymbolTable.table_counter += 1
         self.parent = parent
         self.children = list()
         self.symbols = dict()
