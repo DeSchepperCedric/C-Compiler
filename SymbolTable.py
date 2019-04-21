@@ -79,12 +79,13 @@ def print_symbol_table_to_dot(root):
     :param root: Symbol table root
     :return: None
     """
-    print("digraph G {")
+    dot = "digraph G {\n"
 
     cur_id = 0
-    recursive_symbol_table(root, cur_id)
-
-    print("}")
+    new_dot, i = recursive_symbol_table(root, cur_id)
+    dot += new_dot
+    dot += "}\n"
+    return dot
 
 
 def recursive_symbol_table(parent, cur_id):
@@ -92,17 +93,18 @@ def recursive_symbol_table(parent, cur_id):
     Print symbol table recursively
     :param parent: Parent of symbol table
     :param cur_id: current node id
-    :return: new id
+    :return: dot, new id
     """
     i = cur_id
+    dot = ""
 
-    print_symbol_table_node_to_dot(parent, cur_id)
-
+    dot += print_symbol_table_node_to_dot(parent, cur_id)
     for child in parent.children:
-        print("\t{} -> {};".format(cur_id, i + 1))
-        i = recursive_symbol_table(child, i + 1)
+        dot += "\t{} -> {};\n".format(cur_id, i + 1)
+        new_dot, i = recursive_symbol_table(child, i + 1)
+        dot += new_dot
 
-    return i
+    return dot, i
 
 
 def print_symbol_table_node_to_dot(node, cur_id):
@@ -110,17 +112,18 @@ def print_symbol_table_node_to_dot(node, cur_id):
     Print the node of a symbol table as html table
     :param node: symbol table
     :param cur_id: current node id
-    :return: None
+    :return: dot string
     """
-    print("\t{} [\n shape=plaintext \nlabel=< <table border=\'0\' cellborder=\'1\' cellspacing=\'0\'>".format(cur_id))
+    dot = "\t{} [\n shape=plaintext \nlabel=< <table border=\'0\' cellborder=\'1\' cellspacing=\'0\'\n>".format(cur_id)
 
-    print("\t<tr><td colspan=\"2\"> {} </td></tr>".format(node.name))
+    dot += "\t<tr><td colspan=\"2\"> {} </td></tr>\n".format(node.name)
     for symbol, sym_type in node.symbols.items():
-        print("\t<tr>")
-        print("\t<td>{}</td>".format(sym_type))
-        print("\t<td>{}</td>".format(symbol))
-        print("\t</tr>")
-    print("\t</table>  >];")
+        dot += "\t<tr>"
+        dot += "\t<td>{}</td>\n".format(sym_type)
+        dot += "\t<td>{}</td>\n".format(symbol)
+        dot += "\t</tr>\n"
+    dot += "\t</table>  >];\n"
+    return dot
 
 
 def main():
@@ -136,7 +139,7 @@ def main():
     child3 = root.allocate()
     child3.insert("i", "float")
 
-    print_symbol_table_to_dot(root)
+    print(print_symbol_table_to_dot(root))
 
 
 if __name__ == "__main__":

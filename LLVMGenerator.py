@@ -250,7 +250,7 @@ class LLVMGenerator:
     def funcDef(self, node):
         # enter new scope
         self.reg_stack.append(self.cur_reg)
-        # %0 is return type
+        # %0 is start label
         # %1 ... are args
         self.cur_reg = len(node.getParamList()) + 1
         code = ""
@@ -269,18 +269,15 @@ class LLVMGenerator:
 
         code += "){\n"
 
-        # allocate parameters
+        # allocate and store parameters
         for param in node.getParamList():
             param_type = self.getLLVMType(param.getParamType()) + param.getPointerCount() * "*"
+            t, table = node.getSymbolTable().lookup(param.getParamID())
+            param_name = table + "." + param.getParamID()
             code += "%{} = alloca {},".format(self.cur_reg, param_type)
+            self.storeLocalVariableFromRegister(param_name, param_type, self.cur_reg)
             self.cur_reg += 1
-        # store parameters
-        counter = 1
-        for param in node.getParamList():
-            param_type = self.getLLVMType(param.getParamType()) + param.getPointerCount() * "*"
-            self.storeLocalVariableFromRegister(counter, param_type, self.cur_reg)
-            self.cur_reg += 1
-# store i32 %0, i32* %2, align 4
+
         new_code, reg = self.astNodeToLLVM(node.getBody())
         code += new_code
         code += "}\n"
