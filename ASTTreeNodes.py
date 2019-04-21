@@ -12,6 +12,16 @@ class ASTNode:
     def getNodeName(self):
         return self.node_name
 
+    def getSymbolTable(self):
+        """
+            Retrieve the symbol table that node is part of. This can be used
+            to check whether or not the node is valid w.r.t. the symbol table.
+        """
+        return self.symbol_table
+
+    def setSymbolTable(self, symbol_table):
+        self.symbol_table = symbol_table
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         """
             Gives a dot presententation for this node/branch/tree.
@@ -116,7 +126,8 @@ class EmptyNode(ASTNode):
 
 class ProgramNode(ASTNode):
     """
-        Node that represents the entire program.
+        Node that represents the entire program. This
+        also functions as the root node of the AST tree.
     """
 
     def __init__(self):
@@ -129,12 +140,14 @@ class ProgramNode(ASTNode):
     def getChildren(self):
         return self.children
 
-    def getSymbolTable(self):
+    def genSymbolTable(self):
         """
-            Recursively traverse the tree and create a symbol table for each scope.
+            Recursively traverse the AST tree and create a symbol table for each scope.
         """
 
         symbol_table = SymbolTable()
+
+        self.setSymbolTable(symbol_table)
 
         for tln in self.children:
             if isinstance(tln, SymbolDecl):
@@ -142,8 +155,8 @@ class ProgramNode(ASTNode):
             elif isinstance(tln, IncludeNode):
                 tln.addToSymbolTable(symbol_table)
             elif isinstance(tln, FuncDef):
-                tln.addToSymbolTable(symbol_table)
-                tln.addFunctionScopeToSymbolTable(symbol_table)
+                tln.addToSymbolTable(symbol_table) # does nothing wrt the function symbol table
+                tln.addFunctionScopeToSymbolTable(symbol_table) # sets function body's table
         # ENDFOR
 
         return symbol_table
@@ -179,6 +192,7 @@ class IncludeNode(TopLevelNode):
                                        add_open_close=add_open_close)
 
     def addToSymbolTable(self, symbol_table):
+        self.setSymbolTable(symbol_table)
         symbol_table.insert("printf", 'void()')
         symbol_table.insert("scanf", 'void()')
 
@@ -252,6 +266,7 @@ class ArrayDecl(SymbolDecl):
                                        add_open_close=add_open_close)
 
     def addToSymbolTable(self, symbol_table):
+        self.setSymbolTable(symbol_table)
         symbol_table.insert(self.symbol_id, "{}{}[]".format(self.symbol_type, "*" * self.symbol_ptr_cnt))
 
 
@@ -273,6 +288,7 @@ class VarDeclDefault(SymbolDecl):
                                        add_open_close=add_open_close)
 
     def addToSymbolTable(self, symbol_table):
+        self.setSymbolTable(symbol_table)
         symbol_table.insert(self.symbol_id, "{}{}".format(self.symbol_type, "*" * self.symbol_ptr_cnt))
 
 
@@ -298,6 +314,7 @@ class VarDeclWithInit(SymbolDecl):
                                        add_open_close=add_open_close)
 
     def addToSymbolTable(self, symbol_table):
+        self.setSymbolTable(symbol_table)
         symbol_table.insert(self.symbol_id, "{}{}".format(self.symbol_type, "*" * self.symbol_ptr_cnt))
 
 
@@ -323,8 +340,8 @@ class FuncDecl(SymbolDecl):
                                        add_open_close=add_open_close)
 
     def addToSymbolTable(self, symbol_table):
-        symbol_table.insert(self.symbol_id,
-                            "{}({})".format(self.symbol_type, [param.getParamType() for param in self.param_list]))
+        self.setSymbolTable(symbol_table)
+        symbol_table.insert(self.symbol_id, "{}({})".format(self.symbol_type, [param.getParamType() for param in self.param_list]))
 
 
 class FuncDef(TopLevelNode):
@@ -365,8 +382,7 @@ class FuncDef(TopLevelNode):
         """
             Add the signature of the function to the specified symbol table.
         """
-        symbol_table.insert(self.func_id,
-                            "{}({})".format(self.return_type, [param.getParamType() for param in self.param_list]))
+        symbol_table.insert(self.func_id, "{}({})".format(self.return_type, [param.getParamType() for param in self.param_list]))
 
     def addFunctionScopeToSymbolTable(self, parent_table):
         """
@@ -375,6 +391,8 @@ class FuncDef(TopLevelNode):
 
         # instantiate child table
         symbol_table = parent_table.allocate()
+
+        self.setSymbolTable(symbol_table)
 
         for param in self.param_list:
             param.addToSymbolTable(symbol_table)
@@ -413,6 +431,9 @@ class StatementContainer:
         else:
             symbol_table = parent_table
 
+        # TODO check if this is possible
+        self.setSymbolTable(symbol_table)
+
         for child in self.child_list:
             # each child is declaration or statement
             # important statements;
@@ -423,17 +444,23 @@ class StatementContainer:
             # each declaration introduces a symbol.
 
             if isinstance(child, SymbolDecl):  # a symbol can simply be added
+                # note: this also sets the symbol table for the declaration
                 child.addToSymbolTable(symbol_table)
 
             elif isinstance(child, BranchStmt):  # if statement: has its own scope
                 # retrieve if, else body
+
+                child.addToSymbolTable(symbol_table)
+
                 if_body = child.getIfBody()
                 else_body = child.getElseBody()
 
                 # add if body
+                # note: this also sets the symbol table for the body
                 if_body.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
 
                 # add else body if it is not empty.
+                # note: this also sets the symbol table for the body
                 if not else_body.isEmpty():
                     else_body.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
 
@@ -441,25 +468,38 @@ class StatementContainer:
                 # retrieve condition init_expr
                 # retrieve body
                 # merge these and add as child
+
+                # filter out expression
                 init_decl_list = [decl for decl in child.getInitList() if isinstance(decl, SymbolDecl)]
                 body = child.getBody()
 
                 # allocate new scope
                 for_scope = symbol_table.allocate()
 
+                # merge body and declarators
                 for decl in init_decl_list:
-                    # declaration or expression
+                    # only declarations
                     decl.addToSymbolTable(for_scope)
-
+                # note: this also sets the symbol table for the body
                 body.addScopeToSymbolTable(parent_table=for_scope, as_child=False)
+
+                # if we retrieve the symbol table
+                # it will be the one with the children of the for body, and de declarations
+                child.setSymbolTable(for_scope)
 
             elif isinstance(child, WhileStmt):  # while statement: has its own scope
                 # retrieve body and add as child.
                 body = child.getBody()
-                body.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
+                # note: this also sets the symbol table for the body
+                tbl = body.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
+
+                # if we retrieve the symbol table
+                # it will be the one with the children of the while body.
+                child.setSymbolTable(tbl)
 
             elif isinstance(child, CompoundStmt):  # compound statement: has its own scope
                 # add contents as child
+                # note: this also sets the symbol table for the body
                 child.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
 
         return symbol_table
@@ -512,6 +552,7 @@ class FuncParam(ASTNode):
         """
             A function param introduces an identifier into the function's own scope.
         """
+        self.setSymbolTable(symbol_table)
         symbol_table.insert(self.param_id, "{}{}".format(self.param_type, "*" * self.ptr_count))
 
 
@@ -555,10 +596,6 @@ class WhileStmt(Statement):
 
     def getBody(self):
         return self.body
-
-    # TODO implement
-    def getSymbolTable(self):
-        pass
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.cond_expr, self.body],

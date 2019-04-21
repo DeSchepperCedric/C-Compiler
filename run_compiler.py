@@ -24,7 +24,7 @@ def run_compiler(source_file_path, output_name):
 
     visitor = ParserVisitor()
     ast_tree = visitor.visitProgram(parse_tree)
-    # ast_tree.generateSymbolTable()
+    ast_tree.genSymbolTable()
     symbol_table = ast_tree.getSymbolTable()
 
     # constant folding
