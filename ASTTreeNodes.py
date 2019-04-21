@@ -216,8 +216,7 @@ class SymbolDecl(TopLevelNode):
             'symbol_ptr_count': Integer that denotes the amount of pointer levels. Can be set to zero if the symbol is not a pointer.
         """
         # string that represents the node in dot-format.
-        full_node_name = "Decl:{}\\nId:{}\\nPtrCount:{}\\nType:{}".format(symbol_class, symbol_id, symbol_ptr_cnt,
-                                                                          symbol_type)
+        full_node_name = "Decl:{}\\nId:{}\\nPtrCount:{}\\nType:{}".format(symbol_class, symbol_id, symbol_ptr_cnt, symbol_type)
         super().__init__(node_name=full_node_name)
         self.symbol_type = symbol_type
         self.symbol_id = symbol_id
@@ -779,6 +778,7 @@ class Expression(ASTNode):
 
     def __init__(self, expression_type):
         super().__init__(node_name=expression_type)
+        self.expression_type = None
 
     def setExprTreeSymbolTable(self, symbol_table):
     	"""
@@ -793,6 +793,12 @@ class Expression(ASTNode):
         """
 
         # TODO implement
+        pass
+
+    def getExpressionType(self):
+        """
+            Retrieve the type of the expression
+        """
         pass
 
 

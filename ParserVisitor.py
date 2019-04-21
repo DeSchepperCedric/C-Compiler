@@ -2,6 +2,9 @@ from antlr_files.CVisitor import CVisitor
 from antlr_files.CParser import CParser
 from ASTTreeNodes import *
 
+from Logger import Logger
+from CompilerException import AstCreationException
+
 
 class ParserVisitor(CVisitor):
 
@@ -92,6 +95,10 @@ class ParserVisitor(CVisitor):
     def visitVarDeclSimple(self, ctx: CParser.VarDeclSimpleContext):
         var_id, ptr_count = self.manuallyVisitChild(ctx.getChild(0))
 
+        if ctx.temp_typeName == 'void' and ptr_count == 0:
+            Logger.error("Cannot declare variable with type 'void' at line {}.".format(ctx.start.line))
+            raise AstCreationException()
+
         # temporarily set type to None
         return VarDeclDefault(ctx.temp_typeName, var_id, ptr_count)
 
@@ -107,6 +114,10 @@ class ParserVisitor(CVisitor):
         var_id, ptr_count = self.manuallyVisitChild(ctx.getChild(0))
         size_expr = self.manuallyVisitChild(ctx.getChild(2))
 
+        if ctx.temp_typeName == 'void' and ptr_count == 0:
+            Logger.error("Cannot declare array with type 'void' at line {}.".format(ctx.start.line))
+            raise AstCreationException()
+
         # temporarily set type to None
         return ArrayDecl(ctx.temp_typeName, var_id, ptr_count, size_expr)
 
@@ -119,19 +130,27 @@ class ParserVisitor(CVisitor):
         var_id, ptr_count = self.manuallyVisitChild(ctx.getChild(0))
         init_expr = self.manuallyVisitChild(ctx.getChild(2))
 
+        if ctx.temp_typeName == 'void' and ptr_count == 0:
+            Logger.error("Cannot declare variable with type 'void' at line {}.".format(ctx.start.line))
+            raise AstCreationException()
+
         # temporarily set type to None
         return VarDeclWithInit(ctx.temp_typeName, var_id, ptr_count, init_expr)
 
     # Visit a parse tree produced by CParser#param.
     def visitParam(self, ctx: CParser.ParamContext):
         # child 0 is type
-        # child 1 is id with ptr
+        # child 1 is (id, ptr_count) from id_with_ptr
 
         # string that contains the name of the type
         param_type = self.manuallyVisitChild(ctx.getChild(0))
 
         # tuple (id, ptr_count)
         param_id, ptr_count = self.manuallyVisitChild(ctx.getChild(1))
+
+        if param_type == 'void' and ptr_count == 0:
+            Logger.error("Cannot declare function parameter with type 'void' at line {}.".format(ctx.start.line))
+            raise AstCreationException()
 
         return FuncParam(param_type, param_id, ptr_count)
 
@@ -541,7 +560,6 @@ class ParserVisitor(CVisitor):
     def visitArrayAccesExpr(self, ctx: CParser.ArrayAccesExprContext):
         # child #0 the array identifier
         target_array_id = self.manuallyVisitChild(ctx.getChild(0))
-        print("ArrAccsExpr:",type(ctx.getChild(0)), target_array_id)
         target_array = IdentifierExpr(target_array_id)
 
         # child #1 is '['
@@ -563,7 +581,6 @@ class ParserVisitor(CVisitor):
     def visitFuncCall(self, ctx: CParser.FuncCallContext):
         # function id is a IdentifierExpression
         function_id_str = self.manuallyVisitChild(ctx.getChild(0))
-        print("FuncCall:",type(ctx.getChild(0)), function_id_str)
         function_id = IdentifierExpr(function_id_str)
 
         arg_ctx_list = [node for node in list(ctx.getChildren())[1:] if not node.getText() in [',', '(', ')']]
