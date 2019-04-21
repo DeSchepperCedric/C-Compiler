@@ -5,10 +5,6 @@ class LLVMGenerator:
     def __init__(self, symbol_table):
         self.cur_reg = 0
         self.symbol_table = symbol_table
-        self.code = ""
-
-    def getCode(self):
-        return self.code
 
     def astNodeToLLVM(self, node):
         """
@@ -67,35 +63,38 @@ class LLVMGenerator:
             return self.body(node)
         elif isinstance(node, ProgramNode):
             return self.programNode(node)
-        return self.cur_reg
+        return "", self.cur_reg
 
     def boolConstantExpr(self, expr):
         """
         Return a constant bool with its type and the register it's stored in
         """
+        code = ""
         register = self.cur_reg
         self.cur_reg += 1
-        self.code += "%{} = i1 {} \n".format(register, expr.getBoolValue())
+        code += "%{} = i1 {} \n".format(register, expr.getBoolValue())
 
-        return register
+        return code, register
 
     def floatConstantExpr(self, expr):
         """
         Return a constant float with its type and the register it's stored in
         """
+        code = ""
         register = self.cur_reg
         self.cur_reg += 1
-        self.code += "%{} = float {} \n".format(register, expr.getFloatValue())
+        code += "%{} = float {} \n".format(register, expr.getFloatValue())
 
-        return register
+        return code, register
 
     def integerConstantExpr(self, expr):
         """
         Return a constant integer with its type and the register it's stored in
         """
+        code = ""
         register = self.cur_reg
         self.cur_reg += 1
-        self.code += "%{} = i32 {} \n".format(register, expr.getIntValue())
+        code += "%{} = i32 {} \n".format(register, expr.getIntValue())
 
         return register
 
@@ -108,51 +107,85 @@ class LLVMGenerator:
         return "%{} = load {}, {}* @{} \n".format(register, var_type, var_type, var_id), register
 
     def storeGlobalVariableFromRegister(self, var_id, var_type, register):
-        self.code += "store {} %{}, {}* @{} \n".format(var_type, register, var_type, var_id)
+        return "store {} %{}, {}* @{} \n".format(var_type, register, var_type, var_id)
 
     def varDeclDefault(self, node):
         # default initialization to 0. Might be improved later
         var_type = node.getType() + str(node.getPointerCount())
         var_id = node.getID()
-
+        code = ""
         if self.symbol_table.isGlobal(var_id):
-            self.code += "@{} = global {} 0".format(var_id, var_type)
-            # self.code += "store {} 0, {}* @{}".format(var_type, var_type, var_id)
+            code += "@{} = global {} 0".format(var_id, var_type)
+            # code += "store {} 0, {}* @{}".format(var_type, var_type, var_id)
         else:
             t, table = self.symbol_table.lookup(var_id)
             reg_name = table + "." + var_id
-            self.code += "%{} = {} 0".format(reg_name, var_type)
+            code += "%{} = {} 0".format(reg_name, var_type)
 
-        self.code += "\n"
-        return
+        code += "\n"
+        return code
 
     def varDeclWithInit(self, node):
         var_type = node.getType() + str(node.getPointerCount())
         var_id = node.getID()
-        register = self.astNodeToLLVM(node.getInitExpr())
+        code, register = self.astNodeToLLVM(node.getInitExpr())
         if self.symbol_table.isGlobal(var_id):
-            self.code += self.storeGlobalVariableFromRegister(var_id, var_type, register)
+            code += self.storeGlobalVariableFromRegister(var_id, var_type, register)
         else:
             t, table = self.symbol_table.lookup(var_id)
             reg_name = table + "." + var_id
-            self.code += "%{} = {} %{}".format(reg_name, var_type, register)
+            code += "%{} = {} %{}".format(reg_name, var_type, register)
 
-        self.code += "\n"
-        return
+        code += "\n"
+        return code
 
     def branchStatement(self, node):
-        # WIP
-        register = self.astNodeToLLVM(node.getCondExpr())
-        self.code += "br i1 %{}, label %{}, label %{}".format(register, register + 1, register + 2)
-        # add self.code blocks
+        # no else statement will still generate a label
+        # might be removed later
+        code, register = self.astNodeToLLVM(node.getCondExpr())
+        branch_if = self.cur_reg
+
+        # we need to generate conditional code last since we need the correct register numbers
+        # cond
+        # code += "br i1 %{}, label %{}, label %{}\n\n".format(register, self.cur_reg, self.cur_reg + 1)
+        # self.cur_reg += 2
+
+        # if
+        reg_if_label = self.cur_reg
+        self.cur_reg += 1
+        code_if = "; <label>:{}:".format(reg_if_label)  # comment for clarity
+        code_if += self.astNodeToLLVM(node.getIfBody())
+        code_if += "\n"
+
+        # else
+        reg_else_label = self.cur_reg
+        self.cur_reg += 1
+        code_else = "; <label>:{}:".format(reg_else_label)  # comment for clarity
+        code_else += self.astNodeToLLVM(node.getElseBody())
+        code_else += "\n"
+
+        # cond
+        cond_code = "br i1 %{}, label %{}, label %{}\n\n".format(register, reg_if_label, reg_else_label)
+
+        code += cond_code
+        code += code_if
+        code += code_else
+
+        return code
 
     def programNode(self, node):
+        code = ""
         for child in node.getChildren():
-            self.code += self.astNodeToLLVM(child)
+            new_code, reg = self.astNodeToLLVM(child)
+            code += new_code
+        return code
 
     def body(self, node):
+        code = ""
         for child in node.getChildren():
-            self.code += self.astNodeToLLVM(child)
+            new_code, reg = self.astNodeToLLVM(child)
+            code += new_code
+        return code
 
     def funcParam(self, node):
         param_type = self.getLLVMType(node.getParamType()) + node.getPointerCount() * "*"
@@ -160,43 +193,48 @@ class LLVMGenerator:
         return param_type + param_name
 
     def funcDecl(self, node):
+        code = ""
         return_type = node.getType() + node.getPointerCount() * "*"
         function_name = "@" + node.getID()
 
-        self.code += "declare " + return_type + function_name + "("
+        code += "declare " + return_type + function_name + "("
         first_param = True
         for param in node.getParams():
             if not first_param:
-                self.code += ","
+                code += ","
             else:
                 first_param = False
 
-            self.code += self.funcParam(param)
+            code += self.funcParam(param)
 
-        self.code += ")\n"
+        code += ")\n"
+        return code
 
     def funcDef(self, node):
+        code = ""
         return_type = node.getReturnType() + node.getPointerCount() * "*"
         function_name = "@" + node.getFuncID()
 
-        self.code += "define " + return_type + function_name + "("
+        code += "define " + return_type + function_name + "("
         first_param = True
         for param in node.getParamList():
             if not first_param:
-                self.code += ","
+                code += ","
             else:
                 first_param = False
 
-            self.code += self.funcParam(param)
+            code += self.funcParam(param)
 
-        self.code += "){\n"
-        self.code += self.astNodeToLLVM(node.getBody())
-        self.code += "}\n"
-        return
+        code += "){\n"
+        new_code, reg = self.astNodeToLLVM(node.getBody())
+        code += new_code
+        code += "}\n"
+        return code
 
     def funcCallExpr(self, node):
         # "%retval = call i32 @test(i32 %argc)"
         # first load the correct variables to use as arguments
+        code = ""
         first_arg = True
         arg_list = "("
         for arg in node.getArguments():
@@ -205,7 +243,7 @@ class LLVMGenerator:
             else:
                 first_arg = False
             arg_code, arg_reg = self.astNodeToLLVM(arg)
-            self.code += arg_code
+            code += arg_code
 
             arg_type = self.getLLVMType(arg.getType())
             arg_list += "{} %{}".format(arg_type, arg_reg)
@@ -213,14 +251,14 @@ class LLVMGenerator:
 
         func_reg = self.cur_reg
         self.cur_reg += 1
-        self.code += "%{} = call ".format(func_reg)
+        code += "%{} = call ".format(func_reg)
 
         return_type = node.getType()
-        self.code += "{} @{}".format(return_type, node.getFunctionID())
-        self.code += arg_list
-        self.code += "\n"
+        code += "{} @{}".format(return_type, node.getFunctionID())
+        code += arg_list
+        code += "\n"
 
-        return func_reg
+        return code, func_reg
 
     def isConstant(self, node):
         return isinstance(node, ConstantExpr)
@@ -244,27 +282,35 @@ class LLVMGenerator:
         return "%" + table + "." + identifier
 
     def arithmeticExpr(self, node, operation):
+        code = ""
         type_left = node.getLeft().getType()
         type_right = node.getRight().getType()
 
-        reg_left = self.astNodeToLLVM(node.getLeft())
-        reg_right = self.astNodeToLLVM(node.getRight())
+        code_left, reg_left = self.astNodeToLLVM(node.getLeft())
+        code_right, reg_right = self.astNodeToLLVM(node.getRight())
+
+        code += code_left
+        code += code_right
 
         strongest_type = self.getStrongestType(type_left, type_right)
 
         if strongest_type == "float":
-            reg_left = self.convertToFloat(reg_left, type_left)
-            reg_right = self.convertToFloat(reg_right, type_right)
+            code_left, reg_left = self.convertToFloat(reg_left, type_left)
+            code_right, reg_right = self.convertToFloat(reg_right, type_right)
 
-            self.code += "%{} = f{} float %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
+            code += code_left
+            code += code_right
+            code += "%{} = f{} float %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
         else:
-            reg_left = self.convertToInt(reg_left, type_left)
-            reg_right = self.convertToInt(reg_right, type_right)
+            code_left, reg_left = self.convertToInt(reg_left, type_left)
+            code_right, reg_right = self.convertToInt(reg_right, type_right)
 
-            self.code += "%{} = {} i32 %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
+            code += code_left
+            code += code_right
+            code += "%{} = {} i32 %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
 
         self.cur_reg += 1
-        return self.cur_reg - 1
+        return code, self.cur_reg - 1
 
     def getStrongestType(self, a, b):
         if a == "float" or b == "float":
@@ -275,72 +321,79 @@ class LLVMGenerator:
             return "char"
 
     def convertToFloat(self, reg, type):
+        code = ""
         if type == "float":
-            return reg
+            return code, reg
 
         elif type == "char":
-            self.code += "%{} = sext i8 %{} to i32\n".format(self.cur_reg, reg)
-            self.code += "%{} = sitofp i32 %{} to float\n".format(self.cur_reg + 1, self.cur_reg)
+            code += "%{} = sext i8 %{} to i32\n".format(self.cur_reg, reg)
+            code += "%{} = sitofp i32 %{} to float\n".format(self.cur_reg + 1, self.cur_reg)
             self.cur_reg += 2
-            return self.cur_reg - 1
+            return code, self.cur_reg - 1
         elif type == "int":
-            self.code += "%{} = sitofp i32 %{} to float\n".format(self.cur_reg, reg)
+            code += "%{} = sitofp i32 %{} to float\n".format(self.cur_reg, reg)
             self.cur_reg += 1
-            return self.cur_reg - 1
+            return code, self.cur_reg - 1
         else:
             # what with other types?
-            return reg
+            return code, reg
 
     def convertToInt(self, reg, type):
+        code = ""
         if type == "int":
-            return reg
+            return code, reg
 
         elif type == "char":
-            self.code += "%{} = sext i8 %{} to i32\n".format(self.cur_reg, reg)
+            code += "%{} = sext i8 %{} to i32\n".format(self.cur_reg, reg)
             self.cur_reg += 1
-            return self.cur_reg - 1
+            return code, self.cur_reg - 1
 
         elif type == "float":
-            self.code += " %{} = fptosi float %{} to i32\n".format(self.cur_reg, reg)
+            code += " %{} = fptosi float %{} to i32\n".format(self.cur_reg, reg)
             self.cur_reg += 1
-            return self.cur_reg - 1
+            return code, self.cur_reg - 1
 
         else:
             # what with other types?
-            return reg
+            return code, reg
 
     def returnStatement(self):
-        self.code += "ret void"
+        return "ret void"
 
     def returnWithExprStatement(self, node):
         return_type = node.getType()
-        register = self.astNodeToLLVM(node.getExpression())
-        self.code += "ret {} %{}".format(return_type, register)
+        code, register = self.astNodeToLLVM(node.getExpression())
+        code += "ret {} %{}".format(return_type, register)
+        return code
 
     def comparisonExpr(self, node, int_op, float_op):
+        code = ""
         type_left = node.getLeft().getType()
         type_right = node.getRight().getType()
 
-        reg_left = self.astNodeToLLVM(node.getLeft())
-        reg_right = self.astNodeToLLVM(node.getRight())
+        code_left, reg_left = self.astNodeToLLVM(node.getLeft())
+        code_right, reg_right = self.astNodeToLLVM(node.getRight())
+
+        code += code_left
+        code += code_right
 
         strongest_type = self.getStrongestType(type_left, type_right)
 
         if strongest_type == "float":
-            reg_left = self.convertToFloat(reg_left, type_left)
-            reg_right = self.convertToFloat(reg_right, type_right)
+            code_left, reg_left = self.convertToFloat(reg_left, type_left)
+            code_right, reg_right = self.convertToFloat(reg_right, type_right)
 
-            self.code += "%{} = {} float %{}, %{}\n".format(self.cur_reg, float_op, reg_left, reg_right)
+            code += code_left
+            code += code_right
+            code += "%{} = icmp {} float %{}, %{}\n".format(self.cur_reg, float_op, reg_left, reg_right)
         else:
-            reg_left = self.convertToInt(reg_left, type_left)
-            reg_right = self.convertToInt(reg_right, type_right)
+            code_left, reg_left = self.convertToInt(reg_left, type_left)
+            code_right, reg_right = self.convertToInt(reg_right, type_right)
 
-            self.code += "%{} = {} i32 %{}, %{}\n".format(self.cur_reg, int_op, reg_left, reg_right)
+            code += code_left
+            code += code_right
+            code += "%{} = icmp {} i32 %{}, %{}\n".format(self.cur_reg, int_op, reg_left, reg_right)
 
         self.cur_reg += 1
 
-
-        #   %10 = icmp sgt i32 %8, %9
-        return self.cur_reg - 1
-
-
+        return code, self.cur_reg - 1
