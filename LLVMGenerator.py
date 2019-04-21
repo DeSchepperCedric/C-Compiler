@@ -11,7 +11,11 @@ class LLVMGenerator:
         Returns LLVM code string + register number
         Only function to call outside the class
         """
-        if isinstance(node, BoolConstantExpr):
+
+        if isinstance(node, IncludeNode):
+            return self.include()
+
+        elif isinstance(node, BoolConstantExpr):
             return self.boolConstantExpr(node)
         elif isinstance(node, FloatConstantExpr):
             return self.floatConstantExpr(node)
@@ -58,6 +62,9 @@ class LLVMGenerator:
             return self.returnStatement()
         elif isinstance(node, ReturnWithExprStatement):
             return self.returnWithExprStatement(node)
+
+        elif isinstance(node, BranchStmt):
+            return self.branchStatement(node)
 
         elif isinstance(node, Body):
             return self.body(node)
@@ -155,22 +162,24 @@ class LLVMGenerator:
         self.cur_reg += 1
         code_if = "; <label>:{}:".format(reg_if_label)  # comment for clarity
         code_if += self.astNodeToLLVM(node.getIfBody())
-        code_if += "\n"
 
         # else
         reg_else_label = self.cur_reg
         self.cur_reg += 1
         code_else = "; <label>:{}:".format(reg_else_label)  # comment for clarity
         code_else += self.astNodeToLLVM(node.getElseBody())
-        code_else += "\n"
 
         # cond
         cond_code = "br i1 %{}, label %{}, label %{}\n\n".format(register, reg_if_label, reg_else_label)
 
         code += cond_code
-        code += code_if
-        code += code_else
 
+        code += code_if
+        code += "br label %{}\n\n".format(self.cur_reg)
+
+        code += code_else
+        code += "br label %{}\n\n".format(self.cur_reg)
+        self.cur_reg += 1
         return code
 
     def programNode(self, node):
@@ -397,3 +406,8 @@ class LLVMGenerator:
         self.cur_reg += 1
 
         return code, self.cur_reg - 1
+
+    def include(self):
+        code = "declare i32 @printf(i8*, ...) nounwind\n"
+        code += "declare i32 @scanf(i8*, ...) nounwind\n"
+        return code
