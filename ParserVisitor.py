@@ -539,7 +539,11 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#arrayAccesExpr.
     def visitArrayAccesExpr(self, ctx: CParser.ArrayAccesExprContext):
-        target_array = self.manuallyVisitChild(ctx.getChild(0))
+        # child #0 the array identifier
+        target_array_id = self.manuallyVisitChild(ctx.getChild(0))
+        print("ArrAccsExpr:",type(ctx.getChild(0)), target_array_id)
+        target_array = IdentifierExpr(target_array_id)
+
         # child #1 is '['
         index_expr = self.manuallyVisitChild(ctx.getChild(2))
         # child # 3 is ']'
@@ -558,7 +562,9 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#funcCall.
     def visitFuncCall(self, ctx: CParser.FuncCallContext):
         # function id is a IdentifierExpression
-        function_id = self.manuallyVisitChild(ctx.getChild(0))
+        function_id_str = self.manuallyVisitChild(ctx.getChild(0))
+        print("FuncCall:",type(ctx.getChild(0)), function_id_str)
+        function_id = IdentifierExpr(function_id_str)
 
         arg_ctx_list = [node for node in list(ctx.getChildren())[1:] if not node.getText() in [',', '(', ')']]
 

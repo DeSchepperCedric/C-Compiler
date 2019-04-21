@@ -138,10 +138,10 @@ unary_operator
         ;
 
 postfix_expr
-        : postfix_expr LEFT_BRACKET assignment_expr RIGHT_BRACKET # arrayAccesExpr // we use assignment_expr here since "expression" is a list
+        : identifier LEFT_BRACKET assignment_expr RIGHT_BRACKET # arrayAccesExpr // we use assignment_expr here since "expression" is a list
         | postfix_expr DECREMENT                                  # postfixDec
         | postfix_expr INCREMENT                                  # postfixInc
-        | postfix_expr LEFT_PAREN expression? RIGHT_PAREN         # funcCall
+        | identifier LEFT_PAREN expression? RIGHT_PAREN         # funcCall
         | prim_expr                                               # primitiveExpr
         ;
 
