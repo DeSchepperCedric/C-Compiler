@@ -440,4 +440,6 @@ $RECYCLE.BIN/
 # End of https://www.gitignore.io/api/c,c++,cmake,linux,macos,python,windows,pycharm,eclipse
 
 ./output/
+./output/*
+output/
 test.c
