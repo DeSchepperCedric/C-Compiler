@@ -6,9 +6,9 @@ class Logger:
     """
 
     @staticmethod
-    def warning(self, message):
+    def warning(message):
         print("[Warning] {}".format(message))
 
     @staticmethod
-    def error(self, message):
+    def error(message):
         print("[Error] {}".format(message))
