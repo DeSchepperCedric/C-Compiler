@@ -16,7 +16,7 @@ class SymbolTable:
         Lookup a symbol in the symbol table
         :param symbol: The symbol to be found
         :param own_scope_only: only check own scope or also parents
-        :return: 0 when not found, symbol type when found
+        :return: (0, None) when not found, (type, scope_name) when found.
         """
         # symbol found in current scope
         if symbol in self.symbols:
