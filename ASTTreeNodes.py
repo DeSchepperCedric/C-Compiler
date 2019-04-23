@@ -512,12 +512,13 @@ class FuncDef(TopLevelNode):
                     .format(self.func_id, symbol_type.toString(), func_type.toString()), self.getLineNr())
                 raise AstTypingException()
 
+            # there is a function with the same name and it is already defined.
             if symbol_type.isDefined():
                 Logger.error(
                     "Invalid redefinition of existing function '{}' on line {}.".format(self.func_id, self.getLineNr()))
                 raise AstTypingException()
 
-            # check if the current symbol matches the function
+            # the types must align 
             if symbol_type.toString() != func_type.toString():
                 Logger.error(
                     "Function definition introduces type '{}' while function was previously declared with type '{}' on line {}."
@@ -546,14 +547,15 @@ class FuncDef(TopLevelNode):
         for param in self.param_list:
             param.addToSymbolTable(symbol_table)
 
-        # add the body to the existing symbol table
-        self.body.addScopeToSymbolTable(parent_table=symbol_table, as_child=False)
-
+        # this needs to be done first, since evaluating the body children requires the parent function type
         # pass the function type to the body so the return value can be type-checked
         func_type = FunctionType(self.return_type,
                                  [type_to_string(param.getParamType(), param.getPointerCount()) for param in
                                   self.param_list])
         self.body.setParentFunctionType(func_type)
+
+        # add the body to the existing symbol table
+        self.body.addScopeToSymbolTable(parent_table=symbol_table, as_child=False)
 
         return symbol_table
 
@@ -609,14 +611,14 @@ class StatementContainer:
 
                 # add if body
                 # note: this also sets the symbol table for the body
-                if_body.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
                 if_body.setParentFunctionType(self.parent_function_type)
+                if_body.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
 
                 # add else body if it is not empty.
                 # note: this also sets the symbol table for the body
                 if not else_body.isEmpty():
-                    else_body.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
                     else_body.setParentFunctionType(self.parent_function_type)
+                    else_body.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
 
                 # annotate the conditional expression with symbol table and resolve expression_type
                 cond_expr = child.getCondExpr()
@@ -647,8 +649,8 @@ class StatementContainer:
                     # only declarations
                     decl.addToSymbolTable(for_scope)
                 # note: this also sets the symbol table for the body
-                body.addScopeToSymbolTable(parent_table=for_scope, as_child=False)
                 body.setParentFunctionType(self.parent_function_type)
+                body.addScopeToSymbolTable(parent_table=for_scope, as_child=False)
 
                 # if we retrieve the symbol table
                 # it will be the one with the children of the for body, and de declarations
@@ -684,8 +686,8 @@ class StatementContainer:
                 # retrieve body and add as child.
                 body = child.getBody()
                 # note: this also sets the symbol table for the body
-                tbl = body.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
                 body.setParentFunctionType(self.parent_function_type)
+                tbl = body.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
 
                 # if we retrieve the symbol table
                 # it will be the one with the children of the while body.
@@ -709,8 +711,8 @@ class StatementContainer:
                 # compound statement: has its own scope
                 # add contents as child
                 # note: this also sets the symbol table for the body
-                child.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
                 child.setParentFunctionType(self.parent_function_type)
+                child.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
 
             elif isinstance(child, ExpressionStatement):
                 # expression statement: annotate the expression tree with the symbol table and type information
