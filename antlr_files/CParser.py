@@ -93,11 +93,11 @@ def serializedATN():
         buf.write("\5\36\20\2\u00a5\u00a7\5\34\17\2\u00a6\u00a1\3\2\2\2\u00a6")
         buf.write("\u00a2\3\2\2\2\u00a6\u00a3\3\2\2\2\u00a6\u00a4\3\2\2\2")
         buf.write("\u00a6\u00a5\3\2\2\2\u00a7\21\3\2\2\2\u00a8\u00a9\7\f")
-        buf.write("\2\2\u00a9\u00aa\7\32\2\2\u00aa\u00ab\5 \21\2\u00ab\u00ac")
+        buf.write("\2\2\u00a9\u00aa\7\32\2\2\u00aa\u00ab\5\"\22\2\u00ab\u00ac")
         buf.write("\7\33\2\2\u00ac\u00af\5\20\t\2\u00ad\u00ae\7\r\2\2\u00ae")
         buf.write("\u00b0\5\20\t\2\u00af\u00ad\3\2\2\2\u00af\u00b0\3\2\2")
         buf.write("\2\u00b0\23\3\2\2\2\u00b1\u00b2\7\17\2\2\u00b2\u00b3\7")
-        buf.write("\32\2\2\u00b3\u00b4\5 \21\2\u00b4\u00b5\7\33\2\2\u00b5")
+        buf.write("\32\2\2\u00b3\u00b4\5\"\22\2\u00b4\u00b5\7\33\2\2\u00b5")
         buf.write("\u00b6\5\20\t\2\u00b6\u00be\3\2\2\2\u00b7\u00b8\7\22\2")
         buf.write("\2\u00b8\u00b9\7\32\2\2\u00b9\u00ba\5\26\f\2\u00ba\u00bb")
         buf.write("\7\33\2\2\u00bb\u00bc\5\20\t\2\u00bc\u00be\3\2\2\2\u00bd")
@@ -131,7 +131,7 @@ def serializedATN():
         buf.write("\u00f7\3\2\2\2\u00fa\u00fd\3\2\2\2\u00fb\u00f9\3\2\2\2")
         buf.write("\u00fb\u00fc\3\2\2\2\u00fc!\3\2\2\2\u00fd\u00fb\3\2\2")
         buf.write("\2\u00fe\u0104\5&\24\2\u00ff\u0100\5\64\33\2\u0100\u0101")
-        buf.write("\5$\23\2\u0101\u0102\5\"\22\2\u0102\u0104\3\2\2\2\u0103")
+        buf.write("\5$\23\2\u0101\u0102\5&\24\2\u0102\u0104\3\2\2\2\u0103")
         buf.write("\u00fe\3\2\2\2\u0103\u00ff\3\2\2\2\u0104#\3\2\2\2\u0105")
         buf.write("\u0106\t\2\2\2\u0106%\3\2\2\2\u0107\u0108\b\24\1\2\u0108")
         buf.write("\u0109\5(\25\2\u0109\u010f\3\2\2\2\u010a\u010b\f\3\2\2")
@@ -194,7 +194,7 @@ def serializedATN():
         buf.write("\2\u018c\u0188\3\2\2\2\u018c\u018a\3\2\2\2\u018d\u0190")
         buf.write("\3\2\2\2\u018e\u018c\3\2\2\2\u018e\u018f\3\2\2\2\u018f")
         buf.write("9\3\2\2\2\u0190\u018e\3\2\2\2\u0191\u0192\7\32\2\2\u0192")
-        buf.write("\u0193\5 \21\2\u0193\u0194\7\33\2\2\u0194\u0198\3\2\2")
+        buf.write("\u0193\5\"\22\2\u0193\u0194\7\33\2\2\u0194\u0198\3\2\2")
         buf.write("\2\u0195\u0198\5J&\2\u0196\u0198\5N(\2\u0197\u0191\3\2")
         buf.write("\2\2\u0197\u0195\3\2\2\2\u0197\u0196\3\2\2\2\u0198;\3")
         buf.write("\2\2\2\u0199\u019f\5> \2\u019a\u019f\5@!\2\u019b\u019f")
@@ -1132,8 +1132,8 @@ class CParser ( Parser ):
         def LEFT_PAREN(self):
             return self.getToken(CParser.LEFT_PAREN, 0)
 
-        def expression(self):
-            return self.getTypedRuleContext(CParser.ExpressionContext,0)
+        def assignment_expr(self):
+            return self.getTypedRuleContext(CParser.Assignment_exprContext,0)
 
 
         def RIGHT_PAREN(self):
@@ -1180,7 +1180,7 @@ class CParser ( Parser ):
             self.state = 167
             self.match(CParser.LEFT_PAREN)
             self.state = 168
-            self.expression()
+            self.assignment_expr()
             self.state = 169
             self.match(CParser.RIGHT_PAREN)
             self.state = 170
@@ -1230,8 +1230,8 @@ class CParser ( Parser ):
             return self.getToken(CParser.WHILE, 0)
         def LEFT_PAREN(self):
             return self.getToken(CParser.LEFT_PAREN, 0)
-        def expression(self):
-            return self.getTypedRuleContext(CParser.ExpressionContext,0)
+        def assignment_expr(self):
+            return self.getTypedRuleContext(CParser.Assignment_exprContext,0)
 
         def RIGHT_PAREN(self):
             return self.getToken(CParser.RIGHT_PAREN, 0)
@@ -1305,7 +1305,7 @@ class CParser ( Parser ):
                 self.state = 176
                 self.match(CParser.LEFT_PAREN)
                 self.state = 177
-                self.expression()
+                self.assignment_expr()
                 self.state = 178
                 self.match(CParser.RIGHT_PAREN)
                 self.state = 179
@@ -1966,10 +1966,6 @@ class CParser ( Parser ):
             return self.getTypedRuleContext(CParser.Assignment_operatorContext,0)
 
 
-        def assignment_expr(self):
-            return self.getTypedRuleContext(CParser.Assignment_exprContext,0)
-
-
         def getRuleIndex(self):
             return CParser.RULE_assignment_expr
 
@@ -2011,7 +2007,7 @@ class CParser ( Parser ):
                 self.state = 254
                 self.assignment_operator()
                 self.state = 255
-                self.assignment_expr()
+                self.logical_or_expr(0)
                 pass
 
 
@@ -3278,8 +3274,8 @@ class CParser ( Parser ):
 
         def LEFT_PAREN(self):
             return self.getToken(CParser.LEFT_PAREN, 0)
-        def expression(self):
-            return self.getTypedRuleContext(CParser.ExpressionContext,0)
+        def assignment_expr(self):
+            return self.getTypedRuleContext(CParser.Assignment_exprContext,0)
 
         def RIGHT_PAREN(self):
             return self.getToken(CParser.RIGHT_PAREN, 0)
@@ -3364,7 +3360,7 @@ class CParser ( Parser ):
                 self.state = 399
                 self.match(CParser.LEFT_PAREN)
                 self.state = 400
-                self.expression()
+                self.assignment_expr()
                 self.state = 401
                 self.match(CParser.RIGHT_PAREN)
                 pass
