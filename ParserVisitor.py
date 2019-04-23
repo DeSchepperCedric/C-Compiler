@@ -383,6 +383,10 @@ class ParserVisitor(CVisitor):
         operator = self.manuallyVisitChild(ctx.getChild(1))  # visits the operator node, and returns string
         right = self.manuallyVisitChild(ctx.getChild(2))
 
+        if not is_valid_assignment_target_expr(left):
+            Logger.error("Invalid target '{}' for assignment on line {}.".format(get_full_context_source(ctx.getChild(0)), ctx.start.line))
+            raise AstCreationException()
+
         if operator == "=":
             return AssignmentExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "+=":
@@ -604,6 +608,8 @@ class ParserVisitor(CVisitor):
         # here we ignore the "(" and ")" and simply return the contained expression.
         # this is because the goal of using parenthesis is altering
         # precedence. Precedence is handled by the parser, not by the AST tree.
+
+        # note this returns a single assignment_expr, since we no longer directly use expression
         return self.manuallyVisitChild(ctx.getChild(1))
 
     # Visit a parse tree produced by CParser#idExpr.
@@ -690,3 +696,35 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#bool_constant.
     def visitBool_constant(self, ctx: CParser.Bool_constantContext):
         return BoolConstantExpr(ctx.getText()).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+
+
+def is_valid_assignment_target_expr(target_expr):
+    """
+        Determines whether specified target expression node is a valid target for assignment.
+
+        Note: it should also be determine if the type of the node still allows for 
+        a valid assignment, this function will only determine fitness w.r.t. Expression type.
+    """
+    
+    # note: this is obtained by analysing the grammar
+    # Also retrieving an object with a getter-function and assigning to it is still possible due to the derefence expression:
+    #       "*get_object_location() = new_object_value"
+
+    if isinstance(target_expr, ArrayAccessExpr) or isinstance(target_expr, IdentifierExpr) or isinstance(target_expr, PointerDerefExpr):
+        return True
+
+    return False
+
+
+def get_full_context_source(ctx):
+    """
+        Retrieve the full source code that is behind a parser node.
+    """
+    start = ctx.start
+    stop = ctx.stop
+    start_idx = start.start
+    stop_idx = stop.stop
+
+    stream = start.getInputStream()
+
+    return stream.getText(start_idx, stop_idx)
