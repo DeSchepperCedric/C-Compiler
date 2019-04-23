@@ -72,7 +72,7 @@ expression : assignment_expr (COMMA assignment_expr)* ;
 
 assignment_expr
         : logical_or_expr
-		| unary_expr assignment_operator assignment_expr
+		| unary_expr assignment_operator logical_or_expr
 	    ;
 
 assignment_operator
@@ -138,10 +138,10 @@ unary_operator
         ;
 
 postfix_expr
-        : identifier LEFT_BRACKET assignment_expr RIGHT_BRACKET # arrayAccesExpr // we use assignment_expr here since "expression" is a list
+        : identifier LEFT_BRACKET assignment_expr RIGHT_BRACKET   # arrayAccesExpr // we use assignment_expr here since "expression" is a list
         | postfix_expr DECREMENT                                  # postfixDec
         | postfix_expr INCREMENT                                  # postfixInc
-        | identifier LEFT_PAREN expression? RIGHT_PAREN         # funcCall
+        | identifier LEFT_PAREN expression? RIGHT_PAREN           # funcCall
         | prim_expr                                               # primitiveExpr
         ;
 
