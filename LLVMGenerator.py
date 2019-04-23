@@ -203,7 +203,8 @@ class LLVMGenerator:
         return code
 
     def varDeclWithInit(self, node):
-        var_type = self.getLLVMType(node.getType()) + node.getPointerCount() * "*"
+        #var_type = self.getLLVMType(node.getInitExpr().getExpressionType())
+        var_type = "i32"
         var_id = node.getID()
         code = ""
 
@@ -306,7 +307,8 @@ class LLVMGenerator:
         # %1 ... are args
         self.cur_reg = len(node.getParamList()) + 1
         code = ""
-        return_type = self.getLLVMType(node.getReturnType()) + node.getPointerCount() * "*" + " "
+        return_type, scope = node.getSymbolTable().lookup(node.getFuncID())
+        return_type = self.getLLVMType(return_type.getReturnType()) + " "
         function_name = "@" + node.getFuncID()
 
         code += "define " + return_type + function_name + "("
@@ -370,7 +372,15 @@ class LLVMGenerator:
     def isConstant(self, node):
         return isinstance(node, ConstantExpr)
 
-    def getLLVMType(self, type):
+    def getLLVMType(self, type_node):
+        if type_node.isVar():
+            type_string = type_node.toString()
+
+            type_string = type_string.replace("int", "i32")
+            type_string = type_string.replace("bool", "i1")
+            return type_string
+
+        # TODO convert to new system
         # TODO add char/string
         if type == "float":
             return "float"
@@ -385,12 +395,19 @@ class LLVMGenerator:
         Returns register number the identifier is located in
         """
         identifier = node.getIdentifierName()
-        t, table = node.getSymbolTable().lookup(identifier)
-        var_name = table + "." + identifier
-        reg = self.variable_reg.get(var_name)
-        print("HHHHere")
-        print(reg)
-        return "%{}".format(reg), -1
+
+        var_type = self.getLLVMType(node.getExpressionType())
+        print("-----")
+        print(var_type)
+        print("--------")
+        print(identifier)
+        if node.getSymbolTable().isGlobal(identifier):
+            return self.loadVariable(identifier, var_type, True)
+        else:
+            t, table = node.getSymbolTable().lookup(identifier)
+            var_name = table + "." + identifier
+            return "", var_name
+
 
     def arithmeticExpr(self, node, operation):
         code = ""
@@ -474,13 +491,8 @@ class LLVMGenerator:
     def returnWithExprStatement(self, node):
 
         return_type = self.getLLVMType(node.getExpression().getExpressionType())
-        return_type = "i32"
         code, register = self.astNodeToLLVM(node.getExpression())
-        print("here")
-        print(type(node.getExpression()))
-        print(code)
-        print(register)
-        print("here")
+
         new_code, register = self.loadVariable(register, return_type, False)
         code += new_code
         code += "ret {} %{}".format(return_type, register)
