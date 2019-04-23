@@ -512,7 +512,6 @@ class StatementContainer:
             elif isinstance(child, ExpressionStatement): # expression statement: annotate the expression tree with the symbol table
                 child.getExpression().setExprTreeSymbolTable(symbol_table)
 
-
         return symbol_table
 
 
