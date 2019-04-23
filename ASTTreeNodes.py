@@ -20,7 +20,11 @@ class ASTNode:
 
     def getNodeName(self):
         if isinstance(self, Expression):
-            expr_type = "\\nEXPR_TYPE:'"+self.getExpressionType().toString() + "'"
+            if self.getExpressionType() is None:
+                print("WARNING: missing type in node",self)
+                expr_type = "\\n#### MISSING TYPE ####"
+            else:
+                expr_type = "\\nEXPR_TYPE:'"+self.getExpressionType().toString() + "'"
         else:
             expr_type = ""
 
@@ -322,6 +326,7 @@ class ArrayDecl(SymbolDecl):
 
         self.setSymbolTable(symbol_table)
         self.size_expr.setExprTreeSymbolTable(symbol_table)
+        self.size_expr.resolveExpressionType(symbol_table)
 
         symbol_table.insert(self.symbol_id, ArrayType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)))
 
@@ -440,6 +445,9 @@ class FuncDecl(SymbolDecl):
         #       and has to be inserted into the global scope
 
         self.setSymbolTable(symbol_table)
+
+
+
         symbol_table.insert(self.symbol_id, FunctionType(self.symbol_type, [type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list]))
 
 
