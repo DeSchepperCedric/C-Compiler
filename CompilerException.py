@@ -17,3 +17,9 @@ class AstCreationException(CompilerException):
     """
     pass
 
+class AstTypingException(CompilerException):
+    """
+        Exception thrown when an error occurs during AST type checking.
+    """
+    pass
+
