@@ -384,15 +384,15 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == "=":
-            return AssignmentExpr(left, right)
+            return AssignmentExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "+=":
-            return AddAssignmentExpr(left, right)
+            return AddAssignmentExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "-=":
-            return SubAssignmentExpr(left, right)
+            return SubAssignmentExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "*=":
-            return MulAssignmentExpr(left, right)
+            return MulAssignmentExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "/=":
-            return DivAssignmentExpr(left, right)
+            return DivAssignmentExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for assignment expr: {}".format(operator))
 
@@ -412,7 +412,7 @@ class ParserVisitor(CVisitor):
         # get right: child #2
         right = self.manuallyVisitChild(ctx.getChild(2))
 
-        return LogicOrExpr(left, right)
+        return LogicOrExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#logical_and_expr.
     def visitLogical_and_expr(self, ctx: CParser.Logical_and_exprContext):
@@ -426,7 +426,7 @@ class ParserVisitor(CVisitor):
         # get right: child #2
         right = self.manuallyVisitChild(ctx.getChild(2))
 
-        return LogicAndExpr(left, right)
+        return LogicAndExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#equality_expr.
     def visitEquality_expr(self, ctx: CParser.Equality_exprContext):
@@ -439,9 +439,9 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == "==":
-            return EqualityExpr(left, right)
+            return EqualityExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "!=":
-            return InequalityExpr(left, right)
+            return InequalityExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for equality expr: {}".format(operator))
 
@@ -456,13 +456,13 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == ">":
-            return CompGreater(left, right)
+            return CompGreater(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "<":
-            return CompLess(left, right)
+            return CompLess(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == ">=":
-            return CompGreaterEqual(left, right)
+            return CompGreaterEqual(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "<=":
-            return CompLessEqual(left, right)
+            return CompLessEqual(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for comparison expr: {}".format(operator))
 
@@ -477,9 +477,9 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == "+":
-            return AddExpr(left, right)
+            return AddExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "-":
-            return SubExpr(left, right)
+            return SubExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for additive expr: {}".format(operator))
 
@@ -494,11 +494,11 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == "*":
-            return MulExpr(left, right)
+            return MulExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "/":
-            return DivExpr(left, right)
+            return DivExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "%":
-            return ModExpr(left, right)
+            return ModExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for multiplicative expr: {}".format(operator))
 
@@ -516,7 +516,7 @@ class ParserVisitor(CVisitor):
         # visit each type-child and retrieve type name
         type_list = [self.manuallyVisitChild(ctx) for ctx in type_ctx_list]
 
-        return CastExpr(type_list, expr)
+        return CastExpr(type_list, expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#unaryAsPostfix.
     def visitUnaryAsPostfix(self, ctx: CParser.UnaryAsPostfixContext):
@@ -528,25 +528,25 @@ class ParserVisitor(CVisitor):
         expr = self.manuallyVisitChild(ctx.getChild(1))
 
         if operator == "+":
-            return PlusPrefixExpr(expr)
+            return PlusPrefixExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "-":
-            return MinPrefixExpr(expr)
+            return MinPrefixExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "not" or operator == '!':
-            return LogicNotExpr(expr)
+            return LogicNotExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "*":
-            return PointerDerefExpr(expr)
+            return PointerDerefExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "&":
-            return AddressExpr(expr)
+            return AddressExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "++":
-            return PrefixIncExpr(expr)
+            return PrefixIncExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "--":
-            return PrefixDecExpr(expr)
+            return PrefixDecExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         else:
             raise Exception("Invalid operator '{}'".format(operator))
@@ -560,18 +560,18 @@ class ParserVisitor(CVisitor):
     def visitArrayAccesExpr(self, ctx: CParser.ArrayAccesExprContext):
         # child #0 the array identifier
         target_array_id = self.manuallyVisitChild(ctx.getChild(0))
-        target_array = IdentifierExpr(target_array_id)
+        target_array = IdentifierExpr(target_array_id).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         # child #1 is '['
         index_expr = self.manuallyVisitChild(ctx.getChild(2))
         # child # 3 is ']'
 
-        return ArrayAccessExpr(target_array, index_expr)
+        return ArrayAccessExpr(target_array, index_expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#postfixDec.
     def visitPostfixDec(self, ctx: CParser.PostfixDecContext):
         expression = self.manuallyVisitChild(ctx.getChild(0))
-        return PostfixDecExpr(expression)
+        return PostfixDecExpr(expression).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#primitiveExpr.
     def visitPrimitiveExpr(self, ctx: CParser.PrimitiveExprContext):
@@ -581,7 +581,7 @@ class ParserVisitor(CVisitor):
     def visitFuncCall(self, ctx: CParser.FuncCallContext):
         # function id is a IdentifierExpression
         function_id_str = self.manuallyVisitChild(ctx.getChild(0))
-        function_id = IdentifierExpr(function_id_str)
+        function_id = IdentifierExpr(function_id_str).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         arg_ctx_list = [node for node in list(ctx.getChildren())[1:] if not node.getText() in [',', '(', ')']]
 
@@ -592,12 +592,12 @@ class ParserVisitor(CVisitor):
         for arg_expr_list in argument_exprs:
             argument_nodes.extend(arg_expr_list)
 
-        return FuncCallExpr(function_id, argument_nodes)
+        return FuncCallExpr(function_id, argument_nodes).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#postfixInc.
     def visitPostfixInc(self, ctx: CParser.PostfixIncContext):
         expression = self.manuallyVisitChild(ctx.getChild(0))
-        return PostfixIncExpr(expression)
+        return PostfixIncExpr(expression).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#parenExpr.
     def visitParenExpr(self, ctx: CParser.ParenExprContext):
@@ -612,7 +612,7 @@ class ParserVisitor(CVisitor):
 
         id_str = self.manuallyVisitChild(ctx.getChild(0))
 
-        return IdentifierExpr(id_str)
+        return IdentifierExpr(id_str).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#constantExpr.
     def visitConstantExpr(self, ctx: CParser.ConstantExprContext):
@@ -672,21 +672,21 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#int_constant.
     def visitInt_constant(self, ctx: CParser.Int_constantContext):
-        return IntegerConstantExpr(ctx.getText())
+        return IntegerConstantExpr(ctx.getText()).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#float_constant.
     def visitFloat_constant(self, ctx: CParser.Float_constantContext):
-        return FloatConstantExpr(ctx.getText())
+        return FloatConstantExpr(ctx.getText()).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#str_constant.
     def visitStr_constant(self, ctx: CParser.Str_constantContext):
         constant = ctx.getText().rstrip("\"").lstrip("\"") # remove "
-        return StringConstantExpr(constant)
+        return StringConstantExpr(constant).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#char_constant.
     def visitChar_constant(self, ctx: CParser.Char_constantContext):
-        return CharConstantExpr(ctx.getText())
+        return CharConstantExpr(ctx.getText()).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#bool_constant.
     def visitBool_constant(self, ctx: CParser.Bool_constantContext):
-        return BoolConstantExpr(ctx.getText())
+        return BoolConstantExpr(ctx.getText()).setLineNr(ctx.start.line).setColNr(ctx.start.column)
