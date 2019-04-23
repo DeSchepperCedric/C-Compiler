@@ -35,6 +35,9 @@ class ASTNode:
         self.symbol_table = symbol_table
 
     def getLineNr(self):
+        """ 
+            Retrieve the line number of the AST node w.r.t. the original C source file.
+        """
         return self.line_nr
 
     def setLineNr(self, line_nr):
@@ -42,6 +45,9 @@ class ASTNode:
         return self # return self so we can chain these operations
 
     def getColNr(self):
+        """ 
+            Retrieve the column number of the AST node w.r.t. the original C source file.
+        """
         return self.col_nr
 
     def setColNr(self, col_nr):
@@ -170,6 +176,9 @@ class ProgramNode(ASTNode):
     def genSymbolTable(self):
         """
             Recursively traverse the AST tree and create a symbol table for each scope.
+            Type checking will also be performed at this stage.
+            Each expression node will be annotated with a type. Can be retrieved with getExpressionType()
+            Each statement will have a symbol table if relevant. Can be retrieved with getSymbolTable()
         """
 
         symbol_table = SymbolTable()
@@ -537,6 +546,23 @@ class StatementContainer:
                 child.getExpression().setExprTreeSymbolTable(symbol_table)
                 child.getExpression().resolveExpressionType(symbol_table)
 
+            elif isinstance(child, VarDeclWithInit):
+                child.getInitExpr().setExprTreeSymbolTable(symbol_table) # annotate with symbol table
+                child.getInitExpr().resolveExpressionType(symbol_table)  # resolve expr type
+
+                # check if compatible is_conversion_possible
+                # check for narrowing will_conversion_narrow
+                # TODO
+            elif isinstance(child, ReturnWithExprStatement):
+                child.getExpression().setExprTreeSymbolTable(symbol_table) # annotate with symbol table
+                child.getExpression().resolveExpressionType(symbol_table)  # resolve expr type
+
+                # check return type for compatibility and narrowing
+                # TODO
+
+
+
+
 
         return symbol_table
 
@@ -589,7 +615,8 @@ class FuncParam(ASTNode):
             A function param introduces an identifier into the function's own scope.
         """
         self.setSymbolTable(symbol_table)
-        symbol_table.insert(self.param_id, "{}{}".format(self.param_type, "*" * self.ptr_count))
+
+        symbol_table.insert(self.param_id, VariableType(type_to_string(self.param_type, self.ptr_count)))
 
 
 class Statement(ASTNode):
@@ -834,7 +861,9 @@ class Expression(ASTNode):
         """
         return self.expression_type
 
-
+# TODO check left expression: must be deref, array access, non-function variable, 
+# TODO check if left and right expression types are compatible
+# TODO narrowing warnings
 class AssignmentExpr(Expression):
     """
         Node that represents a normal assignment expression.
@@ -856,6 +885,28 @@ class AssignmentExpr(Expression):
 
         self.left.setExprTreeSymbolTable(symbol_table)
         self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # left type does not matter, since assignments are possible on all types
+        # right value conforms to the same constraints as division operators
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        # and assignment is not possible
+        if not is_conversion_possible(left_type, right_type):
+            Logger.error("Assignment of expression of type '{}' to target of incompatible type '{}' is not possible on line {}."
+                                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstTypingException()
+
+        # check for narrowing
+        if will_conversion_narrow(left_type, right_type):
+            Logger.warning("Assignment of expression of type '{}' to target of type '{}' will result in narrowing on line {}."
+                                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            # no exception here, compilation may continue.
+
+        # lhs = rhs, lhs is returned, so we take the type of lhs
+        return left_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -886,6 +937,30 @@ class AddAssignmentExpr(Expression):
         self.left.setExprTreeSymbolTable(symbol_table)
         self.right.setExprTreeSymbolTable(symbol_table)
 
+    def resolveExpressionType(self, symbol_table):
+        # left type does not matter, since assignments are possible on all types
+        # right value conforms to the same constraints as division operators
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
+            Logger.error("Pointers, arrays and functions cannot be used as operators for addition. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstTypingException()
+
+        # assignment is possible since left and right type are both non-pointer variable types. The only possible
+        # complication is 'float' and integer type, but those too can be converted.
+
+        # check for narrowing
+        if will_conversion_narrow(left_type, right_type):
+            Logger.warning("Assignment of expression of type '{}' to target of type '{}' will result in narrowing on line {}."
+                                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            # no exception here, compilation may continue.
+
+        # lhs = rhs, lhs is returned, so we take the type of lhs
+        return left_type
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
                                        parent_nr=parent_nr,
@@ -914,6 +989,30 @@ class SubAssignmentExpr(Expression):
 
         self.left.setExprTreeSymbolTable(symbol_table)
         self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # left type does not matter, since assignments are possible on all types
+        # right value conforms to the same constraints as division operators
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
+            Logger.error("Pointers, arrays and functions cannot be used as operators for subtraction. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstTypingException()
+
+        # assignment is possible since left and right type are both non-pointer variable types. The only possible
+        # complication is 'float' and integer type, but those too can be converted.
+
+        # check for narrowing
+        if will_conversion_narrow(left_type, right_type):
+            Logger.warning("Assignment of expression of type '{}' to target of type '{}' will result in narrowing on line {}."
+                                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            # no exception here, compilation may continue.
+
+        # lhs = rhs, lhs is returned, so we take the type of lhs
+        return left_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -944,13 +1043,37 @@ class MulAssignmentExpr(Expression):
         self.left.setExprTreeSymbolTable(symbol_table)
         self.right.setExprTreeSymbolTable(symbol_table)
 
+    def resolveExpressionType(self, symbol_table):
+        # left type does not matter, since assignments are possible on all types
+        # right value conforms to the same constraints as division operators
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
+            Logger.error("Only pointers, arrays and functions cannot be used as operators for multiplication. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstTypingException()
+
+        # assignment is possible since left and right type are both non-pointer variable types. The only possible
+        # complication is 'float' and integer type, but those too can be converted.
+
+        # check for narrowing
+        if will_conversion_narrow(left_type, right_type):
+            Logger.warning("Assignment of expression of type '{}' to target of type '{}' will result in narrowing on line {}."
+                                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            # no exception here, compilation may continue.
+
+        # lhs = rhs, lhs is returned, so we take the type of lhs
+        return left_type
+
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-
+# left = array access, 
 class DivAssignmentExpr(Expression):
     """
         Node that represents a division assignment expression: "a /= b;".
@@ -972,6 +1095,30 @@ class DivAssignmentExpr(Expression):
 
         self.left.setExprTreeSymbolTable(symbol_table)
         self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # left type does not matter, since assignments are possible on all types
+        # right value conforms to the same constraints as division operators
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
+            Logger.error("Pointers, arrays and functions cannot be used as operators for division. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstTypingException()
+
+        # assignment is possible since left and right type are both non-pointer variable types. The only possible
+        # complication is 'float' and integer type, but those too can be converted.
+
+        # check for narrowing
+        if will_conversion_narrow(left_type, right_type):
+            Logger.warning("Assignment of expression of type '{}' to target of type '{}' will result in narrowing on line {}."
+                                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            # no exception here, compilation may continue.
+
+        # lhs = rhs, lhs is returned, so we take the type of lhs
+        return left_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1003,15 +1150,16 @@ class LogicOrExpr(Expression):
         self.right.setExprTreeSymbolTable(symbol_table)
 
     def resolveExpressionType(self, symbol_table):
-        # integer types: int char bool
+        # pointer types, arrays, value types are all allowed so that 0 is false, anything else is true.
 
         left_type = self.left.resolveExpressionType(symbol_table)
         right_type = self.right.resolveExpressionType(symbol_table)
 
-        if not is_integral_variable_type(left_type) or not is_integral_variable_type(right_type):
-            Logger.error("Only integral types can be used as operators for logical expressions. Tried to use types '{}' and '{}' on line {}."
+        if left_type.isFunction() or right_type.isFunction():
+
+            Logger.error("Functions cannot be used in logical expressions. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         # return bool
         self.expression_type = VariableType('bool')
@@ -1048,15 +1196,16 @@ class LogicAndExpr(Expression):
         self.right.setExprTreeSymbolTable(symbol_table)
 
     def resolveExpressionType(self, symbol_table):
-        # integer types: int char bool
+        # pointer types, arrays, value types are all allowed so that 0 is false, anything else is true.
 
         left_type = self.left.resolveExpressionType(symbol_table)
         right_type = self.right.resolveExpressionType(symbol_table)
 
-        if not is_integral_variable_type(left_type) or not is_integral_variable_type(right_type):
-            Logger.error("Only integral types can be used as operators for logical expressions. Tried to use types '{}' and '{}' on line {}."
+        if left_type.isFunction() or right_type.isFunction():
+
+            Logger.error("Functions cannot be used in logical expressions. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         # return bool
         self.expression_type = VariableType('bool')
@@ -1099,9 +1248,9 @@ class EqualityExpr(Expression):
 
         # variables, arrays and pointers are allowed
         if left_type.isFunction() or right_type.isFunction():
-            Logger.error("Only pointers, arrays and variables can be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
+            Logger.error("Functions cannot be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         # return bool
         self.expression_type = VariableType('bool')
@@ -1144,9 +1293,9 @@ class InequalityExpr(Expression):
 
         # variables, arrays and pointers are allowed
         if left_type.isFunction() or right_type.isFunction():
-            Logger.error("Only pointers, arrays and variables can be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
+            Logger.error("Functions cannot be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         # return bool
         self.expression_type = VariableType('bool')
@@ -1189,9 +1338,9 @@ class CompGreater(Expression):
 
         # variables, arrays and pointers are allowed
         if left_type.isFunction() or right_type.isFunction():
-            Logger.error("Only pointers, arrays and variables can be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
+            Logger.error("Functions cannot be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         # return bool
         self.expression_type = VariableType('bool')
@@ -1234,9 +1383,9 @@ class CompLess(Expression):
 
         # variables, arrays and pointers are allowed
         if left_type.isFunction() or right_type.isFunction():
-            Logger.error("Only pointers, arrays and variables can be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
+            Logger.error("Functions cannot be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         # return bool
         self.expression_type = VariableType('bool')
@@ -1279,9 +1428,9 @@ class CompGreaterEqual(Expression):
 
         # variables, arrays and pointers are allowed
         if left_type.isFunction() or right_type.isFunction():
-            Logger.error("Only pointers, arrays and variables can be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
+            Logger.error("Functions cannot be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         # return bool
         self.expression_type = VariableType('bool')
@@ -1324,9 +1473,9 @@ class CompLessEqual(Expression):
 
         # variables, arrays and pointers are allowed
         if left_type.isFunction() or right_type.isFunction():
-            Logger.error("Only pointers, arrays and variables can be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
+            Logger.error("Functions cannot be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         # return bool
         self.expression_type = VariableType('bool')
@@ -1369,9 +1518,9 @@ class AddExpr(Expression):
         right_type = self.right.resolveExpressionType(symbol_table)
 
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
-            Logger.error("Only pointers, arrays and functions cannot be used as operators for addition. Tried to use types '{}' and '{}' on line {}."
+            Logger.error("Pointers, arrays and functions cannot be used as operators for addition. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         self.expression_type = get_maximal_type(left_type, right_type)
 
@@ -1413,9 +1562,9 @@ class SubExpr(Expression):
         right_type = self.right.resolveExpressionType(symbol_table)
 
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
-            Logger.error("Only pointers, arrays and functions cannot be used as operators for subtraction. Tried to use types '{}' and '{}' on line {}."
+            Logger.error("Pointers, arrays and functions cannot be used as operators for subtraction. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         self.expression_type = get_maximal_type(left_type, right_type)
 
@@ -1459,7 +1608,7 @@ class MulExpr(Expression):
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
             Logger.error("Only pointers, arrays and functions cannot be used as operators for multiplication. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         self.expression_type = get_maximal_type(left_type, right_type)
 
@@ -1501,9 +1650,9 @@ class DivExpr(Expression):
         right_type = self.right.resolveExpressionType(symbol_table)
 
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
-            Logger.error("Only pointers, arrays and functions cannot be used as operators for division. Tried to use types '{}' and '{}' on line {}."
+            Logger.error("Pointers, arrays and functions cannot be used as operators for division. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         self.expression_type = get_maximal_type(left_type, right_type)
 
@@ -1552,14 +1701,14 @@ class ModExpr(Expression):
         else:
             Logger.error("Operands of modulo operator need to be of type 'bool', 'char', or 'int'. LHS argument of type '{}' was given on line {}."
                             .format(left_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         if right_type.isVar() and not right_type.toString().endswith("*") and not right_type.toString() == 'float':
             right_type_name = right_type.toString()
         else:
             Logger.error("Operands of modulo operator need to be of type 'bool', 'char', or 'int'. RHS side argument of type '{}' was given on line {}."
                             .format(right_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         # always convert to int
         self.expression_type = VariableType("int")
@@ -1631,7 +1780,7 @@ class LogicNotExpr(Expression):
 
         if target_type.isFunction():
             Logger.error("Logical not operator cannot be applied to functions. Tried to apply to function of type '{}' on line {}.".format(target_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         self.expression_type = target_type
 
@@ -1671,7 +1820,7 @@ class PrefixIncExpr(Expression):
         if not target_type.isVar():
             Logger.error("Prefix increment cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
                             .format(target_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         self.expression_type = target_type
 
@@ -1711,7 +1860,7 @@ class PrefixDecExpr(Expression):
         if not target_type.isVar():
             Logger.error("Prefix decrement cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
                             .format(target_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         self.expression_type = target_type
 
@@ -1751,7 +1900,7 @@ class PostfixIncExpr(Expression):
         if not target_type.isVar():
             Logger.error("Postfix increment cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
                             .format(target_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         self.expression_type = target_type
 
@@ -1791,7 +1940,7 @@ class PostfixDecExpr(Expression):
         if not target_type.isVar():
             Logger.error("Postfix decrement cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
                             .format(target_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         self.expression_type = target_type
 
@@ -1831,7 +1980,7 @@ class PlusPrefixExpr(Expression):
         if not is_non_ptr_variable_type(target_type):
             Logger.error("Unary plus cannot be performed on pointers, arrays or functions. Tried to apply on type '{}' on line {}."
                             .format(target_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         self.expression_type = target_type
 
@@ -1871,7 +2020,7 @@ class MinPrefixExpr(Expression):
         if not is_non_ptr_variable_type(target_type):
             Logger.error("Unary minus cannot be performed on pointers, arrays or functions. Tried to apply on type '{}' on line {}."
                             .format(target_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         self.expression_type = target_type
 
@@ -1928,16 +2077,16 @@ class ArrayAccessExpr(Expression):
             # invalid target
             Logger.error("Array access can only be performed on arrays and pointers. Tried to apply array access on '{}' with type '{}' on line '{}'."
                             .format(target_name, target_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         # check that index expression can evaluated to int
         index_type = self.index_expr.resolveExpressionType(symbol_table)
 
         # index type needs to be compatible with 
-        if not are_types_compatible('int', index_type.toString()):
+        if not is_conversion_possible('int', index_type.toString()):
             Logger.error("Invalid index expression passed to array '{}' on line {}: Type '{}' is requested, incompatible type '{}' was given."
                             .format(target_name, self.getLineNr(), 'int', index_type.toString()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         return self.expression_type
 
@@ -1975,7 +2124,7 @@ class PointerDerefExpr(Expression):
             new_type = VariableType(target_type.getEntryType()) # deref of array simply points to first element.
         else:
             Logger.error("Only pointer types and array types can be dereferened. Tried to derefence type '{}' on line {}.".format(target_type.toString(), self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         self.expression_type = new_type
 
@@ -2015,7 +2164,7 @@ class AddressExpr(Expression):
             # pointer to array is pointer to pointer to first element
         elif target_type.isFunction():
             Logger.error("Error at line {}. Cannot take address of function.".format(self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
         elif target_type.isVar():
             target_type_name = target_type.toString()
             # add ptr level
@@ -2076,30 +2225,35 @@ class FuncCallExpr(Expression):
 
         if not function_type.isFunction():
             Logger.error("Symbol '{}' cannot be called as a function on line {}".format(function_name, self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
 
         # check argument count
         if len(self.argument_list) != len(function_type.getParamTypes()):
             Logger.error("Function {} called with invalid amount of arguments on line {}. {} parameters needed, {} parameters specified."
                             .format(function_name, len(function_type.getParamTypes()), len(self.argument_list)))
-            raise AstCreationException()
+            raise AstTypingException()
 
         # check arguments
         for i in range(0, len(self.argument_list)):
-            arg_expr_type = self.argument_list[i].resolveExpressionType(symbol_table)
-            param_type = function_type.getParamTypes()[i]
+            arg_expr_type = self.argument_list[i].resolveExpressionType(symbol_table) # supplied param type
+            param_type = function_type.getParamTypes()[i] # expected param type
 
             if arg_expr_type.isFunction():
                 Logger.error("Invalid argument #{} passed to function '{}' on line {}: Functions cannot be passed as argument."
                                 .format(i+1, function_name, self.getLineNr()))
-                raise AstCreationException()
+                raise AstTypingException()
 
-            # TODO check for narrowing!
             # check if parameters are compatible
-            if not are_types_compatible(param_type, arg_expr_type.toString()):
+            if not is_conversion_possible(VariableType(param_type), arg_expr_type):
                 Logger.error("Invalid argument #{} passed to function '{}' on line {}: Type '{}' is requested, incompatible type '{}' was given."
                                 .format(i+1, function_name, self.getLineNr(), param_type, arg_expr_type.toString()))
-                raise AstCreationException()
+                raise AstTypingException()
+
+            # parameters are compatible, check for narrowing
+            if will_conversion_narrow(VariableType(param_type), arg_expr_type):
+                Logger.warning("Passing expression of type '{}' as argument #{} for function '{}' narrowing on line {}. Expected type is '{}'."
+                                    .format(arg_expr_type.toString(), i+1, function_name, self.getLineNr(), param_type))
+                # no exception needed here
 
         self.expression_type = VariableType(function_type.getReturnType())
 
@@ -2147,7 +2301,7 @@ class IdentifierExpr(Expression):
         if symbol_type == 0:
             # symbol not found
             Logger.error("Referenced undeclared symbol {} at line {}.".format(self.identifier, self.getLineNr()))
-            raise AstCreationException()
+            raise AstTypingException()
         else:
             # set symbol type
             self.expression_type = symbol_type
@@ -2269,22 +2423,26 @@ class BoolConstantExpr(ConstantExpr):
 
         return self.expression_type
 
+############### TYPE FUNCTIONS ###############
+
 def type_to_string(typename, pointer_count):
     return typename + ("*"*pointer_count)
 
-# TODO expand this
-def are_types_compatible(left, right):
-    if left != right:
-        return False
-    return True
-
-# TODO add function for narrowing
 
 def get_maximal_type(type_a, type_b):
     """
-        Returns the widest type. The following order is used: float > int > char > bool
+        Returns the widest type of the two specified types. The following order is used: float > int > char > bool.
+        Only non-pointer variable types are allowed!
     """
-    pass
+    
+    type_list = ['bool', 'char', 'int', 'float']
+
+    type_a_idx = type_list.index(type_a.toString())
+    type_b_idx = type_list.index(type_b.toString())
+
+    max_id = max(type_a_idx, type_a_idx)
+
+    return type_list[max_id]
 
 def is_non_ptr_variable_type(type):
     """
@@ -2298,3 +2456,34 @@ def is_integral_variable_type(type):
     """
     return type.isVar() and type.toString() in ['bool', 'char', 'int']
 
+def is_conversion_possible(target_type, original_type):
+    """
+        Determine whether or not a conversion from the original type to the target type is possible.
+    """
+
+    # two different pointer types: not possible
+    # two different value types: maybe
+    # array assigned to array_entry_type* ok
+    # functions are not assignable
+    # assignment to array is not possible, and array-type parameters are not possible.
+
+    # -> if target, origin is var, non-ptr and value types:
+    #   -> further determine value types
+    #   -> !! void not allowed!!
+    # -> if taret is ptr:
+    #       -> if original is identical ptr: ok
+    #       -> if original is compatible array: ok
+    # return false.
+
+    pass
+
+def will_conversion_narrow(target_type, original_type):
+    """
+        Determine whether or not a conversion from the original type to the target type will result in narrowing.
+    """
+
+    # if target < original_type:
+    #   return True
+    # return False
+
+    pass
