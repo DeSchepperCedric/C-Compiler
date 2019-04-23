@@ -188,6 +188,19 @@ class VariableType(SymbolType):
     def isPtr(self):
         return self.variable_type.endswith("*")
 
+    def getUnderlayingPrimive(self):
+        return VariableType(self.variable_type.rstrip("*"))
+
+    def addPointerLayer(self):
+        return VariableType(self.variable_type + "*")
+
+    def removePointerLayer(self):
+        if not self.isPtr():
+            raise Exception("Pointer layer can only be removed if target is pointer.")
+
+        return VariableType(self.variable_type[:-1])
+
+
 class ArrayType(SymbolType):
     def __init__(self, entry_type : str):
         """
@@ -198,8 +211,11 @@ class ArrayType(SymbolType):
         """
         self.entry_type = entry_type
 
-    def getEntryType(self):
+    def getEntryTypeAsString(self):
         return self.entry_type
+
+    def getEntryType(self):
+        return VariableType(self.entry_type)
 
     def toString(self):
         return self.entry_type + "[]"
