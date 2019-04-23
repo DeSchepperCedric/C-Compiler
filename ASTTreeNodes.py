@@ -353,15 +353,28 @@ class VarDeclWithInit(SymbolDecl):
                                        add_open_close=add_open_close)
 
     def addToSymbolTable(self, symbol_table):
+        # note: we first evaluate the expression, then we declare the new symbol, otherwise "int i = i+2;" would be accepted.
         self.setSymbolTable(symbol_table)
         self.init_expr.setExprTreeSymbolTable(symbol_table)
         self.init_expr.resolveExpressionType(symbol_table)
-
-        # check if compatible is_conversion_possible
-        # check for narrowing will_conversion_narrow
-        # TODO
-
         symbol_table.insert(self.symbol_id, VariableType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)))
+
+        # retrieve expression types
+        symbol_type = VariableType(type_to_string(self.symbol_type, self.symbol_ptr_cnt))
+        expr_type = self.init_expr.getExpressionType()
+
+        # determine if types are assignable to target
+        if not is_conversion_possible(symbol_type, expr_type):
+            Logger.error("Assigning expression of type '{}' to target of incompatible type '{}' is not possible on line {}."
+                                .format(expr_type.toString(), symbol_type.toString(), self.init_expr.getLineNr()))
+            raise AstTypingException()
+
+        # check for narrowing
+        if will_conversion_narrow(symbol_type, expr_type):
+            Logger.warning("Assigning expression of type '{}' to target of type '{}' will result in narrowing on line {}."
+                                .format(expr_type.toString(), symbol_type.toString(), self.init_expr.getLineNr()))
+            # no exception here, compilation may continue.
+
 
 
 class FuncDecl(SymbolDecl):
@@ -614,6 +627,8 @@ class FuncParam(ASTNode):
             A function param introduces an identifier into the function's own scope.
         """
         self.setSymbolTable(symbol_table)
+
+        # TODO check if the symbol already exists: if so -> error
 
         symbol_table.insert(self.param_id, VariableType(type_to_string(self.param_type, self.ptr_count)))
 
