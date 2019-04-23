@@ -116,7 +116,10 @@ def print_symbol_table_node_to_dot(node, cur_id):
     dot += "\t<tr><td colspan=\"2\"> {} </td></tr>\n".format(node.name)
     for symbol, sym_type in node.symbols.items():
         dot += "\t<tr>"
-        dot += "\t<td>{}</td>\n".format(sym_type.toString())
+        if sym_type.isFunction():
+            dot += "\t<td>{}</td>\n".format(sym_type.toString(True))
+        else:
+            dot += "\t<td>{}</td>\n".format(sym_type.toString())
         dot += "\t<td>{}</td>\n".format(symbol)
         dot += "\t</tr>\n"
     dot += "\t</table>  >];\n"
@@ -136,12 +139,13 @@ class SymbolType:
         return False
 
 class FunctionType(SymbolType):
-    def __init__(self, return_type : str, param_types : list):
+    def __init__(self, return_type : str, param_types : list, is_defined = False):
         """
             Constructor
         """
         self.return_type = return_type
         self.param_types = param_types
+        self.is_defined = is_defined
 
     def getReturnTypeAsString(self):
         """
@@ -161,8 +165,20 @@ class FunctionType(SymbolType):
     def isFunction(self):
         return True
 
-    def toString(self):
-        return self.return_type + "(" + ",".join(self.param_types) + ")"
+    def isDefined(self):
+        return self.is_defined
+
+    def setDefined(self):
+        self.is_defined = True
+
+    def toString(self, included_definition_flag=False):
+
+        retval = self.return_type + "(" + ",".join(self.param_types) + ")"
+
+        if included_definition_flag and self.is_defined:
+            retval += "{def}"
+
+        return retval
 
 class VariableType(SymbolType):
     def __init__(self, variable_type : str):
