@@ -144,8 +144,17 @@ class FunctionType(SymbolType):
         self.return_type = return_type
         self.param_types = param_types
 
-    def getReturnType(self):
+    def getReturnTypeAsString(self):
+        """
+            Returns a string that represents the return type.
+        """
         return self.return_type
+
+    def getReturnType(self):
+        """
+            Returns a VariableType object that represents the return type.
+        """
+        return VariableType(self.return_type)
 
     def getParamTypes(self):
         return self.param_types
@@ -175,6 +184,9 @@ class VariableType(SymbolType):
 
     def isVar(self):
         return True
+
+    def isPtr(self):
+        return self.variable_type.endswith("*")
 
 class ArrayType(SymbolType):
     def __init__(self, entry_type : str):
