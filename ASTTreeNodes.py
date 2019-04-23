@@ -355,6 +355,12 @@ class VarDeclWithInit(SymbolDecl):
     def addToSymbolTable(self, symbol_table):
         self.setSymbolTable(symbol_table)
         self.init_expr.setExprTreeSymbolTable(symbol_table)
+        self.init_expr.resolveExpressionType(symbol_table)
+
+        # check if compatible is_conversion_possible
+        # check for narrowing will_conversion_narrow
+        # TODO
+
         symbol_table.insert(self.symbol_id, VariableType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)))
 
 
@@ -546,13 +552,6 @@ class StatementContainer:
                 child.getExpression().setExprTreeSymbolTable(symbol_table)
                 child.getExpression().resolveExpressionType(symbol_table)
 
-            elif isinstance(child, VarDeclWithInit):
-                child.getInitExpr().setExprTreeSymbolTable(symbol_table) # annotate with symbol table
-                child.getInitExpr().resolveExpressionType(symbol_table)  # resolve expr type
-
-                # check if compatible is_conversion_possible
-                # check for narrowing will_conversion_narrow
-                # TODO
             elif isinstance(child, ReturnWithExprStatement):
                 child.getExpression().setExprTreeSymbolTable(symbol_table) # annotate with symbol table
                 child.getExpression().resolveExpressionType(symbol_table)  # resolve expr type
@@ -2255,7 +2254,7 @@ class FuncCallExpr(Expression):
                                     .format(arg_expr_type.toString(), i+1, function_name, self.getLineNr(), param_type))
                 # no exception needed here
 
-        self.expression_type = VariableType(function_type.getReturnType())
+        self.expression_type = function_type.getReturnType()
 
         return self.expression_type
 
@@ -2475,12 +2474,37 @@ def is_conversion_possible(target_type, original_type):
     #       -> if original is compatible array: ok
     # return false.
 
-    pass
+    # The following assignments are supported
+    #  T = T, with T not being 'void'
+    #  T* = T*
+    #  T** = T*[]
+    #  T* = T[]
+
+    if target_type.isVar() and not target_type.isPtr() and original_type.isVar() and not original_type.isPtr(): # assignment value to value
+        if target_type.toString() == "void" or original_type.toString() == "void":
+            return False # void must not be assigned
+        return True # all other types can be assigned to eachother
+    elif target_type.isVar() and target_type.isPtr(): # assignment to ptr
+        if original_type.isVar() and original_type.isPtr() and target_type.toString() == original_type.toString():
+            return True # T* = T*
+        elif original_type.isArray() and (original_type.getEntryType()+"*") == target_type.toString():
+            return True # T** = T*[]
+    elif target_type.isVar() and not target_type.isPtr() and original_type.isVar() and original_type.isPtr(): # assignment ptr to value
+        # can only be done to 'bool', 'int', 'char'
+        pass
+
+    return False
+
 
 def will_conversion_narrow(target_type, original_type):
     """
         Determine whether or not a conversion from the original type to the target type will result in narrowing.
     """
+
+    # if ptr type, or if array type:
+    #   narrowing not relevant
+
+    # if 
 
     # if target < original_type:
     #   return True
