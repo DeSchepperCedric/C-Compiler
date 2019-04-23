@@ -2069,7 +2069,7 @@ class ArrayAccessExpr(Expression):
         if target_type.isArray():
             # access on an array returns an entry
             self.expression_type = target_type.getEntryType()
-        elif target_type.isVar() and target_type.isPtr()
+        elif target_type.isVar() and target_type.isPtr():
             # access on a ptr, dereferences the ptr
             self.expression_type = target_type.removePointerLayer()
         else:
@@ -2117,7 +2117,7 @@ class PointerDerefExpr(Expression):
         target_type = self.target_ptr.resolveExpressionType(symbol_table)
 
         # only pointer variables can be dereferenced.
-        if target_type.isVar() and target_type.isPtr()
+        if target_type.isVar() and target_type.isPtr():
             self.expression_type = target_type.removePointerLayer()
         elif target_type.isArray():
             self.expression_type = target_type.getEntryType() # deref of array simply points to first element.
@@ -2435,7 +2435,7 @@ def get_maximal_type(type_a, type_b):
 
     max_id = max(type_a_idx, type_a_idx)
 
-    return type_list[max_id]
+    return VariableType(type_list[max_id])
 
 def is_non_ptr_variable_type(type):
     """
