@@ -19,10 +19,20 @@ class ASTNode:
         self.col_nr       = None
 
     def getNodeName(self):
+        if isinstance(self, Expression):
+            expr_type = "\\nEXPR_TYPE:'"+self.getExpressionType().toString() + "'"
+        else:
+            expr_type = ""
+
+        if self.symbol_table is not None:
+            symbol_table_flag = "\\nSymTbl PRESENT"
+        else:
+            symbol_table_flag = ""
+
         if self.symbol_table is None:
-            return self.node_name
+            return self.node_name + symbol_table_flag + expr_type
         else: # if the symbol table is present, annotate with star
-            return "*"+self.node_name
+            return self.node_name + symbol_table_flag + expr_type
 
     def getSymbolTable(self):
         """
@@ -301,10 +311,17 @@ class ArrayDecl(SymbolDecl):
                                        add_open_close=add_open_close)
 
     def addToSymbolTable(self, symbol_table):
+        # determine whether or not the symbol already exists to prevent redeclaration
+        # only look in the current scope
+        symbol_type, scope_name = symbol_table.lookup(self.symbol_id, own_scope_only=True)
+
+        if symbol_type != 0:
+            Logger.error("Redeclaration of variable '{}' on line {}. The identifier was already declared with type '{}'."
+                                .format(self.symbol_id, self.getLineNr(), symbol_type.toString()))
+            raise AstTypingException()
+
         self.setSymbolTable(symbol_table)
         self.size_expr.setExprTreeSymbolTable(symbol_table)
-
-
 
         symbol_table.insert(self.symbol_id, ArrayType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)))
 
@@ -327,6 +344,15 @@ class VarDeclDefault(SymbolDecl):
                                        add_open_close=add_open_close)
 
     def addToSymbolTable(self, symbol_table):
+        # determine whether or not the symbol already exists to prevent redeclaration
+        # only look in the current scope
+        symbol_type, scope_name = symbol_table.lookup(self.symbol_id, own_scope_only=True)
+
+        if symbol_type != 0:
+            Logger.error("Redeclaration of variable '{}' on line {}. The identifier was already declared with type '{}'."
+                                .format(self.symbol_id, self.getLineNr(), symbol_type.toString()))
+            raise AstTypingException()
+
         self.setSymbolTable(symbol_table)
         symbol_table.insert(self.symbol_id, VariableType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)))
 
@@ -353,6 +379,15 @@ class VarDeclWithInit(SymbolDecl):
                                        add_open_close=add_open_close)
 
     def addToSymbolTable(self, symbol_table):
+        # determine whether or not the symbol already exists to prevent redeclaration
+        # only look in the current scope
+        symbol_type, scope_name = symbol_table.lookup(self.symbol_id, own_scope_only=True)
+
+        if symbol_type != 0:
+            Logger.error("Redeclaration of variable '{}' on line {}. The identifier was already declared with type '{}'."
+                                .format(self.symbol_id, self.getLineNr(), symbol_type.toString()))
+            raise AstTypingException()
+
         # note: we first evaluate the expression, then we declare the new symbol, otherwise "int i = i+2;" would be accepted.
         self.setSymbolTable(symbol_table)
         self.init_expr.setExprTreeSymbolTable(symbol_table)
@@ -399,8 +434,12 @@ class FuncDecl(SymbolDecl):
                                        add_open_close=add_open_close)
 
     def addToSymbolTable(self, symbol_table):
-        self.setSymbolTable(symbol_table)
 
+        # TODO, this declaration has to conform with any previous declarations
+        #       can override previous non-function declarations
+        #       and has to be inserted into the global scope
+
+        self.setSymbolTable(symbol_table)
         symbol_table.insert(self.symbol_id, FunctionType(self.symbol_type, [type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list]))
 
 
@@ -442,7 +481,34 @@ class FuncDef(TopLevelNode):
         """
             Add the signature of the function to the specified symbol table.
         """
-        symbol_table.insert(self.func_id, FunctionType(self.return_type, [type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list]))
+
+        # functions can only be defined in global scope, so own_scope is set to false
+        symbol_type, scope_name = symbol_table.lookup(self.func_id)
+
+        if symbol_type != 0:
+            func_type = FunctionType(self.return_type, [type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list])
+
+            if not symbol_type.isFunction():
+                Logger.error("Cannot define non-function symbol '{}' with type '{}' as a function with type '{}' on line {}."
+                                .format(self.func_id, symbol_type.toString(), func_type.toString()), self.getLineNr())
+                raise AstTypingException()
+
+            if symbol_type.isDefined():
+                Logger.error("Invalid redefinition of existing function '{}' on line {}.".format(self.func_id, self.getLineNr()))
+                raise AstTypingException()
+
+            # check if the current symbol matches the function
+            if symbol_type.toString() != func_type.toString():
+                Logger.error("Function definition introduces type '{}' while function was previously declared with type '{}' on line {}."
+                                .format(func_type.toString(), symbol_type.toString(), self.getLineNr()))
+                raise AstTypingException()
+
+            # set function type as defined
+            symbol_type.setDefined()
+
+        else:
+            # add symbol, and mark as defined
+            symbol_table.insert(self.func_id, FunctionType(self.return_type, [type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list], is_defined = True))
 
     def addFunctionScopeToSymbolTable(self, parent_table):
         """
@@ -460,6 +526,10 @@ class FuncDef(TopLevelNode):
         # add the body to the existing symbol table
         self.body.addScopeToSymbolTable(parent_table=symbol_table, as_child=False)
 
+        # pass the function type to the body so the return value can be type-checked
+        func_type = FunctionType(self.return_type, [type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list])
+        self.body.setParentFunctionType(func_type)
+
         return symbol_table
 
 
@@ -470,6 +540,7 @@ class StatementContainer:
 
     def __init__(self, child_list):
         self.child_list = child_list
+        self.parent_function_type = None
 
     def getChildren(self):
         return self.child_list
@@ -491,7 +562,6 @@ class StatementContainer:
         else:
             symbol_table = parent_table
 
-        # TODO check if this is possible
         self.setSymbolTable(symbol_table)
 
         for child in self.child_list:
@@ -509,20 +579,34 @@ class StatementContainer:
 
             elif isinstance(child, BranchStmt):  # if statement: has its own scope
                 # retrieve if, else body
-
                 if_body = child.getIfBody()
                 else_body = child.getElseBody()
 
                 # add if body
                 # note: this also sets the symbol table for the body
                 if_body.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
+                if_body.setParentFunctionType(self.parent_function_type)
 
                 # add else body if it is not empty.
                 # note: this also sets the symbol table for the body
                 if not else_body.isEmpty():
                     else_body.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
+                    else_body.setParentFunctionType(self.parent_function_type)
 
-            elif isinstance(child, ForStmt):  
+                # annotate the conditional expression with symbol table and resolve expression_type
+                cond_expr = child.getCondExpr()
+                cond_expr.setExprTreeSymbolTable(symbol_table)
+                cond_expr.resolveExpressionType(symbol_table)
+
+                # check that expression is compatible with bool
+                cond_expr_type = cond_expr.getExpressionType()
+
+                if not is_conversion_possible(VariableType('bool'), cond_expr_type):
+                    Logger.error("Conditonal expression in if-statement evaluates to type '{}'. Must be compatible with 'bool'. Error on line {}."
+                                    .format(cond_expr_type.toString(), self.getLineNr()))
+                    raise AstTypingException()
+
+            elif isinstance(child, ForStmt):
                 # for statement: has its own scope
 
                 # filter out expression
@@ -538,29 +622,70 @@ class StatementContainer:
                     decl.addToSymbolTable(for_scope)
                 # note: this also sets the symbol table for the body
                 body.addScopeToSymbolTable(parent_table=for_scope, as_child=False)
+                body.setParentFunctionType(self.parent_function_type)
 
                 # if we retrieve the symbol table
                 # it will be the one with the children of the for body, and de declarations
                 child.setSymbolTable(for_scope)
 
-            elif isinstance(child, WhileStmt):  
+
+                # annotate for-condition expressions and resolve expression types
+                init_expr_list = [expr for expr in child.getInitList() if isinstance(expr, Expression)]
+
+                for expr in init_expr_list:
+                    expr.setExprTreeSymbolTable(symbol_table)
+                    expr.resolveExpressionType(symbol_table)
+
+                for expr in child.getIterList():
+                    expr.setExprTreeSymbolTable(symbol_table)
+                    expr.resolveExpressionType(symbol_table)
+
+                # annotate the conditional expression with symbol table and resolve expression_type
+                cond_expr = child.getCondExpr()
+                cond_expr.setExprTreeSymbolTable(symbol_table)
+                cond_expr.resolveExpressionType(symbol_table)
+
+                # check that expression is compatible with bool
+                cond_expr_type = cond_expr.getExpressionType()
+
+                if not is_conversion_possible(VariableType('bool'), cond_expr_type):
+                    Logger.error("Conditonal expression in for-statement evaluates to type '{}'. Must be compatible with 'bool'. Error on line {}."
+                                    .format(cond_expr_type.toString(), self.getLineNr()))
+                    raise AstTypingException()
+
+            elif isinstance(child, WhileStmt): 
                 # while statement: has its own scope
                 # retrieve body and add as child.
                 body = child.getBody()
                 # note: this also sets the symbol table for the body
                 tbl = body.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
+                body.setParentFunctionType(self.parent_function_type)
 
                 # if we retrieve the symbol table
                 # it will be the one with the children of the while body.
                 child.setSymbolTable(tbl)
+
+                # annotate the conditional expression with symbol table and resolve expression_type
+                cond_expr = child.getCondExpr()
+                cond_expr.setExprTreeSymbolTable(symbol_table)
+                cond_expr.resolveExpressionType(symbol_table)
+
+                # check that expression is compatible with bool
+                cond_expr_type = cond_expr.getExpressionType()
+
+                if not is_conversion_possible(VariableType('bool'), cond_expr_type):
+                    Logger.error("Conditonal expression in for-statement evaluates to type '{}'. Must be compatible with 'bool'. Error on line {}."
+                                    .format(cond_expr_type.toString(), self.getLineNr()))
+                    raise AstTypingException()
 
             elif isinstance(child, CompoundStmt):  
                 # compound statement: has its own scope
                 # add contents as child
                 # note: this also sets the symbol table for the body
                 child.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
+                child.setParentFunctionType(self.parent_function_type)
 
-            elif isinstance(child, ExpressionStatement): 
+            elif isinstance(child, ExpressionStatement):
                 # expression statement: annotate the expression tree with the symbol table and type information
                 child.getExpression().setExprTreeSymbolTable(symbol_table)
                 child.getExpression().resolveExpressionType(symbol_table)
@@ -569,14 +694,31 @@ class StatementContainer:
                 child.getExpression().setExprTreeSymbolTable(symbol_table) # annotate with symbol table
                 child.getExpression().resolveExpressionType(symbol_table)  # resolve expr type
 
-                # check return type for compatibility and narrowing
-                # TODO
+                return_expr_type = child.getExpression().getExpressionType()
 
+                function_return_type = self.parent_function_type.getReturnType()
 
+                # check if the return expr is compatible with the return type
+                if not is_conversion_possible(function_return_type, return_expr_type):
+                    Logger.error("Expression of type '{}' cannot be used as return value for function with return type '{}' on line {}."
+                                    .format(return_expr_type.toString(), function_return_type.toString(), self.getLineNr()))
+                    raise AstTypingException()
 
-
+                if will_conversion_narrow(function_return_type, return_expr_type):
+                    Logger.warning("Returning expression of type '{}' in function with return type '{}' will result in narrowing on line {}."
+                                    .format(return_expr_type.toString(), function_return_type.toString(), self.getLineNr()))
+                    # no exception needed
+            # ENDIF
 
         return symbol_table
+
+    def setParentFunctionType(self, func_type):
+        """
+            Annotate the statement container with the type of the parent function. This
+            function type can be used to type-check return values.
+        """
+
+        self.parent_function_type = func_type
 
 
 class Body(ASTNode, StatementContainer):
@@ -626,10 +768,17 @@ class FuncParam(ASTNode):
         """
             A function param introduces an identifier into the function's own scope.
         """
+
+        # determine whether or not the symbol already exists to prevent redeclaration
+        # only look in the current scope
+        symbol_type, scope_name = symbol_table.lookup(self.param_id, own_scope_only=True)
+
+        if symbol_type != 0:
+            Logger.error("Redeclaration of variable '{}' on line {}. The identifier was already declared with type '{}'."
+                                .format(self.param_id, self.getLineNr(), symbol_type.toString()))
+            raise AstTypingException()
+
         self.setSymbolTable(symbol_table)
-
-        # TODO check if the symbol already exists: if so -> error
-
         symbol_table.insert(self.param_id, VariableType(type_to_string(self.param_type, self.ptr_count)))
 
 
@@ -875,9 +1024,7 @@ class Expression(ASTNode):
         """
         return self.expression_type
 
-# TODO check left expression: must be deref, array access, non-function variable, 
-# TODO check if left and right expression types are compatible
-# TODO narrowing warnings
+
 class AssignmentExpr(Expression):
     """
         Node that represents a normal assignment expression.
@@ -908,6 +1055,11 @@ class AssignmentExpr(Expression):
         left_type = self.left.resolveExpressionType(symbol_table)
         right_type = self.right.resolveExpressionType(symbol_table)
 
+        # add somewhat more explicit information about function, array assignments
+        if left_type.isFunction() or left_type.isArray():
+            Logger.error("Assignment cannot be performed on functions and arrays. Error on line {}.".format(self.getLineNr()))
+            raise AstTypingException()
+
         # assignment is not possible
         if not is_conversion_possible(left_type, right_type):
             Logger.error("Assigning expression of type '{}' to target of incompatible type '{}' is not possible on line {}."
@@ -920,8 +1072,10 @@ class AssignmentExpr(Expression):
                                 .format(right_type.toString(), left_type.toString(), self.getLineNr()))
             # no exception here, compilation may continue.
 
+        self.expression_type = left_type
+
         # lhs = rhs, lhs is returned, so we take the type of lhs
-        return left_type
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -974,8 +1128,10 @@ class AddAssignmentExpr(Expression):
                                 .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             # no exception here, compilation may continue.
 
+        self.expression_type = left_type
+
         # lhs = rhs, lhs is returned, so we take the type of lhs
-        return left_type
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1028,8 +1184,10 @@ class SubAssignmentExpr(Expression):
                                 .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             # no exception here, compilation may continue.
 
+        self.expression_type = left_type
+
         # lhs = rhs, lhs is returned, so we take the type of lhs
-        return left_type
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1082,8 +1240,10 @@ class MulAssignmentExpr(Expression):
                                 .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             # no exception here, compilation may continue.
 
+        self.expression_type = left_type
+
         # lhs = rhs, lhs is returned, so we take the type of lhs
-        return left_type
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1091,7 +1251,7 @@ class MulAssignmentExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-# left = array access, 
+
 class DivAssignmentExpr(Expression):
     """
         Node that represents a division assignment expression: "a /= b;".
@@ -1136,8 +1296,10 @@ class DivAssignmentExpr(Expression):
                                 .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             # no exception here, compilation may continue.
 
+        self.expression_type = left_type
+
         # lhs = rhs, lhs is returned, so we take the type of lhs
-        return left_type
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -2195,7 +2357,7 @@ class AddressExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-# TODO narrowing
+
 class FuncCallExpr(Expression):
     """
         Node that represents a function call: "identifier(params)".
@@ -2240,33 +2402,38 @@ class FuncCallExpr(Expression):
             Logger.error("Symbol '{}' cannot be called as a function on line {}".format(function_name, self.getLineNr()))
             raise AstTypingException()
 
-        # check argument count
-        if len(self.argument_list) != len(function_type.getParamTypes()):
-            Logger.error("Function {} called with invalid amount of arguments on line {}. {} parameters needed, {} parameters specified."
-                            .format(function_name, len(function_type.getParamTypes()), len(self.argument_list)))
-            raise AstTypingException()
-
-        # check arguments
-        for i in range(0, len(self.argument_list)):
-            arg_expr_type = self.argument_list[i].resolveExpressionType(symbol_table) # supplied param type
-            param_type = function_type.getParamTypes()[i] # expected param type
-
-            if arg_expr_type.isFunction():
-                Logger.error("Invalid argument #{} passed to function '{}' on line {}: Functions cannot be passed as argument."
-                                .format(i+1, function_name, self.getLineNr()))
+        if function_name in ['printf', 'scanf']:
+            # TODO checks for printf, scanf
+            for arg in self.argument_list:
+                arg.resolveExpressionType(symbol_table)
+        else:
+            # check argument count
+            if len(self.argument_list) != len(function_type.getParamTypes()):
+                Logger.error("Function {} called with invalid amount of arguments on line {}. {} parameters needed, {} parameters specified."
+                                .format(function_name, self.getLineNr(), len(function_type.getParamTypes()), len(self.argument_list)))
                 raise AstTypingException()
 
-            # check if parameters are compatible
-            if not is_conversion_possible(VariableType(param_type), arg_expr_type):
-                Logger.error("Invalid argument #{} passed to function '{}' on line {}: Type '{}' is requested, incompatible type '{}' was given."
-                                .format(i+1, function_name, self.getLineNr(), param_type, arg_expr_type.toString()))
-                raise AstTypingException()
+            # check arguments
+            for i in range(0, len(self.argument_list)):
+                arg_expr_type = self.argument_list[i].resolveExpressionType(symbol_table) # supplied param type
+                param_type = function_type.getParamTypes()[i] # expected param type
 
-            # parameters are compatible, check for narrowing
-            if will_conversion_narrow(VariableType(param_type), arg_expr_type):
-                Logger.warning("Passing expression of type '{}' as argument #{} for function '{}' narrowing on line {}. Expected type is '{}'."
-                                    .format(arg_expr_type.toString(), i+1, function_name, self.getLineNr(), param_type))
-                # no exception needed here
+                if arg_expr_type.isFunction():
+                    Logger.error("Invalid argument #{} passed to function '{}' on line {}: Functions cannot be passed as argument."
+                                    .format(i+1, function_name, self.getLineNr()))
+                    raise AstTypingException()
+
+                # check if parameters are compatible
+                if not is_conversion_possible(VariableType(param_type), arg_expr_type):
+                    Logger.error("Invalid argument #{} passed to function '{}' on line {}: Type '{}' is requested, incompatible type '{}' was given."
+                                    .format(i+1, function_name, self.getLineNr(), param_type, arg_expr_type.toString()))
+                    raise AstTypingException()
+
+                # parameters are compatible, check for narrowing
+                if will_conversion_narrow(VariableType(param_type), arg_expr_type):
+                    Logger.warning("Passing expression of type '{}' as argument #{} for function '{}' narrowing on line {}. Expected type is '{}'."
+                                        .format(arg_expr_type.toString(), i+1, function_name, self.getLineNr(), param_type))
+                    # no exception needed here
 
         self.expression_type = function_type.getReturnType()
 
