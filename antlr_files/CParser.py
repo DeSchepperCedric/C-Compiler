@@ -127,7 +127,7 @@ def serializedATN():
         buf.write("\u00ef\u00ed\3\2\2\2\u00f0\35\3\2\2\2\u00f1\u00f3\5 \21")
         buf.write("\2\u00f2\u00f1\3\2\2\2\u00f2\u00f3\3\2\2\2\u00f3\u00f4")
         buf.write("\3\2\2\2\u00f4\u00f5\7\13\2\2\u00f5\37\3\2\2\2\u00f6\u00fb")
-        buf.write("\5\"\22\2\u00f7\u00f8\7\n\2\2\u00f8\u00fa\5 \21\2\u00f9")
+        buf.write("\5\"\22\2\u00f7\u00f8\7\n\2\2\u00f8\u00fa\5\"\22\2\u00f9")
         buf.write("\u00f7\3\2\2\2\u00fa\u00fd\3\2\2\2\u00fb\u00f9\3\2\2\2")
         buf.write("\u00fb\u00fc\3\2\2\2\u00fc!\3\2\2\2\u00fd\u00fb\3\2\2")
         buf.write("\2\u00fe\u0104\5&\24\2\u00ff\u0100\5\64\33\2\u0100\u0101")
@@ -1885,8 +1885,11 @@ class CParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
-        def assignment_expr(self):
-            return self.getTypedRuleContext(CParser.Assignment_exprContext,0)
+        def assignment_expr(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(CParser.Assignment_exprContext)
+            else:
+                return self.getTypedRuleContext(CParser.Assignment_exprContext,i)
 
 
         def COMMA(self, i:int=None):
@@ -1894,13 +1897,6 @@ class CParser ( Parser ):
                 return self.getTokens(CParser.COMMA)
             else:
                 return self.getToken(CParser.COMMA, i)
-
-        def expression(self, i:int=None):
-            if i is None:
-                return self.getTypedRuleContexts(CParser.ExpressionContext)
-            else:
-                return self.getTypedRuleContext(CParser.ExpressionContext,i)
-
 
         def getRuleIndex(self):
             return CParser.RULE_expression
@@ -1926,22 +1922,22 @@ class CParser ( Parser ):
 
         localctx = CParser.ExpressionContext(self, self._ctx, self.state)
         self.enterRule(localctx, 30, self.RULE_expression)
+        self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
             self.state = 244
             self.assignment_expr()
             self.state = 249
             self._errHandler.sync(self)
-            _alt = self._interp.adaptivePredict(self._input,22,self._ctx)
-            while _alt!=2 and _alt!=ATN.INVALID_ALT_NUMBER:
-                if _alt==1:
-                    self.state = 245
-                    self.match(CParser.COMMA)
-                    self.state = 246
-                    self.expression() 
+            _la = self._input.LA(1)
+            while _la==CParser.COMMA:
+                self.state = 245
+                self.match(CParser.COMMA)
+                self.state = 246
+                self.assignment_expr()
                 self.state = 251
                 self._errHandler.sync(self)
-                _alt = self._interp.adaptivePredict(self._input,22,self._ctx)
+                _la = self._input.LA(1)
 
         except RecognitionException as re:
             localctx.exception = re
