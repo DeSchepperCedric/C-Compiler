@@ -1,5 +1,11 @@
 from SymbolTable import SymbolTable
+from SymbolTable import SymbolType
+from SymbolTable import FunctionType
+from SymbolTable import ArrayType
+from SymbolTable import VariableType
+from Logger import Logger
 
+from CompilerException import *
 
 class ASTNode:
     """
@@ -7,8 +13,10 @@ class ASTNode:
     """
 
     def __init__(self, node_name):
-        self.node_name = node_name
+        self.node_name    = node_name
         self.symbol_table = None
+        self.line_nr      = None
+        self.col_nr       = None
 
     def getNodeName(self):
         if self.symbol_table is None:
@@ -25,6 +33,20 @@ class ASTNode:
 
     def setSymbolTable(self, symbol_table):
         self.symbol_table = symbol_table
+
+    def getLineNr(self):
+        return self.line_nr
+
+    def setLineNr(self, line_nr):
+        self.line_nr = line_nr
+        return self # return self so we can chain these operations
+
+    def getColNr(self):
+        return self.col_nr
+
+    def setColNr(self, col_nr):
+        self.col_nr = col_nr
+        return self # return self so we can chain these operations
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         """
@@ -198,8 +220,8 @@ class IncludeNode(TopLevelNode):
 
     def addToSymbolTable(self, symbol_table):
         self.setSymbolTable(symbol_table)
-        symbol_table.insert("printf", 'void()')
-        symbol_table.insert("scanf", 'void()')
+        symbol_table.insert("printf", FunctionType('void', []))
+        symbol_table.insert("scanf",  FunctionType('void', []))
 
 
 class SymbolDecl(TopLevelNode):
@@ -272,7 +294,10 @@ class ArrayDecl(SymbolDecl):
     def addToSymbolTable(self, symbol_table):
         self.setSymbolTable(symbol_table)
         self.size_expr.setExprTreeSymbolTable(symbol_table)
-        symbol_table.insert(self.symbol_id, "{}{}[]".format(self.symbol_type, "*" * self.symbol_ptr_cnt))
+
+
+
+        symbol_table.insert(self.symbol_id, ArrayType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)))
 
 
 class VarDeclDefault(SymbolDecl):
@@ -294,7 +319,7 @@ class VarDeclDefault(SymbolDecl):
 
     def addToSymbolTable(self, symbol_table):
         self.setSymbolTable(symbol_table)
-        symbol_table.insert(self.symbol_id, "{}{}".format(self.symbol_type, "*" * self.symbol_ptr_cnt))
+        symbol_table.insert(self.symbol_id, VariableType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)))
 
 
 class VarDeclWithInit(SymbolDecl):
@@ -321,7 +346,7 @@ class VarDeclWithInit(SymbolDecl):
     def addToSymbolTable(self, symbol_table):
         self.setSymbolTable(symbol_table)
         self.init_expr.setExprTreeSymbolTable(symbol_table)
-        symbol_table.insert(self.symbol_id, "{}{}".format(self.symbol_type, "*" * self.symbol_ptr_cnt))
+        symbol_table.insert(self.symbol_id, VariableType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)))
 
 
 class FuncDecl(SymbolDecl):
@@ -347,7 +372,8 @@ class FuncDecl(SymbolDecl):
 
     def addToSymbolTable(self, symbol_table):
         self.setSymbolTable(symbol_table)
-        symbol_table.insert(self.symbol_id, "{}({})".format(self.symbol_type, [param.getParamType() for param in self.param_list]))
+
+        symbol_table.insert(self.symbol_id, FunctionType(self.symbol_type, [type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list]))
 
 
 class FuncDef(TopLevelNode):
@@ -388,7 +414,7 @@ class FuncDef(TopLevelNode):
         """
             Add the signature of the function to the specified symbol table.
         """
-        symbol_table.insert(self.func_id, "{}({})".format(self.return_type, [param.getParamType() for param in self.param_list]))
+        symbol_table.insert(self.func_id, FunctionType(self.return_type, [type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list]))
 
     def addFunctionScopeToSymbolTable(self, parent_table):
         """
@@ -456,8 +482,6 @@ class StatementContainer:
             elif isinstance(child, BranchStmt):  # if statement: has its own scope
                 # retrieve if, else body
 
-                child.addToSymbolTable(symbol_table)
-
                 if_body = child.getIfBody()
                 else_body = child.getElseBody()
 
@@ -470,10 +494,8 @@ class StatementContainer:
                 if not else_body.isEmpty():
                     else_body.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
 
-            elif isinstance(child, ForStmt):  # for statement: has its own scope
-                # retrieve condition init_expr
-                # retrieve body
-                # merge these and add as child
+            elif isinstance(child, ForStmt):  
+                # for statement: has its own scope
 
                 # filter out expression
                 init_decl_list = [decl for decl in child.getInitList() if isinstance(decl, SymbolDecl)]
@@ -493,7 +515,8 @@ class StatementContainer:
                 # it will be the one with the children of the for body, and de declarations
                 child.setSymbolTable(for_scope)
 
-            elif isinstance(child, WhileStmt):  # while statement: has its own scope
+            elif isinstance(child, WhileStmt):  
+                # while statement: has its own scope
                 # retrieve body and add as child.
                 body = child.getBody()
                 # note: this also sets the symbol table for the body
@@ -503,13 +526,16 @@ class StatementContainer:
                 # it will be the one with the children of the while body.
                 child.setSymbolTable(tbl)
 
-            elif isinstance(child, CompoundStmt):  # compound statement: has its own scope
+            elif isinstance(child, CompoundStmt):  
+                # compound statement: has its own scope
                 # add contents as child
                 # note: this also sets the symbol table for the body
                 child.addScopeToSymbolTable(parent_table=symbol_table, as_child=True)
 
-            elif isinstance(child, ExpressionStatement): # expression statement: annotate the expression tree with the symbol table
+            elif isinstance(child, ExpressionStatement): 
+                # expression statement: annotate the expression tree with the symbol table and type information
                 child.getExpression().setExprTreeSymbolTable(symbol_table)
+                child.getExpression().resolveExpressionType(symbol_table)
 
 
         return symbol_table
@@ -781,25 +807,32 @@ class Expression(ASTNode):
         self.expression_type = None
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	"""
-			Sets the symbol table for all in the expression tree with this expression as root.
-    	"""
-    	pass
-
-    def checkIdentifierExistance(self, symbol_table):
         """
-            Determine whether or not all identifier used in the expression are present in
-            the specified symbol table.
+            Sets the symbol table for all in the expression tree with this expression as root.
         """
+        pass
 
-        # TODO implement
+    def resolveExpressionType(self, symbol_table):
+        """
+            This will assign types to the expression nodes in the expression tree.
+            If an identifier is encountered, it's type will be extracted from the specified
+            symbol table.
+
+            Return value: None
+
+            !! Use getExpressionType() to retrieve the resolved type. !!
+        """
         pass
 
     def getExpressionType(self):
         """
-            Retrieve the type of the expression
+            Retrieve the type of the expression.
+
+            Returns a string with the name of the type
+
+            !! First use resolveExpressionType() to calculate the type. !!
         """
-        pass
+        return self.expression_type
 
 
 class AssignmentExpr(Expression):
@@ -819,10 +852,10 @@ class AssignmentExpr(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -848,10 +881,10 @@ class AddAssignmentExpr(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -877,10 +910,10 @@ class SubAssignmentExpr(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -906,10 +939,10 @@ class MulAssignmentExpr(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -935,10 +968,10 @@ class DivAssignmentExpr(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -964,10 +997,26 @@ class LogicOrExpr(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # integer types: int char bool
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        if not is_integral_variable_type(left_type) or not is_integral_variable_type(right_type):
+            Logger.error("Only integral types can be used as operators for logical expressions. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        # return bool
+        self.expression_type = VariableType('bool')
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -993,10 +1042,26 @@ class LogicAndExpr(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # integer types: int char bool
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        if not is_integral_variable_type(left_type) or not is_integral_variable_type(right_type):
+            Logger.error("Only integral types can be used as operators for logical expressions. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        # return bool
+        self.expression_type = VariableType('bool')
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1022,10 +1087,26 @@ class EqualityExpr(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        # variables, arrays and pointers are allowed
+        if left_type.isFunction() or right_type.isFunction():
+            Logger.error("Only pointers, arrays and variables can be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        # return bool
+        self.expression_type = VariableType('bool')
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1051,10 +1132,26 @@ class InequalityExpr(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        # variables, arrays and pointers are allowed
+        if left_type.isFunction() or right_type.isFunction():
+            Logger.error("Only pointers, arrays and variables can be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        # return bool
+        self.expression_type = VariableType('bool')
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1080,10 +1177,26 @@ class CompGreater(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        # variables, arrays and pointers are allowed
+        if left_type.isFunction() or right_type.isFunction():
+            Logger.error("Only pointers, arrays and variables can be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        # return bool
+        self.expression_type = VariableType('bool')
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1109,10 +1222,26 @@ class CompLess(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        # variables, arrays and pointers are allowed
+        if left_type.isFunction() or right_type.isFunction():
+            Logger.error("Only pointers, arrays and variables can be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        # return bool
+        self.expression_type = VariableType('bool')
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1138,10 +1267,26 @@ class CompGreaterEqual(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        # variables, arrays and pointers are allowed
+        if left_type.isFunction() or right_type.isFunction():
+            Logger.error("Only pointers, arrays and variables can be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        # return bool
+        self.expression_type = VariableType('bool')
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1167,10 +1312,26 @@ class CompLessEqual(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        # variables, arrays and pointers are allowed
+        if left_type.isFunction() or right_type.isFunction():
+            Logger.error("Only pointers, arrays and variables can be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        # return bool
+        self.expression_type = VariableType('bool')
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1196,10 +1357,25 @@ class AddExpr(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # only "values" are allowed
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
+            Logger.error("Only pointers, arrays and functions cannot be used as operators for addition. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        self.expression_type = get_maximal_type(left_type, right_type)
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1225,10 +1401,25 @@ class SubExpr(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # only "values" are allowed
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
+            Logger.error("Only pointers, arrays and functions cannot be used as operators for subtraction. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        self.expression_type = get_maximal_type(left_type, right_type)
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1254,10 +1445,25 @@ class MulExpr(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # only "values" are allowed
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
+            Logger.error("Only pointers, arrays and functions cannot be used as operators for multiplication. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        self.expression_type = get_maximal_type(left_type, right_type)
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1283,10 +1489,25 @@ class DivExpr(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # only "values" are allowed
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
+            Logger.error("Only pointers, arrays and functions cannot be used as operators for division. Tried to use types '{}' and '{}' on line {}."
+                            .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        self.expression_type = get_maximal_type(left_type, right_type)
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1312,10 +1533,39 @@ class ModExpr(Expression):
         return self.right
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.left.setExprTreeSymbolTable(symbol_table)
-    	self.right.setExprTreeSymbolTable(symbol_table)
+        self.left.setExprTreeSymbolTable(symbol_table)
+        self.right.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # only on integers, char, bool
+
+        left_type = self.left.resolveExpressionType(symbol_table)
+        right_type = self.right.resolveExpressionType(symbol_table)
+
+        left_type_name = None
+        right_type_name = None
+
+        if left_type.isVar() and not left_type.toString().endswith("*") and not left_type.toString() == 'float':
+            left_type_name = left_type.toString()
+        else:
+            Logger.error("Operands of modulo operator need to be of type 'bool', 'char', or 'int'. LHS argument of type '{}' was given on line {}."
+                            .format(left_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        if right_type.isVar() and not right_type.toString().endswith("*") and not right_type.toString() == 'float':
+            right_type_name = right_type.toString()
+        else:
+            Logger.error("Operands of modulo operator need to be of type 'bool', 'char', or 'int'. RHS side argument of type '{}' was given on line {}."
+                            .format(right_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        # always convert to int
+        self.expression_type = VariableType("int")
+
+        return self.expression_type
+
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.left, self.right],
@@ -1323,7 +1573,7 @@ class ModExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-
+# TODO: find out how!
 class CastExpr(Expression):
     """
         Node that represents a cast expression.
@@ -1346,9 +1596,9 @@ class CastExpr(Expression):
         return self.expression
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.expression.setExprTreeSymbolTable(symbol_table)
+        self.expression.setExprTreeSymbolTable(symbol_table)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
@@ -1370,9 +1620,22 @@ class LogicNotExpr(Expression):
         return self.expression
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.expression.setExprTreeSymbolTable(symbol_table)
+        self.expression.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # returns the same type as the target expression
+
+        target_type = self.expression.resolveExpressionType(symbol_table)
+
+        if target_type.isFunction():
+            Logger.error("Logical not operator cannot be applied to functions. Tried to apply to function of type '{}' on line {}.".format(target_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        self.expression_type = target_type
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
@@ -1394,9 +1657,25 @@ class PrefixIncExpr(Expression):
         return self.expression
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.expression.setExprTreeSymbolTable(symbol_table)
+        self.expression.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # returns the same type as the target expression
+
+        # get type of target expression
+        target_type = self.expression.resolveExpressionType(symbol_table)
+
+        # ptr, array and function is not allowed
+        if not target_type.isVar():
+            Logger.error("Prefix increment cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
+                            .format(target_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        self.expression_type = target_type
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
@@ -1418,9 +1697,25 @@ class PrefixDecExpr(Expression):
         return self.expression
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.expression.setExprTreeSymbolTable(symbol_table)
+        self.expression.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # returns the same type as the target expression
+
+        # get type of target expression
+        target_type = self.expression.resolveExpressionType(symbol_table)
+
+        # ptr, array and function is not allowed
+        if not target_type.isVar():
+            Logger.error("Prefix decrement cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
+                            .format(target_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        self.expression_type = target_type
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
@@ -1442,9 +1737,25 @@ class PostfixIncExpr(Expression):
         return self.expression
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.expression.setExprTreeSymbolTable(symbol_table)
+        self.expression.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # returns the same type as the target expression
+
+        # get type of target expression
+        target_type = self.expression.resolveExpressionType(symbol_table)
+
+        # ptr, array and function is not allowed
+        if not target_type.isVar():
+            Logger.error("Postfix increment cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
+                            .format(target_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        self.expression_type = target_type
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
@@ -1466,9 +1777,25 @@ class PostfixDecExpr(Expression):
         return self.expression
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.expression.setExprTreeSymbolTable(symbol_table)
+        self.expression.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # returns the same type as the target expression
+
+        # get type of target expression
+        target_type = self.expression.resolveExpressionType(symbol_table)
+
+        # ptr, array and function is not allowed
+        if not target_type.isVar():
+            Logger.error("Postfix decrement cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
+                            .format(target_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        self.expression_type = target_type
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
@@ -1490,9 +1817,25 @@ class PlusPrefixExpr(Expression):
         return self.expression
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.expression.setExprTreeSymbolTable(symbol_table)
+        self.expression.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # returns the same type as the target expression
+
+        # get type of target expression
+        target_type = self.expression.resolveExpressionType(symbol_table)
+
+        # ptr, array and function is not allowed
+        if not is_non_ptr_variable_type(target_type):
+            Logger.error("Unary plus cannot be performed on pointers, arrays or functions. Tried to apply on type '{}' on line {}."
+                            .format(target_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        self.expression_type = target_type
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
@@ -1514,9 +1857,25 @@ class MinPrefixExpr(Expression):
         return self.expression
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.expression.setExprTreeSymbolTable(symbol_table)
+        self.expression.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # returns the same type as the target expression
+
+        # get type of target expression
+        target_type = self.expression.resolveExpressionType(symbol_table)
+
+        # ptr, array and function is not allowed
+        if not is_non_ptr_variable_type(target_type):
+            Logger.error("Unary minus cannot be performed on pointers, arrays or functions. Tried to apply on type '{}' on line {}."
+                            .format(target_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        self.expression_type = target_type
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
@@ -1531,6 +1890,13 @@ class ArrayAccessExpr(Expression):
     """
 
     def __init__(self, target_array, index_expr):
+        """
+            Constructor.
+
+            Params:
+                'target_array': IdentifierExpr that represents the array.
+                'index_expr': Expression that evaluates to a type compatible with 'int'
+        """
         super().__init__(expression_type="ArrayAccessExpr")
         self.target_array = target_array
         self.index_expr = index_expr
@@ -1542,10 +1908,38 @@ class ArrayAccessExpr(Expression):
         return self.index_expr
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.target_array.setExprTreeSymbolTable(symbol_table)
-    	self.index_expr.setExprTreeSymbolTable(symbol_table)
+        self.target_array.setExprTreeSymbolTable(symbol_table)
+        self.index_expr.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        target_type = self.target_array.resolveExpressionType(symbol_table)
+
+        target_name = self.target_array.getIdentifierName()
+
+        if target_type.isArray():
+            # access on an array returns an entry
+            self.expression_type = VariableType(target_type.getEntryType())
+        elif target_type.isVar() and target_type.toString().endswith("*"):
+            # access on a ptr, dereferences the ptr
+            self.expression_type = VariableType(target_type.toString()[:-1]) # remove star
+        else:
+            # invalid target
+            Logger.error("Array access can only be performed on arrays and pointers. Tried to apply array access on '{}' with type '{}' on line '{}'."
+                            .format(target_name, target_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        # check that index expression can evaluated to int
+        index_type = self.index_expr.resolveExpressionType(symbol_table)
+
+        # index type needs to be compatible with 
+        if not are_types_compatible('int', index_type.toString()):
+            Logger.error("Invalid index expression passed to array '{}' on line {}: Type '{}' is requested, incompatible type '{}' was given."
+                            .format(target_name, self.getLineNr(), 'int', index_type.toString()))
+            raise AstCreationException()
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.target_array, self.index_expr],
@@ -1567,9 +1961,25 @@ class PointerDerefExpr(Expression):
         return self.target_ptr
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.target_ptr.setExprTreeSymbolTable(symbol_table)
+        self.target_ptr.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        target_type = self.target_ptr.resolveExpressionType(symbol_table)
+
+        # only pointer variables can be dereferenced.
+        if target_type.isVar() and target_type.toString().endswith("*"):
+            new_type = VariableType(target_type.toString()[:-1]) # strip the pointer star
+        elif target_type.isArray():
+            new_type = VariableType(target_type.getEntryType()) # deref of array simply points to first element.
+        else:
+            Logger.error("Only pointer types and array types can be dereferened. Tried to derefence type '{}' on line {}.".format(target_type.toString(), self.getLineNr()))
+            raise AstCreationException()
+
+        self.expression_type = new_type
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.target_ptr],
@@ -1591,9 +2001,31 @@ class AddressExpr(Expression):
         return self.target_expr
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.target_expr.setExprTreeSymbolTable(symbol_table)
+        self.target_expr.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        target_type = self.target_expr.resolveExpressionType(symbol_table)
+
+        if target_type.isArray():
+            entry_type = target_type.getEntryType()
+            new_type = VariableType(entry_type + "*")
+            # array is pointer to first element
+            # pointer to array is pointer to pointer to first element
+        elif target_type.isFunction():
+            Logger.error("Error at line {}. Cannot take address of function.".format(self.getLineNr()))
+            raise AstCreationException()
+        elif target_type.isVar():
+            target_type_name = target_type.toString()
+            # add ptr level
+            new_type = VariableType(target_type_name + "*")
+
+        # a pointer to the target is returned.
+        self.expression_type = new_type
+
+        return self.expression_type
+
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.target_expr],
@@ -1601,7 +2033,7 @@ class AddressExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-
+# TODO narrowing
 class FuncCallExpr(Expression):
     """
         Node that represents a function call: "identifier(params)".
@@ -1624,12 +2056,54 @@ class FuncCallExpr(Expression):
         return self.argument_list
 
     def setExprTreeSymbolTable(self, symbol_table):
-    	self.setSymbolTable(symbol_table)
+        self.setSymbolTable(symbol_table)
 
-    	self.identifier.setExprTreeSymbolTable(symbol_table)
+        self.identifier.setExprTreeSymbolTable(symbol_table)
 
-    	for arg in self.argument_list:
-    		arg.setExprTreeSymbolTable(symbol_table)
+        for arg in self.argument_list:
+            arg.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        # f(param, param)
+
+        # identifier will be of type "ret_type(param_type, param_type, ...)"
+        # if the function is not yet delcared, it will be detected here
+        # NOTE: arguments still need to be checked!
+        function_type = self.identifier.resolveExpressionType(symbol_table)
+
+        # retrieve a string that contains the name of the function
+        function_name = self.identifier.getIdentifierName()
+
+        if not function_type.isFunction():
+            Logger.error("Symbol '{}' cannot be called as a function on line {}".format(function_name, self.getLineNr()))
+            raise AstCreationException()
+
+        # check argument count
+        if len(self.argument_list) != len(function_type.getParamTypes()):
+            Logger.error("Function {} called with invalid amount of arguments on line {}. {} parameters needed, {} parameters specified."
+                            .format(function_name, len(function_type.getParamTypes()), len(self.argument_list)))
+            raise AstCreationException()
+
+        # check arguments
+        for i in range(0, len(self.argument_list)):
+            arg_expr_type = self.argument_list[i].resolveExpressionType(symbol_table)
+            param_type = function_type.getParamTypes()[i]
+
+            if arg_expr_type.isFunction():
+                Logger.error("Invalid argument #{} passed to function '{}' on line {}: Functions cannot be passed as argument."
+                                .format(i+1, function_name, self.getLineNr()))
+                raise AstCreationException()
+
+            # TODO check for narrowing!
+            # check if parameters are compatible
+            if not are_types_compatible(param_type, arg_expr_type.toString()):
+                Logger.error("Invalid argument #{} passed to function '{}' on line {}: Type '{}' is requested, incompatible type '{}' was given."
+                                .format(i+1, function_name, self.getLineNr(), param_type, arg_expr_type.toString()))
+                raise AstCreationException()
+
+        self.expression_type = VariableType(function_type.getReturnType())
+
+        return self.expression_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.identifier, *self.argument_list],
@@ -1644,10 +2118,16 @@ class IdentifierExpr(Expression):
     """
 
     def __init__(self, identifier: str):
+        """
+            Constructor.
+
+            Param:
+                'identifier': A string that contains the name of the identifier.
+        """
         super().__init__(expression_type="IdentifierExpr\\n'" + identifier + "'")
         self.identifier = identifier
 
-    def getIdentifier(self):
+    def getIdentifierName(self):
         return self.identifier
 
     def setExprTreeSymbolTable(self, symbol_table):
@@ -1658,6 +2138,22 @@ class IdentifierExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def resolveExpressionType(self, symbol_table):
+        # extract from table
+        symbol_type, scope_name = symbol_table.lookup(self.identifier)
+
+        # determine if symbol exists in table
+        if symbol_type == 0:
+            # symbol not found
+            Logger.error("Referenced undeclared symbol {} at line {}.".format(self.identifier, self.getLineNr()))
+            raise AstCreationException()
+        else:
+            # set symbol type
+            self.expression_type = symbol_type
+
+            # returned type can be of function, array or variable
+            return self.expression_type
 
 
 class ConstantExpr(Expression):
@@ -1699,6 +2195,11 @@ class IntegerConstantExpr(ConstantExpr):
     def getIntValue(self):
         return int(self.getValue())
 
+    def resolveExpressionType(self, symbol_table):
+        self.expression_type = VariableType('int')
+
+        return self.expression_type
+
 
 class FloatConstantExpr(ConstantExpr):
     """
@@ -1710,6 +2211,11 @@ class FloatConstantExpr(ConstantExpr):
 
     def getFloatValue(self):
         return float(self.getValue())
+
+    def resolveExpressionType(self, symbol_table):
+        self.expression_type = VariableType('float')
+
+        return self.expression_type
 
 
 class StringConstantExpr(ConstantExpr):
@@ -1723,6 +2229,12 @@ class StringConstantExpr(ConstantExpr):
     def getStrValue(self):
         return str(self.getValue())
 
+    def resolveExpressionType(self, symbol_table):
+        # string is a char pointer
+        self.expression_type = VariableType('char*')
+
+        return self.expression_type
+
 
 class CharConstantExpr(ConstantExpr):
     """
@@ -1735,6 +2247,11 @@ class CharConstantExpr(ConstantExpr):
     def getCharValue(self):
         return str(self.getValue())
 
+    def resolveExpressionType(self, symbol_table):
+        self.expression_type = VariableType('char')
+
+        return self.expression_type
+
 
 class BoolConstantExpr(ConstantExpr):
     """
@@ -1746,3 +2263,38 @@ class BoolConstantExpr(ConstantExpr):
 
     def getBoolValue(self):
         return str(self.getValue()).lower() == "true"
+
+    def resolveExpressionType(self, symbol_table):
+        self.expression_type = VariableType('bool')
+
+        return self.expression_type
+
+def type_to_string(typename, pointer_count):
+    return typename + ("*"*pointer_count)
+
+# TODO expand this
+def are_types_compatible(left, right):
+    if left != right:
+        return False
+    return True
+
+# TODO add function for narrowing
+
+def get_maximal_type(type_a, type_b):
+    """
+        Returns the widest type. The following order is used: float > int > char > bool
+    """
+    pass
+
+def is_non_ptr_variable_type(type):
+    """
+        Determines whether or not the specified type is a non-pointer variable type.
+    """
+    return type.isVar() and not type.toString().endswith("*")
+
+def is_integral_variable_type(type):
+    """
+        Determines whether or not the specified type is an integral type.
+    """
+    return type.isVar() and type.toString() in ['bool', 'char', 'int']
+
