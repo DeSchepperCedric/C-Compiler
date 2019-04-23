@@ -3,11 +3,10 @@
 int a = 5;
 
 int main(){
-    int b = a;
 
-    b = 2;
+   int c = 5 + 1.0;
 
+   float b = 5.0 + 1.0;
 
-    int c = b;
-    return b;
+   return 0;
 }

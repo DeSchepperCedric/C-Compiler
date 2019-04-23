@@ -441,7 +441,7 @@ class LLVMGenerator:
         code += code_right
 
         strongest_type = self.getStrongestType(type_left, type_right)
-
+        llvm_type = ""
         if strongest_type == "float":
             code_left, reg_left = self.convertToFloat(reg_left, type_left)
             code_right, reg_right = self.convertToFloat(reg_right, type_right)
@@ -449,6 +449,8 @@ class LLVMGenerator:
             code += code_left
             code += code_right
             code += "%{} = f{} float %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
+            llvm_type = "float"
+
         else:
             code_left, reg_left = self.convertToInt(reg_left, type_left)
             code_right, reg_right = self.convertToInt(reg_right, type_right)
@@ -456,9 +458,11 @@ class LLVMGenerator:
             code += code_left
             code += code_right
             code += "%{} = {} i32 %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
-            self.cur_reg += 1
-            code += self.allocate(self.cur_reg, "i32", False)
-            code += self.storeVariable(self.cur_reg, self.cur_reg - 1, "i32", False)
+            llvm_type = "i32"
+
+        self.cur_reg += 1
+        code += self.allocate(self.cur_reg, llvm_type, False)
+        code += self.storeVariable(self.cur_reg, self.cur_reg - 1, llvm_type, False)
 
         self.cur_reg += 1
 
@@ -525,9 +529,11 @@ class LLVMGenerator:
 
     def comparisonExpr(self, node, int_op, float_op):
         code = ""
-        # TODO: (kasper) use getExpressionType()
-        type_left = node.getLeft().getType()
-        type_right = node.getRight().getType()
+        print(type(node.getLeft()))
+        print(type(node.getLeft().getExpressionType()))
+        type_left = self.getLLVMType(node.getLeft().getExpressionType())
+
+        type_right = self.getLLVMType(node.getRight().getType().getExpressionType())
 
         code_left, reg_left = self.astNodeToLLVM(node.getLeft())
         code_right, reg_right = self.astNodeToLLVM(node.getRight())
