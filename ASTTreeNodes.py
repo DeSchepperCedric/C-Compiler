@@ -35,6 +35,9 @@ class ASTNode:
         self.symbol_table = symbol_table
 
     def getLineNr(self):
+        """ 
+            Retrieve the line number of the AST node w.r.t. the original C source file.
+        """
         return self.line_nr
 
     def setLineNr(self, line_nr):
@@ -42,6 +45,9 @@ class ASTNode:
         return self # return self so we can chain these operations
 
     def getColNr(self):
+        """ 
+            Retrieve the column number of the AST node w.r.t. the original C source file.
+        """
         return self.col_nr
 
     def setColNr(self, col_nr):
@@ -170,6 +176,9 @@ class ProgramNode(ASTNode):
     def genSymbolTable(self):
         """
             Recursively traverse the AST tree and create a symbol table for each scope.
+            Type checking will also be performed at this stage.
+            Each expression node will be annotated with a type. Can be retrieved with getExpressionType()
+            Each statement will have a symbol table if relevant. Can be retrieved with getSymbolTable()
         """
 
         symbol_table = SymbolTable()
@@ -537,6 +546,23 @@ class StatementContainer:
                 child.getExpression().setExprTreeSymbolTable(symbol_table)
                 child.getExpression().resolveExpressionType(symbol_table)
 
+            elif isinstance(child, VarDeclWithInit):
+                child.getInitExpr().setExprTreeSymbolTable(symbol_table) # annotate with symbol table
+                child.getInitExpr().resolveExpressionType(symbol_table)  # resolve expr type
+
+                # check if compatible is_conversion_possible
+                # check for narrowing will_conversion_narrow
+                # TODO
+            elif isinstance(child, ReturnWithExprStatement):
+                child.getExpression().setExprTreeSymbolTable(symbol_table) # annotate with symbol table
+                child.getExpression().resolveExpressionType(symbol_table)  # resolve expr type
+
+                # check return type for compatibility and narrowing
+                # TODO
+
+
+
+
 
         return symbol_table
 
@@ -589,7 +615,8 @@ class FuncParam(ASTNode):
             A function param introduces an identifier into the function's own scope.
         """
         self.setSymbolTable(symbol_table)
-        symbol_table.insert(self.param_id, "{}{}".format(self.param_type, "*" * self.ptr_count))
+
+        symbol_table.insert(self.param_id, VariableType(type_to_string(self.param_type, self.ptr_count)))
 
 
 class Statement(ASTNode):
@@ -2396,24 +2423,26 @@ class BoolConstantExpr(ConstantExpr):
 
         return self.expression_type
 
+############### TYPE FUNCTIONS ###############
+
 def type_to_string(typename, pointer_count):
     return typename + ("*"*pointer_count)
 
-# TODO expand this
-def are_types_compatible(left, right):
-    if left != right:
-        return False
-    return True
-
-# TODO add function for narrowing
-
-############### TYPE FUNCTIONS ###############
 
 def get_maximal_type(type_a, type_b):
     """
-        Returns the widest type of the two specified types. The following order is used: float > int > char > bool
+        Returns the widest type of the two specified types. The following order is used: float > int > char > bool.
+        Only non-pointer variable types are allowed!
     """
-    pass
+    
+    type_list = ['bool', 'char', 'int', 'float']
+
+    type_a_idx = type_list.index(type_a.toString())
+    type_b_idx = type_list.index(type_b.toString())
+
+    max_id = max(type_a_idx, type_a_idx)
+
+    return type_list[max_id]
 
 def is_non_ptr_variable_type(type):
     """
@@ -2431,11 +2460,30 @@ def is_conversion_possible(target_type, original_type):
     """
         Determine whether or not a conversion from the original type to the target type is possible.
     """
+
+    # two different pointer types: not possible
+    # two different value types: maybe
+    # array assigned to array_entry_type* ok
+    # functions are not assignable
+    # assignment to array is not possible, and array-type parameters are not possible.
+
+    # -> if target, origin is var, non-ptr and value types:
+    #   -> further determine value types
+    #   -> !! void not allowed!!
+    # -> if taret is ptr:
+    #       -> if original is identical ptr: ok
+    #       -> if original is compatible array: ok
+    # return false.
+
     pass
 
 def will_conversion_narrow(target_type, original_type):
     """
         Determine whether or not a conversion from the original type to the target type will result in narrowing.
     """
+
+    # if target < original_type:
+    #   return True
+    # return False
 
     pass
