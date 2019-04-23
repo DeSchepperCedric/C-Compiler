@@ -37,11 +37,11 @@ statement
 		| jump_statement
 		;
 
-if_statement: IF LEFT_PAREN expression RIGHT_PAREN statement (ELSE statement)? ;
+if_statement: IF LEFT_PAREN assignment_expr RIGHT_PAREN statement (ELSE statement)? ;
 
 iteration_statement
-        : WHILE LEFT_PAREN expression RIGHT_PAREN statement  # WhileLoop
-	    | FOR LEFT_PAREN for_condition RIGHT_PAREN statement # forLoop
+        : WHILE LEFT_PAREN assignment_expr RIGHT_PAREN statement  # WhileLoop
+	    | FOR LEFT_PAREN for_condition RIGHT_PAREN statement      # forLoop
 	    ;
 
 // note: usually the conditions in forloops can be multiple expressions, but these
@@ -145,9 +145,9 @@ postfix_expr
         | prim_expr                                               # primitiveExpr
         ;
 
-prim_expr : LEFT_PAREN expression RIGHT_PAREN # parenExpr
-		  | identifier                        # idExpr
-		  | constant                          # constantExpr
+prim_expr : LEFT_PAREN assignment_expr RIGHT_PAREN # parenExpr
+		  | identifier                             # idExpr
+		  | constant                               # constantExpr
           ;
 
 //-----------------------------------------------------------------------------------------------
