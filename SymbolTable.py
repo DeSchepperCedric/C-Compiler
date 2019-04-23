@@ -86,7 +86,6 @@ class SymbolTable:
         dot += "}\n"
         return dot
 
-
 def recursive_symbol_table(parent, cur_id):
     """
     Print symbol table recursively
@@ -124,6 +123,77 @@ def print_symbol_table_node_to_dot(node, cur_id):
     dot += "\t</table>  >];\n"
     return dot
 
+class SymbolType:
+    def __init__(self):
+        pass
+
+    def isFunction(self):
+        return False
+
+    def isArray(self):
+        return False
+
+    def isVar(self):
+        return False
+
+class FunctionType(SymbolType):
+    def __init__(self, return_type : str, param_types : list):
+        """
+            Constructor
+        """
+        self.return_type = return_type
+        self.param_types = param_types
+
+    def getReturnType(self):
+        return self.return_type
+
+    def getParamTypes(self):
+        return self.param_types
+
+    def isFunction(self):
+        return True
+
+    def toString(self):
+        return self.return_type + "(" + ",".join(self.param_types) + ")"
+
+class VariableType(SymbolType):
+    def __init__(self, variable_type : str):
+        """
+             Constructor.
+
+             Params:
+                'entry_type': String that contains the name of the type of the variable.
+        """
+
+        self.variable_type = variable_type
+
+    def getVariableType(self):
+        return self.variable_type
+
+    def toString(self):
+        return self.variable_type
+
+    def isVar(self):
+        return True
+
+class ArrayType(SymbolType):
+    def __init__(self, entry_type : str):
+        """
+            Constructor.
+
+            Params:
+                'entry_type': String that contains the name of the type of the array entries.
+        """
+        self.entry_type = entry_type
+
+    def getEntryType(self):
+        return self.entry_type
+
+    def toString(self):
+        return self.entry_type + "[]"
+
+    def isArray(self):
+        return True
 
 def main():
     root = SymbolTable()
@@ -139,6 +209,7 @@ def main():
     child3.insert("i", "float")
 
     print(print_symbol_table_to_dot(root))
+
 
 
 if __name__ == "__main__":
