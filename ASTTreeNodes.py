@@ -886,22 +886,23 @@ class AssignmentExpr(Expression):
         self.right.setExprTreeSymbolTable(symbol_table)
 
     def resolveExpressionType(self, symbol_table):
-        # left type does not matter, since assignments are possible on all types
-        # right value conforms to the same constraints as division operators
+        # the target expression (LHS expr), is already verified to be array access, identifier or dereference expr
+        # the LHS expression now needs to be of valid type. For example: functions and arrays are not valid targets, pointer types need to match, etc.
+        # the RHS expression needs to be of a type that can be assigned to the LHS
 
         left_type = self.left.resolveExpressionType(symbol_table)
         right_type = self.right.resolveExpressionType(symbol_table)
 
-        # and assignment is not possible
+        # assignment is not possible
         if not is_conversion_possible(left_type, right_type):
-            Logger.error("Assignment of expression of type '{}' to target of incompatible type '{}' is not possible on line {}."
-                                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            Logger.error("Assigning expression of type '{}' to target of incompatible type '{}' is not possible on line {}."
+                                .format(right_type.toString(), left_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         # check for narrowing
         if will_conversion_narrow(left_type, right_type):
-            Logger.warning("Assignment of expression of type '{}' to target of type '{}' will result in narrowing on line {}."
-                                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+            Logger.warning("Assigning expression of type '{}' to target of type '{}' will result in narrowing on line {}."
+                                .format(right_type.toString(), left_type.toString(), self.getLineNr()))
             # no exception here, compilation may continue.
 
         # lhs = rhs, lhs is returned, so we take the type of lhs
@@ -937,19 +938,20 @@ class AddAssignmentExpr(Expression):
         self.right.setExprTreeSymbolTable(symbol_table)
 
     def resolveExpressionType(self, symbol_table):
-        # left type does not matter, since assignments are possible on all types
-        # right value conforms to the same constraints as division operators
+        # the target expression (LHS expr), is already verified to be array access, identifier or dereference expr
+        # the LHS expression now needs to be of valid type. For example: functions and arrays are not valid targets, pointer types need to match, etc.
+        # the RHS expression needs to be of a type that can be added to LHS
+        # the resulting type of an addition is simply the maximum of the types of the two operands, so it will also be fit to be assigned to the first operand.
 
         left_type = self.left.resolveExpressionType(symbol_table)
         right_type = self.right.resolveExpressionType(symbol_table)
 
+        # only non-pointer values may be added together
+        # since we can always assign non-ptr var types to eachother, we can assume that the assignment is valid
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
             Logger.error("Pointers, arrays and functions cannot be used as operators for addition. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
-
-        # assignment is possible since left and right type are both non-pointer variable types. The only possible
-        # complication is 'float' and integer type, but those too can be converted.
 
         # check for narrowing
         if will_conversion_narrow(left_type, right_type):
@@ -990,19 +992,20 @@ class SubAssignmentExpr(Expression):
         self.right.setExprTreeSymbolTable(symbol_table)
 
     def resolveExpressionType(self, symbol_table):
-        # left type does not matter, since assignments are possible on all types
-        # right value conforms to the same constraints as division operators
+        # the target expression (LHS expr), is already verified to be array access, identifier or dereference expr
+        # the LHS expression now needs to be of valid type. For example: functions and arrays are not valid targets, pointer types need to match, etc.
+        # the RHS expression needs to be of a type that can be subtracted from LHS
+        # the resulting type of a subtraction is simply the maximum of the types of the two operands, so it will also be fit to be assigned to the first operand.
 
         left_type = self.left.resolveExpressionType(symbol_table)
         right_type = self.right.resolveExpressionType(symbol_table)
 
+        # only non-pointer values may be subtracted
+        # since we can always assign non-ptr var types to eachother, we can assume that the assignment is valid
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
             Logger.error("Pointers, arrays and functions cannot be used as operators for subtraction. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
-
-        # assignment is possible since left and right type are both non-pointer variable types. The only possible
-        # complication is 'float' and integer type, but those too can be converted.
 
         # check for narrowing
         if will_conversion_narrow(left_type, right_type):
@@ -1043,19 +1046,20 @@ class MulAssignmentExpr(Expression):
         self.right.setExprTreeSymbolTable(symbol_table)
 
     def resolveExpressionType(self, symbol_table):
-        # left type does not matter, since assignments are possible on all types
-        # right value conforms to the same constraints as division operators
+        # the target expression (LHS expr), is already verified to be array access, identifier or dereference expr
+        # the LHS expression now needs to be of valid type. For example: functions and arrays are not valid targets, pointer types need to match, etc.
+        # the RHS expression needs to be of a type that can be multiplied with LHS
+        # the resulting type of a multiplication is simply the maximum of the types of the two operands, so it will also be fit to be assigned to the first operand.
 
         left_type = self.left.resolveExpressionType(symbol_table)
         right_type = self.right.resolveExpressionType(symbol_table)
 
+        # only non-pointer values may be multiplied together
+        # since we can always assign non-ptr var types to eachother, we can assume that the assignment is valid
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
             Logger.error("Only pointers, arrays and functions cannot be used as operators for multiplication. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
-
-        # assignment is possible since left and right type are both non-pointer variable types. The only possible
-        # complication is 'float' and integer type, but those too can be converted.
 
         # check for narrowing
         if will_conversion_narrow(left_type, right_type):
@@ -1096,19 +1100,20 @@ class DivAssignmentExpr(Expression):
         self.right.setExprTreeSymbolTable(symbol_table)
 
     def resolveExpressionType(self, symbol_table):
-        # left type does not matter, since assignments are possible on all types
-        # right value conforms to the same constraints as division operators
+        # the target expression (LHS expr), is already verified to be array access, identifier or dereference expr
+        # the LHS expression now needs to be of valid type. For example: functions and arrays are not valid targets, pointer types need to match, etc.
+        # the RHS expression needs to be of a type that can divide LHS
+        # the resulting type of a division is simply the maximum of the types of the two operands, so it will also be fit to be assigned to the first operand.
 
         left_type = self.left.resolveExpressionType(symbol_table)
         right_type = self.right.resolveExpressionType(symbol_table)
 
+        # only non-pointer values may be divided
+        # since we can always assign non-ptr var types to eachother, we can assume that the assignment is valid
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
             Logger.error("Pointers, arrays and functions cannot be used as operators for division. Tried to use types '{}' and '{}' on line {}."
                             .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
-
-        # assignment is possible since left and right type are both non-pointer variable types. The only possible
-        # complication is 'float' and integer type, but those too can be converted.
 
         # check for narrowing
         if will_conversion_narrow(left_type, right_type):
@@ -2421,7 +2426,6 @@ class BoolConstantExpr(ConstantExpr):
 def type_to_string(typename, pointer_count):
     return typename + ("*"*pointer_count)
 
-
 def get_maximal_type(type_a, type_b):
     """
         Returns the widest type of the two specified types. The following order is used: float > int > char > bool.
@@ -2487,17 +2491,16 @@ def is_conversion_possible(target, value):
 
     return False
 
-
 def will_conversion_narrow(target, value):
     """
         Determine whether or not a conversion from the original type to the target type will result in narrowing.
     """
 
     if not is_non_ptr_variable_type(target) or not is_non_ptr_variable_type(value):
-        raise exception("Narrowing check can only be performed on values. Pointers, functions and arrays are not valid.")
+        return False
 
     if not is_non_void(target) or not is_non_void(value):
-        raise Exception("Narrowing check cannot be performed on 'void'.")
+        return False
 
     # types ordered by width
     type_list = ['bool', 'char', 'int', 'float']
