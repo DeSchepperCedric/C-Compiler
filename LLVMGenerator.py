@@ -409,29 +409,25 @@ class LLVMGenerator:
             t, table = node.getSymbolTable().lookup(identifier)
             var_name = table + "." + identifier
             return self.loadVariable(var_name, var_type, False)
-            return "", var_name
-
+            # return "", var_name
 
     def arithmeticExpr(self, node, operation):
         code = ""
-<<<<<<< HEAD
+
         type_left = self.getLLVMType(node.getLeft().getExpressionType())
         type_right = self.getLLVMType(node.getRight().getExpressionType())
-=======
-        type_left = node.getLeft().getExpressionType()
-        type_right = node.getRight().getExpressionType()
->>>>>>> 26fb27afca730a5d5a27f62f4715ca34fde8d9b9
 
         code_left, reg_left = self.astNodeToLLVM(node.getLeft())
 
-        if self.isConstant(node.getLeft()):
+        # extra load not necessary when dealing with Identifiers
+        if not isinstance(node.getLeft(), IdentifierExpr):
             load, reg_left = self.loadVariable(reg_left, type_left, False)
 
             code_left += load
 
         code_right, reg_right = self.astNodeToLLVM(node.getRight())
 
-        if self.isConstant(node.getRight()):
+        if not isinstance(node.getRight(), IdentifierExpr):
             load, reg_right = self.loadVariable(reg_right, type_right, False)
 
             code_right += load
@@ -460,7 +456,6 @@ class LLVMGenerator:
             code += self.storeVariable(self.cur_reg, self.cur_reg - 1, "i32", False)
 
         self.cur_reg += 1
-
 
         return code, self.cur_reg - 1
 
