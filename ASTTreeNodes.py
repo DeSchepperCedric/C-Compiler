@@ -1695,14 +1695,14 @@ class ModExpr(Expression):
         left_type_name = None
         right_type_name = None
 
-        if left_type.isVar() and not left_type.toString().endswith("*") and not left_type.toString() == 'float':
+        if left_type.isVar() and not left_type.isPtr() and not left_type.toString() == 'float':
             left_type_name = left_type.toString()
         else:
             Logger.error("Operands of modulo operator need to be of type 'bool', 'char', or 'int'. LHS argument of type '{}' was given on line {}."
                             .format(left_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
-        if right_type.isVar() and not right_type.toString().endswith("*") and not right_type.toString() == 'float':
+        if right_type.isVar() and not right_type.isPtr() and not right_type.toString() == 'float':
             right_type_name = right_type.toString()
         else:
             Logger.error("Operands of modulo operator need to be of type 'bool', 'char', or 'int'. RHS side argument of type '{}' was given on line {}."
@@ -2068,10 +2068,10 @@ class ArrayAccessExpr(Expression):
 
         if target_type.isArray():
             # access on an array returns an entry
-            self.expression_type = VariableType(target_type.getEntryType())
-        elif target_type.isVar() and target_type.toString().endswith("*"):
+            self.expression_type = target_type.getEntryType()
+        elif target_type.isVar() and target_type.isPtr()
             # access on a ptr, dereferences the ptr
-            self.expression_type = VariableType(target_type.toString()[:-1]) # remove star
+            self.expression_type = target_type.removePointerLayer()
         else:
             # invalid target
             Logger.error("Array access can only be performed on arrays and pointers. Tried to apply array access on '{}' with type '{}' on line '{}'."
@@ -2117,15 +2117,13 @@ class PointerDerefExpr(Expression):
         target_type = self.target_ptr.resolveExpressionType(symbol_table)
 
         # only pointer variables can be dereferenced.
-        if target_type.isVar() and target_type.toString().endswith("*"):
-            new_type = VariableType(target_type.toString()[:-1]) # strip the pointer star
+        if target_type.isVar() and target_type.isPtr()
+            self.expression_type = target_type.removePointerLayer()
         elif target_type.isArray():
-            new_type = VariableType(target_type.getEntryType()) # deref of array simply points to first element.
+            self.expression_type = target_type.getEntryType() # deref of array simply points to first element.
         else:
             Logger.error("Only pointer types and array types can be dereferened. Tried to derefence type '{}' on line {}.".format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
-
-        self.expression_type = new_type
 
         return self.expression_type
 
@@ -2157,8 +2155,7 @@ class AddressExpr(Expression):
         target_type = self.target_expr.resolveExpressionType(symbol_table)
 
         if target_type.isArray():
-            entry_type = target_type.getEntryType()
-            new_type = VariableType(entry_type + "*")
+            self.expression_type = target_type.getEntryType().addPointerLayer()
             # array is pointer to first element
             # pointer to array is pointer to pointer to first element
         elif target_type.isFunction():
@@ -2167,10 +2164,7 @@ class AddressExpr(Expression):
         elif target_type.isVar():
             target_type_name = target_type.toString()
             # add ptr level
-            new_type = VariableType(target_type_name + "*")
-
-        # a pointer to the target is returned.
-        self.expression_type = new_type
+            self.expression_type = target_type.addPointerLayer()
 
         return self.expression_type
 
@@ -2447,7 +2441,13 @@ def is_non_ptr_variable_type(type):
     """
         Determines whether or not the specified type is a non-pointer variable type.
     """
-    return type.isVar() and not type.toString().endswith("*")
+    return type.isVar() and not type.isPtr()
+
+def is_ptr_variable_type(type):
+    """
+        Determines whether or not the specified type is a pointer variable type.
+    """
+    return type.isVar() and type.isPtr()
 
 def is_integral_variable_type(type):
     """
@@ -2455,59 +2455,58 @@ def is_integral_variable_type(type):
     """
     return type.isVar() and type.toString() in ['bool', 'char', 'int']
 
-def is_conversion_possible(target_type, original_type):
+def is_non_void(type):
+    return type.toString() != 'void'
+
+def is_conversion_possible(target, value):
     """
         Determine whether or not a conversion from the original type to the target type is possible.
+
+        The following assignments are supported
+         > T = T, with T not being 'void'
+         > T* = T*
+         > T** = T*[], T* = T[]
+         > int_type = T* (retrieving the internal value of a pointer)
+         > T* = int_type (assigning a raw value to a ptr)
     """
 
-    # two different pointer types: not possible
-    # two different value types: maybe
-    # array assigned to array_entry_type* ok
-    # functions are not assignable
-    # assignment to array is not possible, and array-type parameters are not possible.
+    if is_non_ptr_variable_type(target) and is_non_ptr_variable_type(value) and is_non_void(target) and is_non_void(value):
+        return True # bool, char, float and int can all be assigned to eachother
 
-    # -> if target, origin is var, non-ptr and value types:
-    #   -> further determine value types
-    #   -> !! void not allowed!!
-    # -> if taret is ptr:
-    #       -> if original is identical ptr: ok
-    #       -> if original is compatible array: ok
-    # return false.
+    elif is_ptr_variable_type(target) and is_ptr_variable_type(value) and target.toString() == value.toString():
+        return True # T* = T*
 
-    # The following assignments are supported
-    #  T = T, with T not being 'void'
-    #  T* = T*
-    #  T** = T*[]
-    #  T* = T[]
+    elif is_ptr_variable_type(target) and value.isArray() and target.toString() == value.getEntryType().addPointerLayer().toString():
+        return True # T* = T[], T** = T*[]
 
-    if target_type.isVar() and not target_type.isPtr() and original_type.isVar() and not original_type.isPtr(): # assignment value to value
-        if target_type.toString() == "void" or original_type.toString() == "void":
-            return False # void must not be assigned
-        return True # all other types can be assigned to eachother
-    elif target_type.isVar() and target_type.isPtr(): # assignment to ptr
-        if original_type.isVar() and original_type.isPtr() and target_type.toString() == original_type.toString():
-            return True # T* = T*
-        elif original_type.isArray() and (original_type.getEntryType()+"*") == target_type.toString():
-            return True # T** = T*[]
-    elif target_type.isVar() and not target_type.isPtr() and original_type.isVar() and original_type.isPtr(): # assignment ptr to value
-        # can only be done to 'bool', 'int', 'char'
-        pass
+    elif is_integral_variable_type(target) and is_ptr_variable_type(value):
+        return True # int_type = T*
+
+    elif is_ptr_variable_type(target) and is_integral_variable_type(value):
+        return True # T* = int_type (manually set the address)
 
     return False
 
 
-def will_conversion_narrow(target_type, original_type):
+def will_conversion_narrow(target, value):
     """
         Determine whether or not a conversion from the original type to the target type will result in narrowing.
     """
 
-    # if ptr type, or if array type:
-    #   narrowing not relevant
+    if not is_non_ptr_variable_type(target) or not is_non_ptr_variable_type(value):
+        raise exception("Narrowing check can only be performed on values. Pointers, functions and arrays are not valid.")
 
-    # if 
+    if not is_non_void(target) or not is_non_void(value):
+        raise Exception("Narrowing check cannot be performed on 'void'.")
 
-    # if target < original_type:
-    #   return True
-    # return False
+    # types ordered by width
+    type_list = ['bool', 'char', 'int', 'float']
 
-    pass
+    target_idx = type_list.index(target.toString())
+    value_idx = type_list.index(value.toString())
+
+    # if target is narrower that value, we have a narrowing.
+    if target_idx < value_idx:
+        return True
+
+    return False
