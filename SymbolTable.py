@@ -72,6 +72,17 @@ class SymbolTable:
         else:
             return 0
 
+    def getGlobalScope(self):
+        """
+            Retrieve the global scope. This is the scope in the scope tree that has no parent and is thus the root.
+        """
+        cur = self
+
+        while(cur.parent is not None):
+            cur = cur.parent
+
+        return cur
+
     def toDot(self):
         """
         Print the symbol table in dot
