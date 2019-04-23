@@ -16,7 +16,7 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#program.
     def visitProgram(self, ctx: CParser.ProgramContext):
 
-        program_node = ProgramNode()
+        program_node = ProgramNode().setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         # add each top-level-instruction as a child
         for child in ctx.getChildren():
@@ -49,7 +49,7 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#include.
     def visitInclude(self, ctx: CParser.IncludeContext):
-        return IncludeNode()
+        return IncludeNode().setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # END
 
@@ -89,7 +89,7 @@ class ParserVisitor(CVisitor):
 
         param_list = [self.manuallyVisitChild(decl) for decl in param_declarations]
 
-        return FuncDecl(ctx.temp_typeName, func_id, ptr_count, param_list)
+        return FuncDecl(ctx.temp_typeName, func_id, ptr_count, param_list).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#varDeclSimple.
     def visitVarDeclSimple(self, ctx: CParser.VarDeclSimpleContext):
@@ -100,7 +100,7 @@ class ParserVisitor(CVisitor):
             raise AstCreationException()
 
         # temporarily set type to None
-        return VarDeclDefault(ctx.temp_typeName, var_id, ptr_count)
+        return VarDeclDefault(ctx.temp_typeName, var_id, ptr_count).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # ENDCLASS
 
@@ -119,7 +119,7 @@ class ParserVisitor(CVisitor):
             raise AstCreationException()
 
         # temporarily set type to None
-        return ArrayDecl(ctx.temp_typeName, var_id, ptr_count, size_expr)
+        return ArrayDecl(ctx.temp_typeName, var_id, ptr_count, size_expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#varDeclInit.
     def visitVarDeclInit(self, ctx: CParser.VarDeclInitContext):
@@ -135,7 +135,7 @@ class ParserVisitor(CVisitor):
             raise AstCreationException()
 
         # temporarily set type to None
-        return VarDeclWithInit(ctx.temp_typeName, var_id, ptr_count, init_expr)
+        return VarDeclWithInit(ctx.temp_typeName, var_id, ptr_count, init_expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#param.
     def visitParam(self, ctx: CParser.ParamContext):
@@ -152,7 +152,7 @@ class ParserVisitor(CVisitor):
             Logger.error("Cannot declare function parameter with type 'void' at line {}.".format(ctx.start.line))
             raise AstCreationException()
 
-        return FuncParam(param_type, param_id, ptr_count)
+        return FuncParam(param_type, param_id, ptr_count).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#func_def.
     def visitFunc_def(self, ctx: CParser.Func_defContext):
@@ -166,7 +166,7 @@ class ParserVisitor(CVisitor):
         # the body is the last statement
         body_child = ctx.getChild(ctx.getChildCount()-1)
         compound_statement = self.manuallyVisitChild(body_child)[0]
-        body = Body(compound_statement.child_list)
+        body = Body(compound_statement.child_list).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         # the parameter part of the function def is the entire
         # child list without the first and last child
@@ -176,7 +176,7 @@ class ParserVisitor(CVisitor):
 
         param_nodes = [self.manuallyVisitChild(child) for child in param_children]
 
-        return FuncDef(return_type, func_id, ptr_count, param_nodes, body)
+        return FuncDef(return_type, func_id, ptr_count, param_nodes, body).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#statement.
     def visitStatement(self, ctx: CParser.StatementContext):
@@ -206,18 +206,18 @@ class ParserVisitor(CVisitor):
         if len(if_body_list) == 1 and isinstance(if_body_list[0], CompoundStmt):
             compound_statement = if_body_list[0]
 
-            if_body = Body(compound_statement.child_list)
+            if_body = Body(compound_statement.child_list).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
-            if_body = Body(if_body_list)
+            if_body = Body(if_body_list).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         if len(else_body_list) == 1 and isinstance(else_body_list[0], CompoundStmt):
             compound_statement = else_body_list[0]
 
-            else_body = Body(compound_statement.child_list)
+            else_body = Body(compound_statement.child_list).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
-            else_body = Body(else_body_list)
+            else_body = Body(else_body_list).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
-        return [BranchStmt(cond_expr, if_body, else_body)]
+        return [BranchStmt(cond_expr, if_body, else_body).setLineNr(ctx.start.line).setColNr(ctx.start.column)]
 
     # Visit a parse tree produced by CParser#forLoop.
     def visitForLoop(self, ctx: CParser.ForLoopContext):
@@ -234,11 +234,11 @@ class ParserVisitor(CVisitor):
         if len(body_statements) == 1 and isinstance(body_statements[0], CompoundStmt):
             compound_statement = body_statements[0]
 
-            body = Body(compound_statement.child_list)
+            body = Body(compound_statement.child_list).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
-            body = Body(body_statements)
+            body = Body(body_statements).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
-        return [ForStmt(init_list, cond_expr, iter_list, body)]
+        return [ForStmt(init_list, cond_expr, iter_list, body).setLineNr(ctx.start.line).setColNr(ctx.start.column)]
 
     # Visit a parse tree produced by CParser#forCondWithDecl.
     def visitFor_condition(self, ctx: CParser.For_conditionContext):
@@ -248,9 +248,9 @@ class ParserVisitor(CVisitor):
         targets = ["INIT", "COND", "ITER"]
         cur_target = 0 # specifies what we're looking for
 
-        init_list = [EmptyNode()]
-        cond_expr = EmptyNode()
-        iter_list = [EmptyNode()]
+        init_list = [EmptyNode().setLineNr(ctx.start.line).setColNr(ctx.start.column)]
+        cond_expr = EmptyNode().setLineNr(ctx.start.line).setColNr(ctx.start.column)
+        iter_list = [EmptyNode().setLineNr(ctx.start.line).setColNr(ctx.start.column)]
 
         for i in range(0, ctx.getChildCount()):
             if ctx.getChild(i).getText() == ";":
@@ -279,11 +279,11 @@ class ParserVisitor(CVisitor):
         if len(body_statements) == 1 and isinstance(body_statements[0], CompoundStmt):
             compound_statement = body_statements[0]
 
-            body = Body(compound_statement.child_list)
+            body = Body(compound_statement.child_list).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
-            body = Body(body_statements)
+            body = Body(body_statements).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
-        return [WhileStmt(cond_expr, body)]
+        return [WhileStmt(cond_expr, body).setLineNr(ctx.start.line).setColNr(ctx.start.column)]
 
     # Visit a parse tree produced by CParser#compound_statement.
     def visitCompound_statement(self, ctx: CParser.Compound_statementContext):
@@ -302,7 +302,7 @@ class ParserVisitor(CVisitor):
         for block_item in block_item_list:
             statement_list.extend(block_item)
 
-        return [CompoundStmt(statement_list)]
+        return [CompoundStmt(statement_list).setLineNr(ctx.start.line).setColNr(ctx.start.column)]
 
     # Visit a parse tree produced by CParser#blockItemStatement.
     def visitBlockItemStatement(self, ctx: CParser.BlockItemStatementContext):
@@ -328,7 +328,7 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#jumpReturn.
     def visitJumpReturn(self, ctx: CParser.JumpReturnContext):
-        return [ReturnStatement()]
+        return [ReturnStatement().setLineNr(ctx.start.line).setColNr(ctx.start.column)]
 
     # Visit a parse tree produced by CParser#jumpReturnWithExpr.
     def visitJumpReturnWithExpr(self, ctx:CParser.JumpReturnWithExprContext):
@@ -339,15 +339,15 @@ class ParserVisitor(CVisitor):
         
         # child 2: ';'
 
-        return [ReturnWithExprStatement(return_value)]
+        return [ReturnWithExprStatement(return_value).setLineNr(ctx.start.line).setColNr(ctx.start.column)]
 
     # Visit a parse tree produced by CParser#jumpBreak.
     def visitJumpBreak(self, ctx: CParser.JumpBreakContext):
-        return [BreakStatement()]
+        return [BreakStatement().setLineNr(ctx.start.line).setColNr(ctx.start.column)]
 
     # Visit a parse tree produced by CParser#jumpContinue.
     def visitJumpContinue(self, ctx: CParser.JumpContinueContext):
-        return [ContinueStatement()]
+        return [ContinueStatement().setLineNr(ctx.start.line).setColNr(ctx.start.column)]
 
     # Visit a parse tree produced by CParser#expression_statement.
     def visitExpression_statement(self, ctx: CParser.Expression_statementContext):
@@ -359,7 +359,7 @@ class ParserVisitor(CVisitor):
         expr_list = self.manuallyVisitChild(ctx.getChild(0))
 
         # one statement per expression
-        statement_list = [ExpressionStatement(expr) for expr in expr_list]
+        statement_list = [ExpressionStatement(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column) for expr in expr_list]
 
         # return statements
         return statement_list
