@@ -27,6 +27,8 @@ class LLVMGenerator:
             return self.varDeclDefault(node)
         elif isinstance(node, VarDeclWithInit):
             return self.varDeclWithInit(node)
+        elif isinstance(node, AssignmentExpr):
+            return self.assignmentExpr(node)
 
         elif isinstance(node, IdentifierExpr):
             return self.identifierExpr(node)
@@ -70,6 +72,8 @@ class LLVMGenerator:
         elif isinstance(node, BranchStmt):
             return self.branchStatement(node)
 
+        elif isinstance(node, ExpressionStatement):
+            return self.expressionStatement(node)
         elif isinstance(node, Body):
             return self.body(node)
         elif isinstance(node, ProgramNode):
@@ -185,8 +189,7 @@ class LLVMGenerator:
         return code
         """
         # default initialization to 0. Might be improved later
-        # TODO: (kasper) use getExpressionType() and don't manually add pointer stars
-        var_type = node.getType() + node.getPointerCount() * "*"
+        var_type = self.getLLVMType(node.getExpressionType())
         var_id = node.getID()
         code = ""
         if node.getSymbolTable().isGlobal(var_id):
@@ -204,12 +207,14 @@ class LLVMGenerator:
         return code
 
     def varDeclWithInit(self, node):
-        #var_type = self.getLLVMType(node.getInitExpr().getExpressionType())
-        var_type = "i32"
+        # TODO change back to correct var_type
+        var_type = self.getLLVMType(node.getInitExpr().getExpressionType())
         var_id = node.getID()
         code = ""
 
         is_global = node.getSymbolTable().isGlobal(var_id)
+
+
 
         if is_global:
             # node.getInitExpr() should return a ConstantExpr
@@ -221,8 +226,12 @@ class LLVMGenerator:
             var_id = table + "." + var_id
 
             code += self.allocate(var_id, var_type, is_global)
-            new_code, register = self.loadVariable(register, var_type, False)
-            code += new_code
+
+            # otherwise type isn't correct
+            if not isinstance(node.getInitExpr(), IdentifierExpr):
+                load, register = self.loadVariable(register, var_type, False)
+
+                code += load
             code += self.storeVariable(var_id, register, var_type, is_global)
 
         code += "\n"
@@ -286,8 +295,7 @@ class LLVMGenerator:
     def funcDecl(self, node):
         code = ""
 
-        # TODO: (kasper) use getExpressionType() and don't manually add pointer stars
-        return_type = self.getLLVMType(node.getType()) + node.getPointerCount() * "*"
+        return_type = self.getLLVMType(node.getExpressionType())
         function_name = "@" + node.getID()
 
         code += "declare " + return_type + function_name + "("
@@ -357,8 +365,7 @@ class LLVMGenerator:
             arg_code, arg_reg = self.astNodeToLLVM(arg)
             code += arg_code
 
-            # TODO: (kasper) use getExpressionType()
-            arg_type = self.getLLVMType(self.getLLVMType(arg.getType()))
+            arg_type = self.getLLVMType(arg.getExpressionType())
             arg_list += "{} %{}".format(arg_type, arg_reg)
         arg_list += ")"
 
@@ -366,8 +373,7 @@ class LLVMGenerator:
         self.cur_reg += 1
         code += "%{} = call ".format(func_reg)
 
-        # TODO: (kasper) use getExpressionType()
-        return_type = self.getLLVMType(node.getType())
+        return_type = self.getLLVMType(node.getExpressionType())
         code += "{} @{}".format(return_type, node.getFunctionID())
         code += arg_list
         code += "\n"
@@ -409,7 +415,6 @@ class LLVMGenerator:
             t, table = node.getSymbolTable().lookup(identifier)
             var_name = table + "." + identifier
             return self.loadVariable(var_name, var_type, False)
-            # return "", var_name
 
     def arithmeticExpr(self, node, operation):
         code = ""
@@ -558,10 +563,15 @@ class LLVMGenerator:
 
     def assignmentExpr(self, node):
         code, register = self.astNodeToLLVM(node.getRight())
-        # TODO: (kasper) use getExpressionType()
-        right_type = node.getRight().getType()
-        left_type = node.getLeft().getType()
-        identifier = node.getLeft().getIdentifier()
+        right_type = self.getLLVMType(node.getRight().getExpressionType())
+        left_type = self.getLLVMType(node.getLeft().getExpressionType())
+        identifier = node.getLeft().getIdentifierName()
+
+        if not isinstance(node.getRight(), IdentifierExpr):
+            load, register = self.loadVariable(register, right_type, False)
+
+            code += load
+
         if right_type == left_type:
             pass
         elif left_type == "int":
@@ -574,6 +584,11 @@ class LLVMGenerator:
         if node.getSymbolTable().isGlobal(identifier):
             code += self.storeGlobalVariableFromRegister(identifier, left_type, register)
         else:
+            t, table = node.getSymbolTable().lookup(identifier)
+            identifier = table + "." + identifier
             code += self.storeLocalVariableFromRegister(identifier, left_type, register)
 
         return code, -1
+
+    def expressionStatement(self, node):
+        return self.astNodeToLLVM(node.getExpression())
