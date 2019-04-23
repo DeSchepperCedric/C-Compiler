@@ -493,9 +493,12 @@ class FuncDef(TopLevelNode):
         # functions can only be defined in global scope, so own_scope is set to false
         symbol_type, scope_name = symbol_table.lookup(self.func_id)
 
-        if symbol_type != 0:
+        if symbol_type != 0: # there exists a symbol with the same name as the function
+
+            # determine what the new function would look like
             func_type = FunctionType(self.return_type, [type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list])
 
+            # check if current symbol is a function, if not this means there is a conflict.
             if not symbol_type.isFunction():
                 Logger.error("Cannot define non-function symbol '{}' with type '{}' as a function with type '{}' on line {}."
                                 .format(self.func_id, symbol_type.toString(), func_type.toString()), self.getLineNr())
