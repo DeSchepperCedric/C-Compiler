@@ -117,7 +117,7 @@ def print_symbol_table_node_to_dot(node, cur_id):
     dot += "\t<tr><td colspan=\"2\"> {} </td></tr>\n".format(node.name)
     for symbol, sym_type in node.symbols.items():
         dot += "\t<tr>"
-        dot += "\t<td>{}</td>\n".format(sym_type)
+        dot += "\t<td>{}</td>\n".format(sym_type.toString())
         dot += "\t<td>{}</td>\n".format(symbol)
         dot += "\t</tr>\n"
     dot += "\t</table>  >];\n"
