@@ -67,7 +67,7 @@ jump_statement
 expression_statement : expression? SC ;
 
 // expression
-expression : assignment_expr (COMMA expression)* ;
+expression : assignment_expr (COMMA assignment_expr)* ;
 
 
 assignment_expr
