@@ -185,6 +185,7 @@ class LLVMGenerator:
         return code
         """
         # default initialization to 0. Might be improved later
+        # TODO: (kasper) use getExpressionType() and don't manually add pointer stars
         var_type = node.getType() + node.getPointerCount() * "*"
         var_id = node.getID()
         code = ""
@@ -284,6 +285,8 @@ class LLVMGenerator:
 
     def funcDecl(self, node):
         code = ""
+
+        # TODO: (kasper) use getExpressionType() and don't manually add pointer stars
         return_type = self.getLLVMType(node.getType()) + node.getPointerCount() * "*"
         function_name = "@" + node.getID()
 
@@ -354,6 +357,7 @@ class LLVMGenerator:
             arg_code, arg_reg = self.astNodeToLLVM(arg)
             code += arg_code
 
+            # TODO: (kasper) use getExpressionType()
             arg_type = self.getLLVMType(self.getLLVMType(arg.getType()))
             arg_list += "{} %{}".format(arg_type, arg_reg)
         arg_list += ")"
@@ -362,6 +366,7 @@ class LLVMGenerator:
         self.cur_reg += 1
         code += "%{} = call ".format(func_reg)
 
+        # TODO: (kasper) use getExpressionType()
         return_type = self.getLLVMType(node.getType())
         code += "{} @{}".format(return_type, node.getFunctionID())
         code += arg_list
@@ -409,8 +414,13 @@ class LLVMGenerator:
 
     def arithmeticExpr(self, node, operation):
         code = ""
+<<<<<<< HEAD
         type_left = self.getLLVMType(node.getLeft().getExpressionType())
         type_right = self.getLLVMType(node.getRight().getExpressionType())
+=======
+        type_left = node.getLeft().getExpressionType()
+        type_right = node.getRight().getExpressionType()
+>>>>>>> 26fb27afca730a5d5a27f62f4715ca34fde8d9b9
 
         code_left, reg_left = self.astNodeToLLVM(node.getLeft())
 
@@ -515,6 +525,7 @@ class LLVMGenerator:
 
     def comparisonExpr(self, node, int_op, float_op):
         code = ""
+        # TODO: (kasper) use getExpressionType()
         type_left = node.getLeft().getType()
         type_right = node.getRight().getType()
 
@@ -552,6 +563,7 @@ class LLVMGenerator:
 
     def assignmentExpr(self, node):
         code, register = self.astNodeToLLVM(node.getRight())
+        # TODO: (kasper) use getExpressionType()
         right_type = node.getRight().getType()
         left_type = node.getLeft().getType()
         identifier = node.getLeft().getIdentifier()
