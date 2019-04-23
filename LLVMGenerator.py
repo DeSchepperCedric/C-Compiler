@@ -402,25 +402,35 @@ class LLVMGenerator:
         identifier = node.getIdentifierName()
 
         var_type = self.getLLVMType(node.getExpressionType())
-        print("-----")
-        print(var_type)
-        print("--------")
-        print(identifier)
+
         if node.getSymbolTable().isGlobal(identifier):
             return self.loadVariable(identifier, var_type, True)
         else:
             t, table = node.getSymbolTable().lookup(identifier)
             var_name = table + "." + identifier
-            return "", var_name
-
+            return self.loadVariable(var_name, var_type, False)
+            # return "", var_name
 
     def arithmeticExpr(self, node, operation):
         code = ""
-        type_left = node.getLeft().getExpressionType()
-        type_right = node.getRight().getExpressionType()
+
+        type_left = self.getLLVMType(node.getLeft().getExpressionType())
+        type_right = self.getLLVMType(node.getRight().getExpressionType())
 
         code_left, reg_left = self.astNodeToLLVM(node.getLeft())
+
+        # extra load not necessary when dealing with Identifiers
+        if not isinstance(node.getLeft(), IdentifierExpr):
+            load, reg_left = self.loadVariable(reg_left, type_left, False)
+
+            code_left += load
+
         code_right, reg_right = self.astNodeToLLVM(node.getRight())
+
+        if not isinstance(node.getRight(), IdentifierExpr):
+            load, reg_right = self.loadVariable(reg_right, type_right, False)
+
+            code_right += load
 
         code += code_left
         code += code_right
@@ -441,8 +451,12 @@ class LLVMGenerator:
             code += code_left
             code += code_right
             code += "%{} = {} i32 %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
+            self.cur_reg += 1
+            code += self.allocate(self.cur_reg, "i32", False)
+            code += self.storeVariable(self.cur_reg, self.cur_reg - 1, "i32", False)
 
         self.cur_reg += 1
+
         return code, self.cur_reg - 1
 
     def getStrongestType(self, a, b):
@@ -498,8 +512,9 @@ class LLVMGenerator:
         return_type = self.getLLVMType(node.getExpression().getExpressionType())
         code, register = self.astNodeToLLVM(node.getExpression())
 
-        new_code, register = self.loadVariable(register, return_type, False)
-        code += new_code
+        if not isinstance(node.getExpression(), IdentifierExpr):
+            new_code, register = self.loadVariable(register, return_type, False)
+            code += new_code
         code += "ret {} %{}".format(return_type, register)
         return code, -1
 
