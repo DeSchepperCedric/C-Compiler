@@ -72,7 +72,6 @@ class SymbolTable:
         else:
             return 0
 
-
     def toDot(self):
         """
         Print the symbol table in dot
@@ -236,7 +235,6 @@ def main():
     child3 = root.allocate()
     child3.insert("i", "float")
 
-    print(print_symbol_table_to_dot(root))
 
 
 

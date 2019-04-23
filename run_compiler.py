@@ -11,6 +11,8 @@ from Logger import Logger
 from CompilerException import CompilerException
 from CompilerException import ParserException
 
+from LLVMGenerator import LLVMGenerator
+
 def run_compiler(source_file_path, output_name):
     in_stream = FileStream(source_file_path)
     lexer = CLexer(in_stream)
@@ -42,6 +44,9 @@ def run_compiler(source_file_path, output_name):
     with open("./output/" + output_name + "_symboltable.dot", 'w') as symboltable_dotfile:
         symboltable_dot_repr = symbol_table.toDot()
         symboltable_dotfile.write(symboltable_dot_repr)
+
+    print(LLVMGenerator().astNodeToLLVM(ast_tree))
+
 
 def main(argv):
     # the name that will be used to form output files

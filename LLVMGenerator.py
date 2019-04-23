@@ -28,6 +28,9 @@ class LLVMGenerator:
         elif isinstance(node, VarDeclWithInit):
             return self.varDeclWithInit(node)
 
+        elif isinstance(node, IdentifierExpr):
+            return self.identifierExpr(node)
+
         elif isinstance(node, FuncParam):
             return self.funcParam(node)
         elif isinstance(node, FuncDecl):
@@ -80,7 +83,10 @@ class LLVMGenerator:
         code = ""
         register = self.cur_reg
         self.cur_reg += 1
-        code += "%{} = i1 {} \n".format(register, expr.getBoolValue())
+        llvm_type = "i32"
+
+        code += "%{} = alloca {}\n".format(register, llvm_type)
+        code += "store {} {}, {}* %{}\n".format(llvm_type, expr.getBoolValue(), llvm_type, register)
 
         return code, register
 
@@ -91,7 +97,10 @@ class LLVMGenerator:
         code = ""
         register = self.cur_reg
         self.cur_reg += 1
-        code += "%{} = float {} \n".format(register, expr.getFloatValue())
+        llvm_type = "float"
+
+        code += "%{} = alloca {}\n".format(register, llvm_type)
+        code += "store {} {}, {}* %{}\n".format(llvm_type, expr.getFloatValue(), llvm_type, register)
 
         return code, register
 
@@ -102,9 +111,28 @@ class LLVMGenerator:
         code = ""
         register = self.cur_reg
         self.cur_reg += 1
-        code += "%{} = i32 {} \n".format(register, expr.getIntValue())
 
-        return register
+        llvm_type = "i32"
+
+        code += "%{} = alloca {}\n".format(register, llvm_type)
+        code += "store {} {}, {}* %{}\n".format(llvm_type, expr.getIntValue(), llvm_type, register)
+
+        return code, register
+
+    def loadVariable(self, register, var_type, is_global):
+        """
+
+        :param register: register the variable is saved in
+        :param var_type: variable type
+        :param is_global: is the variable global
+        :return: code, register where it's loaded to
+        """
+        new_reg = self.cur_reg
+        self.cur_reg += 1
+
+        glob = "@" if is_global else "%"
+
+        return "%{} = load {}, {}* {}{} \n".format(new_reg, var_type, var_type, glob, register), new_reg
 
     def loadGlobalVariable(self, var_id, var_type):
         """
@@ -114,11 +142,28 @@ class LLVMGenerator:
         self.cur_reg += 1
         return "%{} = load {}, {}* @{} \n".format(register, var_type, var_type, var_id), register
 
+    def loadLocalVariable(self, var_id, var_type):
+        """
+        Load a local variable into a scoped register
+        """
+        register = self.cur_reg
+        self.cur_reg += 1
+        return "%{} = load {}, {}* %{} \n".format(register, var_type, var_type, var_id), register
+
+    def storeVariable(self, store_to, store_from, var_type, is_global):
+        glob = "@" if is_global else "%"
+        return "store {} %{}, {}* {}{} \n".format(var_type, store_from, var_type, glob, store_to)
+
     def storeGlobalVariableFromRegister(self, var_id, var_type, register):
+
         return "store {} %{}, {}* @{} \n".format(var_type, register, var_type, var_id)
 
     def storeLocalVariableFromRegister(self, var_id, var_type, register):
         return "store {} %{}, {}* %{} \n".format(var_type, register, var_type, var_id)
+
+    def allocate(self, register, llvm_type, is_global):
+        glob = "@" if is_global else "%"
+        return "{}{} = alloca {}\n".format(glob, register, llvm_type)
 
     def varDeclDefault(self, node):
         """
@@ -140,39 +185,47 @@ class LLVMGenerator:
         return code
         """
         # default initialization to 0. Might be improved later
-        var_type = node.getType() + str(node.getPointerCount())
+        var_type = node.getType() + node.getPointerCount() * "*"
         var_id = node.getID()
         code = ""
         if node.getSymbolTable().isGlobal(var_id):
             # code += "@{} = global {} 0".format(var_id, var_type)
-            code += "@{} = alloca {}".format(var_id, var_type)
-            code += "store {} 0, {}* {}".format(var_type, var_id, var_type)
+            code += "@{} = alloca {}\n".format(var_id, var_type)
+            code += "store {} 0, {}* {}\n".format(var_type, var_id, var_type)
         else:
 
             t, table = node.getSymbolTable().lookup(var_id)
             reg_name = table + "." + var_id
-            code += "%{} = alloca {}".format(var_id, var_type)
-            code += "store {} 0, {}* {}".format(var_type, reg_name, var_type)
+            code += "%{} = alloca {}\n".format(var_id, var_type)
+            code += "store {} 0, {}* {}\n".format(var_type, reg_name, var_type)
 
         code += "\n"
         return code
 
     def varDeclWithInit(self, node):
-        var_type = node.getType() + str(node.getPointerCount())
+        #var_type = self.getLLVMType(node.getInitExpr().getExpressionType())
+        var_type = "i32"
         var_id = node.getID()
-        code, register = self.astNodeToLLVM(node.getInitExpr())
-        if node.getSymbolTable().isGlobal(var_id):
-            code += "@{} = alloca {}".format(var_id, var_type)
-            code += self.storeGlobalVariableFromRegister(var_id, var_type, register)
-        else:
-            t, table = node.getSymbolTable().lookup(var_id)
-            reg_name = table + "." + var_id
+        code = ""
 
-            code += "%{} = alloca {}".format(reg_name, var_type)
-            code += self.storeLocalVariableFromRegister(reg_name, var_type)
+        is_global = node.getSymbolTable().isGlobal(var_id)
+
+        if is_global:
+            # node.getInitExpr() should return a ConstantExpr
+            code += "@{} = global {} {}".format(var_id, var_type, node.getInitExpr().getValue())
+        else:
+            new_code, register = self.astNodeToLLVM(node.getInitExpr())
+            code += new_code
+            t, table = node.getSymbolTable().lookup(var_id)
+            var_id = table + "." + var_id
+
+            code += self.allocate(var_id, var_type, is_global)
+            new_code, register = self.loadVariable(register, var_type, False)
+            code += new_code
+            code += self.storeVariable(var_id, register, var_type, is_global)
 
         code += "\n"
-        return code
+        return code, -1
 
     def branchStatement(self, node):
         # no else statement will still generate a label
@@ -222,7 +275,7 @@ class LLVMGenerator:
         for child in node.getChildren():
             new_code, reg = self.astNodeToLLVM(child)
             code += new_code
-        return code
+        return code, -1
 
     def funcParam(self, node):
         param_type = self.getLLVMType(node.getParamType()) + node.getPointerCount() * "*"
@@ -231,7 +284,7 @@ class LLVMGenerator:
 
     def funcDecl(self, node):
         code = ""
-        return_type = node.getType() + node.getPointerCount() * "*"
+        return_type = self.getLLVMType(node.getType()) + node.getPointerCount() * "*"
         function_name = "@" + node.getID()
 
         code += "declare " + return_type + function_name + "("
@@ -245,7 +298,7 @@ class LLVMGenerator:
             code += self.funcParam(param)
 
         code += ")\n"
-        return code
+        return code, -1
 
     def funcDef(self, node):
         # enter new scope
@@ -254,7 +307,8 @@ class LLVMGenerator:
         # %1 ... are args
         self.cur_reg = len(node.getParamList()) + 1
         code = ""
-        return_type = node.getReturnType() + node.getPointerCount() * "*"
+        return_type, scope = node.getSymbolTable().lookup(node.getFuncID())
+        return_type = self.getLLVMType(return_type.getReturnType()) + " "
         function_name = "@" + node.getFuncID()
 
         code += "define " + return_type + function_name + "("
@@ -274,7 +328,7 @@ class LLVMGenerator:
             param_type = self.getLLVMType(param.getParamType()) + param.getPointerCount() * "*"
             t, table = node.getSymbolTable().lookup(param.getParamID())
             param_name = table + "." + param.getParamID()
-            code += "%{} = alloca {},".format(self.cur_reg, param_type)
+            code += "%{} = alloca {}\n".format(self.cur_reg, param_type)
             self.storeLocalVariableFromRegister(param_name, param_type, self.cur_reg)
             self.cur_reg += 1
 
@@ -284,7 +338,7 @@ class LLVMGenerator:
 
         # exit scope
         self.cur_reg = self.reg_stack.pop()
-        return code
+        return code, -1
 
     def funcCallExpr(self, node):
         # "%retval = call i32 @test(i32 %argc)"
@@ -300,7 +354,7 @@ class LLVMGenerator:
             arg_code, arg_reg = self.astNodeToLLVM(arg)
             code += arg_code
 
-            arg_type = self.getLLVMType(arg.getType())
+            arg_type = self.getLLVMType(self.getLLVMType(arg.getType()))
             arg_list += "{} %{}".format(arg_type, arg_reg)
         arg_list += ")"
 
@@ -308,7 +362,7 @@ class LLVMGenerator:
         self.cur_reg += 1
         code += "%{} = call ".format(func_reg)
 
-        return_type = node.getType()
+        return_type = self.getLLVMType(node.getType())
         code += "{} @{}".format(return_type, node.getFunctionID())
         code += arg_list
         code += "\n"
@@ -318,7 +372,15 @@ class LLVMGenerator:
     def isConstant(self, node):
         return isinstance(node, ConstantExpr)
 
-    def getLLVMType(self, type):
+    def getLLVMType(self, type_node):
+        if type_node.isVar():
+            type_string = type_node.toString()
+
+            type_string = type_string.replace("int", "i32")
+            type_string = type_string.replace("bool", "i1")
+            return type_string
+
+        # TODO convert to new system
         # TODO add char/string
         if type == "float":
             return "float"
@@ -332,11 +394,20 @@ class LLVMGenerator:
         """
         Returns register number the identifier is located in
         """
-        identifier = node.getIdentifier()
-        t, table = node.getSymbolTable().lookup(identifier)
-        var_name = table + "." + identifier
-        reg = self.variable_reg.get(var_name)
-        return "%{}".format(reg)
+        identifier = node.getIdentifierName()
+
+        var_type = self.getLLVMType(node.getExpressionType())
+        print("-----")
+        print(var_type)
+        print("--------")
+        print(identifier)
+        if node.getSymbolTable().isGlobal(identifier):
+            return self.loadVariable(identifier, var_type, True)
+        else:
+            t, table = node.getSymbolTable().lookup(identifier)
+            var_name = table + "." + identifier
+            return "", var_name
+
 
     def arithmeticExpr(self, node, operation):
         code = ""
@@ -415,13 +486,17 @@ class LLVMGenerator:
             return code, reg
 
     def returnStatement(self):
-        return "ret void"
+        return "ret void", -1
 
     def returnWithExprStatement(self, node):
-        return_type = node.getType()
+
+        return_type = self.getLLVMType(node.getExpression().getExpressionType())
         code, register = self.astNodeToLLVM(node.getExpression())
+
+        new_code, register = self.loadVariable(register, return_type, False)
+        code += new_code
         code += "ret {} %{}".format(return_type, register)
-        return code
+        return code, -1
 
     def comparisonExpr(self, node, int_op, float_op):
         code = ""
@@ -456,9 +531,9 @@ class LLVMGenerator:
         return code, self.cur_reg - 1
 
     def include(self):
-        code = "declare i32 @printf(i8*, ...) nounwind\n"
-        code += "declare i32 @scanf(i8*, ...) nounwind\n"
-        return code
+        code = "declare i32 @printf(i8*, ...) nounwind \n"
+        code += "declare i32 @scanf(i8*, ...) nounwind \n"
+        return code, -1
 
     def assignmentExpr(self, node):
         code, register = self.astNodeToLLVM(node.getRight())
@@ -479,4 +554,4 @@ class LLVMGenerator:
         else:
             code += self.storeLocalVariableFromRegister(identifier, left_type, register)
 
-        return code
+        return code, -1
