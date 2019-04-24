@@ -2,12 +2,12 @@
 
 int a = 5;
 
-int main(){
-    int b = a;
+int main(int q){
+q = 5;
 
-    b = 2;
+   int b = q;
 
 
-    int c = b;
-    return b;
+   return 0;
+
 }
