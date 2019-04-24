@@ -326,19 +326,18 @@ class LLVMGenerator:
 
     def funcParam(self, node):
         # param_type = self.getLLVMType(node.getExpressionType())
-        param_name = " %" + node.getParamID() if node.getParamID() is not None else ""
-        param_type, table = node.getSymbolTable().lookup(node.getParamID())
-        param_type = self.getLLVMType(param_type)
-        #return param_type + " " + param_name
+        param_type = node.getParamType()
+        param_type = self.getLLVMType(VariableType(param_type))
         return param_type
 
     def funcDecl(self, node):
-        code = ""
+        """
+        return_type, t = node.getSymbolTable().lookup(node.getID())
+        return_type = self.getLLVMType(return_type)
 
-        return_type = self.getLLVMType(node.getExpressionType())
         function_name = "@" + node.getID()
 
-        code += "declare " + return_type + function_name + "("
+        code = "declare " + return_type + " " + function_name + "("
         first_param = True
         for param in node.getParams():
             if not first_param:
@@ -350,6 +349,8 @@ class LLVMGenerator:
 
         code += ")\n"
         return code, -1
+        """
+        return "", -1
 
     def funcDef(self, node):
         # enter new scope
@@ -453,6 +454,10 @@ class LLVMGenerator:
         return isinstance(node, ConstantExpr)
 
     def getLLVMType(self, type_node):
+        """ Converts a symbolType to an LLVM type"""
+        if type_node.isFunction():
+            type_node = type_node.getReturnType()
+
         if type_node.isVar():
             type_string = type_node.toString()
 
