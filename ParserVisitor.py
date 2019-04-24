@@ -410,6 +410,9 @@ class ParserVisitor(CVisitor):
         if ctx.getChildCount() == 1:
             return self.manuallyVisitChild(ctx.getChild(0))
 
+
+        # TODO check constant
+
         # get left: child #0
         left = self.manuallyVisitChild(ctx.getChild(0))
         # child #1: "||" or "or"
@@ -424,6 +427,8 @@ class ParserVisitor(CVisitor):
         if ctx.getChildCount() == 1:
             return self.manuallyVisitChild(ctx.getChild(0))
 
+        # TODO check constant
+        
         # get left: child #0
         left = self.manuallyVisitChild(ctx.getChild(0))
         # child #1: "&&" or "and"
@@ -443,8 +448,10 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == "==":
+        	# TODO check constant
             return EqualityExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "!=":
+        	# TODO check constant
             return InequalityExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for equality expr: {}".format(operator))
@@ -460,12 +467,16 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == ">":
+        	# TODO check constant
             return CompGreater(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "<":
+        	# TODO check constant
             return CompLess(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == ">=":
+        	# TODO check constant
             return CompGreaterEqual(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "<=":
+        	# TODO check constant
             return CompLessEqual(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for comparison expr: {}".format(operator))
@@ -481,8 +492,10 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == "+":
+        	# TODO check constant
             return AddExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "-":
+        	# TODO check constant
             return SubExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for additive expr: {}".format(operator))
@@ -498,10 +511,13 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == "*":
+        	# TODO check constant
             return MulExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "/":
+        	# TODO check constant
             return DivExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "%":
+        	# TODO check constant
             return ModExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for multiplicative expr: {}".format(operator))
@@ -532,12 +548,15 @@ class ParserVisitor(CVisitor):
         expr = self.manuallyVisitChild(ctx.getChild(1))
 
         if operator == "+":
+        	# TODO check constant
             return PlusPrefixExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "-":
+        	# TODO check constant
             return MinPrefixExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "not" or operator == '!':
+        	# TODO check constant
             return LogicNotExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "*":
@@ -546,6 +565,7 @@ class ParserVisitor(CVisitor):
         elif operator == "&":
             return AddressExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
+        # note: the postfix counterparts are handled somewhere else
         elif operator == "++":
             return PrefixIncExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
@@ -601,6 +621,7 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#postfixInc.
     def visitPostfixInc(self, ctx: CParser.PostfixIncContext):
         expression = self.manuallyVisitChild(ctx.getChild(0))
+
         return PostfixIncExpr(expression).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#parenExpr.
