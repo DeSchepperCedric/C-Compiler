@@ -19,6 +19,7 @@ def run_compiler(source_file_path, output_name):
     stream = CommonTokenStream(lexer)
     parser = CParser(stream)
     error_listener = ParserErrorListener()
+    parser.removeErrorListeners()
     parser.addErrorListener(error_listener)
     parse_tree = parser.program()
 
@@ -27,8 +28,9 @@ def run_compiler(source_file_path, output_name):
         raise ParserException()
 
     visitor = ParserVisitor()
-    ast_tree = visitor.visitProgram(parse_tree)
-    ast_tree.genSymbolTable()
+    ast_tree = visitor.visitProgram(parse_tree) # create AST
+    #ast_tree.pruneDeadCode()                    # prune after continue, return and break
+    ast_tree.genSymbolTable()                   # annotate AST with types and symbol table
     symbol_table = ast_tree.getSymbolTable()
 
     # constant folding
