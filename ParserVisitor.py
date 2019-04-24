@@ -227,6 +227,7 @@ class ParserVisitor(CVisitor):
 
         init_list, cond_expr, iter_list = self.manuallyVisitChild(ctx.getChild(2))
 
+        # returns list of statements
         body_statements = self.manuallyVisitChild(ctx.getChild(4))
         
         # if the statement after the forloop loop, is a compound statement
@@ -248,9 +249,11 @@ class ParserVisitor(CVisitor):
         targets = ["INIT", "COND", "ITER"]
         cur_target = 0 # specifies what we're looking for
 
-        init_list = [EmptyNode().setLineNr(ctx.start.line).setColNr(ctx.start.column)]
-        cond_expr = EmptyNode().setLineNr(ctx.start.line).setColNr(ctx.start.column)
-        iter_list = [EmptyNode().setLineNr(ctx.start.line).setColNr(ctx.start.column)]
+        init_list = []
+        cond_expr = BoolConstantExpr("true").setLineNr(ctx.start.line).setColNr(ctx.start.column) # empty condition is "true"
+        iter_list = []
+
+
 
         for i in range(0, ctx.getChildCount()):
             if ctx.getChild(i).getText() == ";":
