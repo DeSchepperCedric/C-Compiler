@@ -1,5 +1,5 @@
 from ASTTreeNodes import *
-
+import struct as struct
 
 class LLVMGenerator:
     def __init__(self):
@@ -104,7 +104,7 @@ class LLVMGenerator:
         llvm_type = "float"
 
         code += "%{} = alloca {}\n".format(register, llvm_type)
-        code += "store {} {}, {}* %{}\n".format(llvm_type, expr.getFloatValue(), llvm_type, register)
+        code += "store {} {}, {}* %{}\n".format(llvm_type, self.floatToHex(expr.getFloatValue()), llvm_type, register)
 
         return code, register
 
@@ -297,9 +297,12 @@ class LLVMGenerator:
         return code, -1
 
     def funcParam(self, node):
-        param_type = self.getLLVMType(node.getParamType()) + node.getPointerCount() * "*"
+        # param_type = self.getLLVMType(node.getExpressionType())
         param_name = " %" + node.getParamID() if node.getParamID() is not None else ""
-        return param_type + param_name
+        param_type, table = node.getSymbolTable().lookup(node.getParamID())
+        param_type = self.getLLVMType(param_type)
+        #return param_type + " " + param_name
+        return param_type
 
     def funcDecl(self, node):
         code = ""
@@ -325,7 +328,7 @@ class LLVMGenerator:
         self.reg_stack.append(self.cur_reg)
         # %0 is start label
         # %1 ... are args
-        self.cur_reg = len(node.getParamList()) + 1
+        self.cur_reg = 0
         code = ""
         return_type, scope = node.getSymbolTable().lookup(node.getFuncID())
         return_type = self.getLLVMType(return_type.getReturnType()) + " "
@@ -345,13 +348,15 @@ class LLVMGenerator:
 
         # allocate and store parameters
         for param in node.getParamList():
-            param_type = self.getLLVMType(param.getParamType()) + param.getPointerCount() * "*"
-            t, table = node.getSymbolTable().lookup(param.getParamID())
+            param_type, table = node.getSymbolTable().lookup(param.getParamID())
+            param_type = self.getLLVMType(param_type)
             param_name = table + "." + param.getParamID()
-            code += "%{} = alloca {}\n".format(self.cur_reg, param_type)
-            self.storeLocalVariableFromRegister(param_name, param_type, self.cur_reg)
+            code += "%{} = alloca {}\n".format(param_name, param_type)
+            code += self.storeLocalVariableFromRegister(param_name, param_type, self.cur_reg)
             self.cur_reg += 1
 
+        # +1 since otherwise register points to code block
+        self.cur_reg += 1
         new_code, reg = self.astNodeToLLVM(node.getBody())
         code += new_code
         code += "}\n"
@@ -625,7 +630,13 @@ class LLVMGenerator:
     def expressionStatement(self, node):
         return self.astNodeToLLVM(node.getExpression())
 
-
+    def floatToHex(self, f):
+        """convert float to hex (needed in llvm)"""
+        single_precision_rep = struct.pack('>f', f)
+        single_precision_val = struct.unpack(">f", single_precision_rep)[0]
+        double_val = struct.pack('>d', single_precision_val)
+        double_hex = "0x" + double_val.hex()
+        return double_hex
 
 
 
