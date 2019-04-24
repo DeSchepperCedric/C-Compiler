@@ -207,13 +207,13 @@ class LLVMGenerator:
         return code
 
     def varDeclWithInit(self, node):
-        # TODO change back to correct var_type
-        var_type = self.getLLVMType(node.getInitExpr().getExpressionType())
+        expr_type = self.getLLVMType(node.getInitExpr().getExpressionType())
         var_id = node.getID()
+        var_type, table = node.getSymbolTable().lookup(var_id)
+        var_type = self.getLLVMType(var_type)
         code = ""
 
         is_global = node.getSymbolTable().isGlobal(var_id)
-
 
 
         if is_global:
@@ -222,7 +222,11 @@ class LLVMGenerator:
         else:
             new_code, register = self.astNodeToLLVM(node.getInitExpr())
             code += new_code
-            t, table = node.getSymbolTable().lookup(var_id)
+
+            if var_type != expr_type:
+                new_code, register = self.convertToType(register, expr_type, var_type)
+                code += new_code
+
             var_id = table + "." + var_id
 
             code += self.allocate(var_id, var_type, is_global)
@@ -478,15 +482,15 @@ class LLVMGenerator:
 
     def convertToFloat(self, reg, type):
         code = ""
-        if type == "float":
+        if "float" in type:
             return code, reg
 
-        elif type == "char":
+        elif "char" in type:
             code += "%{} = sext i8 %{} to i32\n".format(self.cur_reg, reg)
             code += "%{} = sitofp i32 %{} to float\n".format(self.cur_reg + 1, self.cur_reg)
             self.cur_reg += 2
             return code, self.cur_reg - 1
-        elif type == "int":
+        elif "int" in type or "i32" in type:
             code += "%{} = sitofp i32 %{} to float\n".format(self.cur_reg, reg)
             self.cur_reg += 1
             return code, self.cur_reg - 1
@@ -496,15 +500,15 @@ class LLVMGenerator:
 
     def convertToInt(self, reg, type):
         code = ""
-        if type == "int":
+        if "int" in type or "i32" in type:
             return code, reg
 
-        elif type == "char":
+        elif "char" in type:
             code += "%{} = sext i8 %{} to i32\n".format(self.cur_reg, reg)
             self.cur_reg += 1
             return code, self.cur_reg - 1
 
-        elif type == "float":
+        elif "float" in type:
             code += " %{} = fptosi float %{} to i32\n".format(self.cur_reg, reg)
             self.cur_reg += 1
             return code, self.cur_reg - 1
@@ -512,6 +516,13 @@ class LLVMGenerator:
         else:
             # what with other types?
             return code, reg
+
+    def convertToType(self, reg, old_type, new_type):
+        if "int" in new_type or "i32" in new_type:
+            return self.convertToInt(reg, old_type)
+
+        elif "float" in new_type:
+            return self.convertToFloat(reg, old_type)
 
     def returnStatement(self):
         return "ret void", -1
@@ -600,4 +611,4 @@ class LLVMGenerator:
         return self.astNodeToLLVM(node.getExpression())
 
 
-    
+

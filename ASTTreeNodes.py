@@ -445,15 +445,55 @@ class FuncDecl(SymbolDecl):
                                        add_open_close=add_open_close)
 
     def addToSymbolTable(self, symbol_table):
+<<<<<<< HEAD
         # TODO, this declaration has to conform with any previous declarations
         #       can override previous non-function declarations
         #       and has to be inserted into the global scope
+=======
+        glob_sym_tbl = symbol_table.getGlobalScope()
 
-        self.setSymbolTable(symbol_table)
+        new_func_type = FunctionType(self.symbol_type, [type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list])
+>>>>>>> 37d2f2435b8ca7ec288bc34cfb5f1e7d7ed0605e
 
+        # symbol lookups
+        local_type, local_scope = symbol_table.lookup(self.symbol_id, own_scope_only=True)
+        tree_wide_type, tree_wide_scope = symbol_table.lookup(self.symbol_id, own_scope_only=False)
+        global_type, glob_scope = glob_sym_tbl.lookup(self.symbol_id)
+
+        # check if symbol is already taken up by a variable, or an array; since other function declarations don't matter
+        if local_type != 0 and (local_type.isVar() or local_type.isArray()):
+            Logger.error("Error when declaring function symbol '{}' of type '{}' on line {}: symbol already declared with type '{}'."
+                            .format(self.symbol_id, new_func_type.toString(), self.getLineNr(), local_type.toString()))
+            raise AstTypingException()
+
+<<<<<<< HEAD
         symbol_table.insert(self.symbol_id, FunctionType(self.symbol_type,
                                                          [type_to_string(param.getParamType(), param.getPointerCount())
                                                           for param in self.param_list]))
+=======
+        # check if the symbol is present throughout the symbol tree and is a function
+        # if so, the new declaration must have the exact same type as previous declarations
+        # if the symbol is present in the tree but has correct type, it does not matter, new declaration will simply override in local scope
+        if tree_wide_type != 0 and tree_wide_type.isFunction() and tree_wide_type.toString() != new_func_type.toString():
+            Logger.error("Error when declaring function symbol '{}' of type '{}' on line {}: function already declared with type '{}'."
+                            .format(self.symbol_id, new_func_type.toString(), self.getLineNr(), tree_wide_type.toString()))
+            raise AstTypingException()
+
+        # if the declaration already exists, use existing object
+        if tree_wide_type != 0:
+            new_func_type = tree_wide_type # use existing object so that the {def} flag can be set
+
+        # all is well, proceed to add function
+        self.setSymbolTable(symbol_table)
+
+        # if not present in local scope => add to local scope
+        if local_type == 0:
+            symbol_table.insert(self.symbol_id, new_func_type)
+
+        # check if not present in global scope => add to global scope
+        if global_type == 0:
+            glob_sym_tbl.insert(self.symbol_id, new_func_type)
+>>>>>>> 37d2f2435b8ca7ec288bc34cfb5f1e7d7ed0605e
 
 
 class FuncDef(TopLevelNode):
@@ -518,17 +558,18 @@ class FuncDef(TopLevelNode):
                     "Invalid redefinition of existing function '{}' on line {}.".format(self.func_id, self.getLineNr()))
                 raise AstTypingException()
 
-            # the types must align 
+            # the types must be the same
             if symbol_type.toString() != func_type.toString():
                 Logger.error(
                     "Function definition introduces type '{}' while function was previously declared with type '{}' on line {}."
                     .format(func_type.toString(), symbol_type.toString(), self.getLineNr()))
                 raise AstTypingException()
 
-            # set function type as defined
+            # set function symbol type as defined
             symbol_type.setDefined()
 
         else:
+            # symbol was not yet present
             # add symbol, and mark as defined
             symbol_table.insert(self.func_id, FunctionType(self.return_type, [
                 type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list],

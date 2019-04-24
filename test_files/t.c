@@ -1,3 +1,9 @@
 #include <stdio.h>
 
-float b = 0.3;
+int a = 5;
+
+int main(){
+
+   int c = 5.0;
+   return 0;
+}
