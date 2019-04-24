@@ -255,15 +255,16 @@ class LLVMGenerator:
         # if
         reg_if_label = self.cur_reg
         self.cur_reg += 1
-        code_if = "; <label>:{}:".format(reg_if_label)  # comment for clarity
-        code_if += self.astNodeToLLVM(node.getIfBody())
+        # code_if = "; <label>:{}:\n".format(reg_if_label)  # comment for clarity
+        code_new_if, reg = self.astNodeToLLVM(node.getIfBody())
+        code_if = code_new_if
 
         # else
         reg_else_label = self.cur_reg
         self.cur_reg += 1
-        code_else = "; <label>:{}:".format(reg_else_label)  # comment for clarity
-        code_else += self.astNodeToLLVM(node.getElseBody())
-
+        # code_else = "; <label>:{}:\n".format(reg_else_label)  # comment for clarity
+        code_new_else, reg = self.astNodeToLLVM(node.getElseBody())
+        code_else = code_new_else
         # cond
         cond_code = "br i1 %{}, label %{}, label %{}\n\n".format(register, reg_if_label, reg_else_label)
 
@@ -274,8 +275,12 @@ class LLVMGenerator:
 
         code += code_else
         code += "br label %{}\n\n".format(self.cur_reg)
+
+        code += "; <label>:{}:\n".format(self.cur_reg)
         self.cur_reg += 1
-        return code
+
+
+        return code, -1
 
     def programNode(self, node):
         code = ""
@@ -414,7 +419,7 @@ class LLVMGenerator:
         var_type = self.getLLVMType(node.getExpressionType())
 
         if node.getSymbolTable().isGlobal(identifier):
-            return self.loadVariable(identifier, var_type, True)
+            return self.loadVariable(identifier, var_type, True), -1
         else:
             t, table = node.getSymbolTable().lookup(identifier)
             var_name = table + "." + identifier
@@ -525,7 +530,7 @@ class LLVMGenerator:
             return self.convertToFloat(reg, old_type)
 
     def returnStatement(self):
-        return "ret void", -1
+        return "ret void\n", -1
 
     def returnWithExprStatement(self, node):
 
@@ -535,19 +540,29 @@ class LLVMGenerator:
         if not isinstance(node.getExpression(), IdentifierExpr):
             new_code, register = self.loadVariable(register, return_type, False)
             code += new_code
-        code += "ret {} %{}".format(return_type, register)
+        code += "ret {} %{}\n".format(return_type, register)
         return code, -1
 
     def comparisonExpr(self, node, int_op, float_op):
         code = ""
-        print(type(node.getLeft()))
-        print(type(node.getLeft().getExpressionType()))
+
         type_left = self.getLLVMType(node.getLeft().getExpressionType())
 
-        type_right = self.getLLVMType(node.getRight().getType().getExpressionType())
+        type_right = self.getLLVMType(node.getRight().getExpressionType())
 
         code_left, reg_left = self.astNodeToLLVM(node.getLeft())
+
+        if not isinstance(node.getLeft(), IdentifierExpr):
+            load, reg_left = self.loadVariable(reg_left, type_left, False)
+
+            code_left += load
+
         code_right, reg_right = self.astNodeToLLVM(node.getRight())
+
+        if not isinstance(node.getRight(), IdentifierExpr):
+            load, reg_right = self.loadVariable(reg_right, type_right, False)
+
+            code_right += load
 
         code += code_left
         code += code_right
@@ -609,6 +624,8 @@ class LLVMGenerator:
 
     def expressionStatement(self, node):
         return self.astNodeToLLVM(node.getExpression())
+
+
 
 
 
