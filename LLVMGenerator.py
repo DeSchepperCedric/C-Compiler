@@ -22,6 +22,8 @@ class LLVMGenerator:
             return self.floatConstantExpr(node)
         elif isinstance(node, IntegerConstantExpr):
             return self.integerConstantExpr(node)
+        elif isinstance(node, CharConstantExpr):
+            return self.charConstantExpr(node)
 
         elif isinstance(node, VarDeclDefault):
             return self.varDeclDefault(node)
@@ -92,7 +94,7 @@ class LLVMGenerator:
         code = ""
         register = self.cur_reg
         self.cur_reg += 1
-        llvm_type = "i32"
+        llvm_type = "i1"
 
         code += "%{} = alloca {}\n".format(register, llvm_type)
         code += "store {} {}, {}* %{}\n".format(llvm_type, expr.getBoolValue(), llvm_type, register)
@@ -127,6 +129,22 @@ class LLVMGenerator:
         code += "store {} {}, {}* %{}\n".format(llvm_type, expr.getIntValue(), llvm_type, register)
 
         return code, register
+
+    def charConstantExpr(self, expr):
+        """
+        Return a constant integer with its type and the register it's stored in
+        """
+        code = ""
+        register = self.cur_reg
+        self.cur_reg += 1
+
+        llvm_type = "i8"
+
+        code += "%{} = alloca {}\n".format(register, llvm_type)
+        code += "store {} {}, {}* %{}\n".format(llvm_type, ord(expr.getCharValue()[1]), llvm_type, register)
+
+        return code, register
+
 
     def loadVariable(self, register, var_type, is_global):
         """
@@ -439,6 +457,7 @@ class LLVMGenerator:
 
             type_string = type_string.replace("int", "i32")
             type_string = type_string.replace("bool", "i1")
+            type_string = type_string.replace("char", "i8")
             return type_string
 
         return ""
