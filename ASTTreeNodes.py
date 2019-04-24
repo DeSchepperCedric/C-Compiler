@@ -213,26 +213,25 @@ class ProgramNode(ASTNode):
         return symbol_table
 
     def pruneDeadCode(self):
-    	"""
-			Removes all the code that has become unreachable because of return, break and continue.
+        """
+            Removes all the code that has become unreachable because of return, break and continue.
 
-			Returns true if pruning occurred, false otherwise.
+            Returns true if pruning occurred, false otherwise.
 
-			Note: since pruning propagates up the AST-tree, the return value can be used to propagate the pruning.
-    	"""
+            Note: since pruning propagates up the AST-tree, the return value can be used to propagate the pruning.
+        """
 
-    	# iterate over children:
-    	#  if func:
-    	#	prune body
+        # iterate over children:
+        #  if func:
+        #	prune body
 
-    	# in body:
-    	# iterate over children:
-    	#   if pruning statement:
-    	#		skip all the other children
-    	#	    and return that pruning has occurred
+        # in body:
+        # iterate over children:
+        #   if pruning statement:
+        #		skip all the other children
+        #	    and return that pruning has occurred
 
-
-    	pass
+        pass
 
     def toDot(self, parent_nr=None, begin_nr=1, add_open_close=False):
         return self.M_defaultToDotImpl(children=self.children,
@@ -346,7 +345,7 @@ class ArrayDecl(SymbolDecl):
         if symbol_type != 0:
             Logger.error(
                 "Redeclaration of variable '{}' on line {}. The identifier was already declared with type '{}'."
-                .format(self.symbol_id, self.getLineNr(), symbol_type.toString()))
+                    .format(self.symbol_id, self.getLineNr(), symbol_type.toString()))
             raise AstTypingException()
 
         self.setSymbolTable(symbol_table)
@@ -381,7 +380,7 @@ class VarDeclDefault(SymbolDecl):
         if symbol_type != 0:
             Logger.error(
                 "Redeclaration of variable '{}' on line {}. The identifier was already declared with type '{}'."
-                .format(self.symbol_id, self.getLineNr(), symbol_type.toString()))
+                    .format(self.symbol_id, self.getLineNr(), symbol_type.toString()))
             raise AstTypingException()
 
         self.setSymbolTable(symbol_table)
@@ -417,7 +416,7 @@ class VarDeclWithInit(SymbolDecl):
         if symbol_type != 0:
             Logger.error(
                 "Redeclaration of variable '{}' on line {}. The identifier was already declared with type '{}'."
-                .format(self.symbol_id, self.getLineNr(), symbol_type.toString()))
+                    .format(self.symbol_id, self.getLineNr(), symbol_type.toString()))
             raise AstTypingException()
 
         # note: we first evaluate the expression, then we declare the new symbol, otherwise "int i = i+2;" would be accepted.
@@ -434,14 +433,14 @@ class VarDeclWithInit(SymbolDecl):
         if not is_conversion_possible(symbol_type, expr_type):
             Logger.error(
                 "Assigning expression of type '{}' to target of incompatible type '{}' is not possible on line {}."
-                .format(expr_type.toString(), symbol_type.toString(), self.init_expr.getLineNr()))
+                    .format(expr_type.toString(), symbol_type.toString(), self.init_expr.getLineNr()))
             raise AstTypingException()
 
         # check for narrowing
         if will_conversion_narrow(symbol_type, expr_type):
             Logger.warning(
                 "Assigning expression of type '{}' to target of type '{}' will result in narrowing on line {}."
-                .format(expr_type.toString(), symbol_type.toString(), self.init_expr.getLineNr()))
+                    .format(expr_type.toString(), symbol_type.toString(), self.init_expr.getLineNr()))
             # no exception here, compilation may continue.
 
 
@@ -469,7 +468,9 @@ class FuncDecl(SymbolDecl):
     def addToSymbolTable(self, symbol_table):
         glob_sym_tbl = symbol_table.getGlobalScope()
 
-        new_func_type = FunctionType(self.symbol_type, [type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list])
+        new_func_type = FunctionType(self.symbol_type,
+                                     [type_to_string(param.getParamType(), param.getPointerCount()) for param in
+                                      self.param_list])
 
         # symbol lookups
         local_type, local_scope = symbol_table.lookup(self.symbol_id, own_scope_only=True)
@@ -478,21 +479,23 @@ class FuncDecl(SymbolDecl):
 
         # check if symbol is already taken up by a variable, or an array; since other function declarations don't matter
         if local_type != 0 and (local_type.isVar() or local_type.isArray()):
-            Logger.error("Error when declaring function symbol '{}' of type '{}' on line {}: symbol already declared with type '{}'."
-                            .format(self.symbol_id, new_func_type.toString(), self.getLineNr(), local_type.toString()))
+            Logger.error(
+                "Error when declaring function symbol '{}' of type '{}' on line {}: symbol already declared with type '{}'."
+                .format(self.symbol_id, new_func_type.toString(), self.getLineNr(), local_type.toString()))
             raise AstTypingException()
 
         # check if the symbol is present throughout the symbol tree and is a function
         # if so, the new declaration must have the exact same type as previous declarations
         # if the symbol is present in the tree but has correct type, it does not matter, new declaration will simply override in local scope
         if tree_wide_type != 0 and tree_wide_type.isFunction() and tree_wide_type.toString() != new_func_type.toString():
-            Logger.error("Error when declaring function symbol '{}' of type '{}' on line {}: function already declared with type '{}'."
-                            .format(self.symbol_id, new_func_type.toString(), self.getLineNr(), tree_wide_type.toString()))
+            Logger.error(
+                "Error when declaring function symbol '{}' of type '{}' on line {}: function already declared with type '{}'."
+                .format(self.symbol_id, new_func_type.toString(), self.getLineNr(), tree_wide_type.toString()))
             raise AstTypingException()
 
         # if the declaration already exists, use existing object
         if tree_wide_type != 0:
-            new_func_type = tree_wide_type # use existing object so that the {def} flag can be set
+            new_func_type = tree_wide_type  # use existing object so that the {def} flag can be set
 
         # all is well, proceed to add function
         self.setSymbolTable(symbol_table)
@@ -559,7 +562,7 @@ class FuncDef(TopLevelNode):
             if not symbol_type.isFunction():
                 Logger.error(
                     "Cannot define non-function symbol '{}' with type '{}' as a function with type '{}' on line {}."
-                    .format(self.func_id, symbol_type.toString(), func_type.toString()), self.getLineNr())
+                        .format(self.func_id, symbol_type.toString(), func_type.toString()), self.getLineNr())
                 raise AstTypingException()
 
             # there is a function with the same name and it is already defined.
@@ -572,7 +575,7 @@ class FuncDef(TopLevelNode):
             if symbol_type.toString() != func_type.toString():
                 Logger.error(
                     "Function definition introduces type '{}' while function was previously declared with type '{}' on line {}."
-                    .format(func_type.toString(), symbol_type.toString(), self.getLineNr()))
+                        .format(func_type.toString(), symbol_type.toString(), self.getLineNr()))
                 raise AstTypingException()
 
             # set function symbol type as defined
@@ -682,7 +685,7 @@ class StatementContainer:
                 if not is_conversion_possible(VariableType('bool'), cond_expr_type):
                     Logger.error(
                         "Conditonal expression in if-statement evaluates to type '{}'. Must be compatible with 'bool'. Error on line {}."
-                        .format(cond_expr_type.toString(), self.getLineNr()))
+                            .format(cond_expr_type.toString(), self.getLineNr()))
                     raise AstTypingException()
 
             elif isinstance(child, ForStmt):
@@ -729,7 +732,7 @@ class StatementContainer:
                 if not is_conversion_possible(VariableType('bool'), cond_expr_type):
                     Logger.error(
                         "Conditonal expression in for-statement evaluates to type '{}'. Must be compatible with 'bool'. Error on line {}."
-                        .format(cond_expr_type.toString(), self.getLineNr()))
+                            .format(cond_expr_type.toString(), self.getLineNr()))
                     raise AstTypingException()
 
             elif isinstance(child, WhileStmt):
@@ -755,7 +758,7 @@ class StatementContainer:
                 if not is_conversion_possible(VariableType('bool'), cond_expr_type):
                     Logger.error(
                         "Conditonal expression in for-statement evaluates to type '{}'. Must be compatible with 'bool'. Error on line {}."
-                        .format(cond_expr_type.toString(), self.getLineNr()))
+                            .format(cond_expr_type.toString(), self.getLineNr()))
                     raise AstTypingException()
 
             elif isinstance(child, CompoundStmt):
@@ -782,13 +785,13 @@ class StatementContainer:
                 if not is_conversion_possible(function_return_type, return_expr_type):
                     Logger.error(
                         "Expression of type '{}' cannot be used as return value for function with return type '{}' on line {}."
-                        .format(return_expr_type.toString(), function_return_type.toString(), self.getLineNr()))
+                            .format(return_expr_type.toString(), function_return_type.toString(), self.getLineNr()))
                     raise AstTypingException()
 
                 if will_conversion_narrow(function_return_type, return_expr_type):
                     Logger.warning(
                         "Returning expression of type '{}' in function with return type '{}' will result in narrowing on line {}."
-                        .format(return_expr_type.toString(), function_return_type.toString(), self.getLineNr()))
+                            .format(return_expr_type.toString(), function_return_type.toString(), self.getLineNr()))
                     # no exception needed
             # ENDIF
 
@@ -858,7 +861,7 @@ class FuncParam(ASTNode):
         if symbol_type != 0:
             Logger.error(
                 "Redeclaration of variable '{}' on line {}. The identifier was already declared with type '{}'."
-                .format(self.param_id, self.getLineNr(), symbol_type.toString()))
+                    .format(self.param_id, self.getLineNr(), symbol_type.toString()))
             raise AstTypingException()
 
         self.setSymbolTable(symbol_table)
@@ -1148,14 +1151,14 @@ class AssignmentExpr(Expression):
         if not is_conversion_possible(left_type, right_type):
             Logger.error(
                 "Assigning expression of type '{}' to target of incompatible type '{}' is not possible on line {}."
-                .format(right_type.toString(), left_type.toString(), self.getLineNr()))
+                    .format(right_type.toString(), left_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         # check for narrowing
         if will_conversion_narrow(left_type, right_type):
             Logger.warning(
                 "Assigning expression of type '{}' to target of type '{}' will result in narrowing on line {}."
-                .format(right_type.toString(), left_type.toString(), self.getLineNr()))
+                    .format(right_type.toString(), left_type.toString(), self.getLineNr()))
             # no exception here, compilation may continue.
 
         self.expression_type = left_type
@@ -1206,14 +1209,14 @@ class AddAssignmentExpr(Expression):
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
             Logger.error(
                 "Pointers, arrays and functions cannot be used as operators for addition. Tried to use types '{}' and '{}' on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         # check for narrowing
         if will_conversion_narrow(left_type, right_type):
             Logger.warning(
                 "Assignment of expression of type '{}' to target of type '{}' will result in narrowing on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             # no exception here, compilation may continue.
 
         self.expression_type = left_type
@@ -1264,14 +1267,14 @@ class SubAssignmentExpr(Expression):
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
             Logger.error(
                 "Pointers, arrays and functions cannot be used as operators for subtraction. Tried to use types '{}' and '{}' on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         # check for narrowing
         if will_conversion_narrow(left_type, right_type):
             Logger.warning(
                 "Assignment of expression of type '{}' to target of type '{}' will result in narrowing on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             # no exception here, compilation may continue.
 
         self.expression_type = left_type
@@ -1322,14 +1325,14 @@ class MulAssignmentExpr(Expression):
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
             Logger.error(
                 "Only pointers, arrays and functions cannot be used as operators for multiplication. Tried to use types '{}' and '{}' on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         # check for narrowing
         if will_conversion_narrow(left_type, right_type):
             Logger.warning(
                 "Assignment of expression of type '{}' to target of type '{}' will result in narrowing on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             # no exception here, compilation may continue.
 
         self.expression_type = left_type
@@ -1380,14 +1383,14 @@ class DivAssignmentExpr(Expression):
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
             Logger.error(
                 "Pointers, arrays and functions cannot be used as operators for division. Tried to use types '{}' and '{}' on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         # check for narrowing
         if will_conversion_narrow(left_type, right_type):
             Logger.warning(
                 "Assignment of expression of type '{}' to target of type '{}' will result in narrowing on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             # no exception here, compilation may continue.
 
         self.expression_type = left_type
@@ -1522,7 +1525,7 @@ class EqualityExpr(Expression):
         if left_type.isFunction() or right_type.isFunction():
             Logger.error(
                 "Functions cannot be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         # return bool
@@ -1567,7 +1570,7 @@ class InequalityExpr(Expression):
         if left_type.isFunction() or right_type.isFunction():
             Logger.error(
                 "Functions cannot be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         # return bool
@@ -1612,7 +1615,7 @@ class CompGreater(Expression):
         if left_type.isFunction() or right_type.isFunction():
             Logger.error(
                 "Functions cannot be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         # return bool
@@ -1657,7 +1660,7 @@ class CompLess(Expression):
         if left_type.isFunction() or right_type.isFunction():
             Logger.error(
                 "Functions cannot be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         # return bool
@@ -1702,7 +1705,7 @@ class CompGreaterEqual(Expression):
         if left_type.isFunction() or right_type.isFunction():
             Logger.error(
                 "Functions cannot be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         # return bool
@@ -1747,7 +1750,7 @@ class CompLessEqual(Expression):
         if left_type.isFunction() or right_type.isFunction():
             Logger.error(
                 "Functions cannot be used as operators for comparisons. Tried to use types '{}' and '{}' on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         # return bool
@@ -1793,7 +1796,7 @@ class AddExpr(Expression):
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
             Logger.error(
                 "Pointers, arrays and functions cannot be used as operators for addition. Tried to use types '{}' and '{}' on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         self.expression_type = get_maximal_type(left_type, right_type)
@@ -1838,7 +1841,7 @@ class SubExpr(Expression):
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
             Logger.error(
                 "Pointers, arrays and functions cannot be used as operators for subtraction. Tried to use types '{}' and '{}' on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         self.expression_type = get_maximal_type(left_type, right_type)
@@ -1883,7 +1886,7 @@ class MulExpr(Expression):
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
             Logger.error(
                 "Only pointers, arrays and functions cannot be used as operators for multiplication. Tried to use types '{}' and '{}' on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         self.expression_type = get_maximal_type(left_type, right_type)
@@ -1928,7 +1931,7 @@ class DivExpr(Expression):
         if not is_non_ptr_variable_type(left_type) or not is_non_ptr_variable_type(right_type):
             Logger.error(
                 "Pointers, arrays and functions cannot be used as operators for division. Tried to use types '{}' and '{}' on line {}."
-                .format(left_type.toString(), right_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         self.expression_type = get_maximal_type(left_type, right_type)
@@ -1978,7 +1981,7 @@ class ModExpr(Expression):
         else:
             Logger.error(
                 "Operands of modulo operator need to be of type 'bool', 'char', or 'int'. LHS argument of type '{}' was given on line {}."
-                .format(left_type.toString(), self.getLineNr()))
+                    .format(left_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         if right_type.isVar() and not right_type.isPtr() and not right_type.toString() == 'float':
@@ -1986,7 +1989,7 @@ class ModExpr(Expression):
         else:
             Logger.error(
                 "Operands of modulo operator need to be of type 'bool', 'char', or 'int'. RHS side argument of type '{}' was given on line {}."
-                .format(right_type.toString(), self.getLineNr()))
+                    .format(right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         # always convert to int
@@ -2101,7 +2104,7 @@ class PrefixIncExpr(Expression):
         if not target_type.isVar():
             Logger.error(
                 "Prefix increment cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
-                .format(target_type.toString(), self.getLineNr()))
+                    .format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         self.expression_type = target_type
@@ -2142,7 +2145,7 @@ class PrefixDecExpr(Expression):
         if not target_type.isVar():
             Logger.error(
                 "Prefix decrement cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
-                .format(target_type.toString(), self.getLineNr()))
+                    .format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         self.expression_type = target_type
@@ -2183,7 +2186,7 @@ class PostfixIncExpr(Expression):
         if not target_type.isVar():
             Logger.error(
                 "Postfix increment cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
-                .format(target_type.toString(), self.getLineNr()))
+                    .format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         self.expression_type = target_type
@@ -2224,7 +2227,7 @@ class PostfixDecExpr(Expression):
         if not target_type.isVar():
             Logger.error(
                 "Postfix decrement cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
-                .format(target_type.toString(), self.getLineNr()))
+                    .format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         self.expression_type = target_type
@@ -2265,7 +2268,7 @@ class PlusPrefixExpr(Expression):
         if not is_non_ptr_variable_type(target_type):
             Logger.error(
                 "Unary plus cannot be performed on pointers, arrays or functions. Tried to apply on type '{}' on line {}."
-                .format(target_type.toString(), self.getLineNr()))
+                    .format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         self.expression_type = target_type
@@ -2306,7 +2309,7 @@ class MinPrefixExpr(Expression):
         if not is_non_ptr_variable_type(target_type):
             Logger.error(
                 "Unary minus cannot be performed on pointers, arrays or functions. Tried to apply on type '{}' on line {}."
-                .format(target_type.toString(), self.getLineNr()))
+                    .format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         self.expression_type = target_type
@@ -2364,7 +2367,7 @@ class ArrayAccessExpr(Expression):
             # invalid target
             Logger.error(
                 "Array access can only be performed on arrays and pointers. Tried to apply array access on '{}' with type '{}' on line '{}'."
-                .format(target_name, target_type.toString(), self.getLineNr()))
+                    .format(target_name, target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
         # check that index expression can evaluated to int
@@ -2372,8 +2375,9 @@ class ArrayAccessExpr(Expression):
 
         # index type needs to be compatible with 
         if not is_conversion_possible(VariableType('int'), index_type):
-            Logger.error("Invalid index expression passed to array '{}' on line {}: Type '{}' is requested, incompatible type '{}' was given."
-                            .format(target_name, self.getLineNr(), 'int', index_type.toString()))
+            Logger.error(
+                "Invalid index expression passed to array '{}' on line {}: Type '{}' is requested, incompatible type '{}' was given."
+                .format(target_name, self.getLineNr(), 'int', index_type.toString()))
             raise AstTypingException()
 
         return self.expression_type
@@ -2520,8 +2524,8 @@ class FuncCallExpr(Expression):
             if len(self.argument_list) != len(function_type.getParamTypes()):
                 Logger.error(
                     "Function {} called with invalid amount of arguments on line {}. {} parameters needed, {} parameters specified."
-                    .format(function_name, self.getLineNr(), len(function_type.getParamTypes()),
-                            len(self.argument_list)))
+                        .format(function_name, self.getLineNr(), len(function_type.getParamTypes()),
+                                len(self.argument_list)))
                 raise AstTypingException()
 
             # check arguments
@@ -2532,21 +2536,21 @@ class FuncCallExpr(Expression):
                 if arg_expr_type.isFunction():
                     Logger.error(
                         "Invalid argument #{} passed to function '{}' on line {}: Functions cannot be passed as argument."
-                        .format(i + 1, function_name, self.getLineNr()))
+                            .format(i + 1, function_name, self.getLineNr()))
                     raise AstTypingException()
 
                 # check if parameters are compatible
                 if not is_conversion_possible(VariableType(param_type), arg_expr_type):
                     Logger.error(
                         "Invalid argument #{} passed to function '{}' on line {}: Type '{}' is requested, incompatible type '{}' was given."
-                        .format(i + 1, function_name, self.getLineNr(), param_type, arg_expr_type.toString()))
+                            .format(i + 1, function_name, self.getLineNr(), param_type, arg_expr_type.toString()))
                     raise AstTypingException()
 
                 # parameters are compatible, check for narrowing
                 if will_conversion_narrow(VariableType(param_type), arg_expr_type):
                     Logger.warning(
                         "Passing expression of type '{}' as argument #{} for function '{}' narrowing on line {}. Expected type is '{}'."
-                        .format(arg_expr_type.toString(), i + 1, function_name, self.getLineNr(), param_type))
+                            .format(arg_expr_type.toString(), i + 1, function_name, self.getLineNr(), param_type))
                     # no exception needed here
 
         self.expression_type = function_type.getReturnType()

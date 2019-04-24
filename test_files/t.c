@@ -2,22 +2,20 @@
 
 int a = 5;
 
-void t(int b);
-
-float q(int q);
-
-void t(int b){
-a = b;
-}
 
 
 int main(){
 
-int b;
-b = 2555;
+int* b = &a;
 
-char c;
-float q;
+int** c = &b;
+
+int*** d = &c;
+
+int* q = **d;
+
+q = b;
+
 return 0;
 
 }

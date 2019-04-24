@@ -1,30 +1,47 @@
 declare i32 @printf(i8*, ...) nounwind 
 declare i32 @scanf(i8*, ...) nounwind 
 @a = global i32 5
-define void @t(i32){
-%T1.b = alloca i32
-store i32 %0, i32* %T1.b 
-%2 = load i32, i32* %T1.b 
-store i32 %2, i32* @a 
-ret void
-}
 define i32 @main(){
-%T2.b = alloca i32
-store i32 0, i32* %T2.b
+%1 = load i32, i32* @a 
+%2 = alloca i32
+store i32 %1, i32* %2 
+%3 = alloca i32*
+store i32* %2, i32** %3 
+%T1.b = alloca i32*
+%4 = load i32*, i32** %3 
+store i32* %4, i32** %T1.b 
 
-%1 = alloca i32
-store i32 2555, i32* %1
-%2 = load i32, i32* %1 
-store i32 %2, i32* %T2.b 
-%T2.c = alloca i8
-store i8 0, i8* %T2.c
+%5 = load i32*, i32** %T1.b 
+%6 = alloca i32*
+store i32* %5, i32** %6 
+%7 = alloca i32**
+store i32** %6, i32*** %7 
+%T1.c = alloca i32**
+%8 = load i32**, i32*** %7 
+store i32** %8, i32*** %T1.c 
 
-%T2.q = alloca float
-store float 0x0000000000000000, float* %T2.q
+%9 = load i32**, i32*** %T1.c 
+%10 = alloca i32**
+store i32** %9, i32*** %10 
+%11 = alloca i32***
+store i32*** %10, i32**** %11 
+%T1.d = alloca i32***
+%12 = load i32***, i32**** %11 
+store i32*** %12, i32**** %T1.d 
 
-%3 = alloca i32
-store i32 0, i32* %3
-%4 = load i32, i32* %3 
-ret i32 %4
+%13 = load i32**, i32*** %12 
+%14 = load i32*, i32** %13 
+%15 = alloca i32*
+store i32* %14, i32** %15 
+%T1.q = alloca i32*
+%16 = load i32*, i32** %15 
+store i32* %16, i32** %T1.q 
+
+%17 = load i32*, i32** %T1.b 
+store i32* %17, i32** %T1.q 
+%18 = alloca i32
+store i32 0, i32* %18
+%19 = load i32, i32* %18 
+ret i32 %19
 }
 

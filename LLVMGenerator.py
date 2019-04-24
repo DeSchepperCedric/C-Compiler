@@ -36,6 +36,8 @@ class LLVMGenerator:
 
         elif isinstance(node, AddressExpr):
             return self.addressExpr(node)
+        elif isinstance(node, PointerDerefExpr):
+            return self.pointerDerefExpr(node)
 
         elif isinstance(node, IdentifierExpr):
             return self.identifierExpr(node)
@@ -694,7 +696,6 @@ class LLVMGenerator:
 
     def addressExpr(self, node):
 
-        # %1 = alloca i32*, align 8
         code, target_reg = self.astNodeToLLVM(node.getTargetExpr())
         expr_type = self.getLLVMType(node.getTargetExpr().getExpressionType())
 
@@ -710,6 +711,37 @@ class LLVMGenerator:
 
         self.cur_reg += 1
         return code, self.cur_reg - 1
+
+    def pointerDerefExpr(self, node):
+        #
+        if isinstance(node.getTargetPtr(), PointerDerefExpr):
+            expr_type = self.getLLVMType(node.getTargetPtr().getExpressionType())
+            target_reg = self.cur_reg - 1
+
+            load, register = self.loadVariable(target_reg, expr_type, False)
+            code = load
+            expr_type = expr_type[:-1]
+            load, register = self.loadVariable(register, expr_type, False)
+            code += load
+            code += self.allocate(self.cur_reg, expr_type, False)
+            code += self.storeVariable(self.cur_reg, register, expr_type, False)
+            self.cur_reg += 1
+
+            return code, self.cur_reg - 1
+        else:
+            code, target_reg = self.astNodeToLLVM(node.getTargetPtr())
+            expr_type = self.getLLVMType(node.getTargetPtr().getExpressionType())
+
+            #code += self.allocate(self.cur_reg, expr_type, False)
+
+            expr_type = expr_type[:-1]
+            load, register = self.loadVariable(target_reg, expr_type, False)
+            code += load
+            code += self.allocate(self.cur_reg, expr_type, False)
+            code += self.storeVariable(self.cur_reg, register, expr_type, False)
+            self.cur_reg += 1
+
+            return code, self.cur_reg - 1
 
     def addStringToGlobal(self, string):
         """
