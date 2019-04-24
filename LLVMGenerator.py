@@ -718,30 +718,23 @@ class LLVMGenerator:
             expr_type = self.getLLVMType(node.getTargetPtr().getExpressionType())
             target_reg = self.cur_reg - 1
 
-            load, register = self.loadVariable(target_reg, expr_type, False)
+            load, target_reg = self.loadVariable(target_reg, expr_type, False)
             code = load
-            expr_type = expr_type[:-1]
-            load, register = self.loadVariable(register, expr_type, False)
-            code += load
-            code += self.allocate(self.cur_reg, expr_type, False)
-            code += self.storeVariable(self.cur_reg, register, expr_type, False)
-            self.cur_reg += 1
 
-            return code, self.cur_reg - 1
         else:
             code, target_reg = self.astNodeToLLVM(node.getTargetPtr())
             expr_type = self.getLLVMType(node.getTargetPtr().getExpressionType())
 
-            #code += self.allocate(self.cur_reg, expr_type, False)
+        expr_type = expr_type[:-1]
+        load, register = self.loadVariable(target_reg, expr_type, False)
+        code += load
 
-            expr_type = expr_type[:-1]
-            load, register = self.loadVariable(target_reg, expr_type, False)
-            code += load
-            code += self.allocate(self.cur_reg, expr_type, False)
-            code += self.storeVariable(self.cur_reg, register, expr_type, False)
-            self.cur_reg += 1
+        code += self.allocate(self.cur_reg, expr_type, False)
+        code += self.storeVariable(self.cur_reg, register, expr_type, False)
 
-            return code, self.cur_reg - 1
+        self.cur_reg += 1
+
+        return code, self.cur_reg - 1
 
     def addStringToGlobal(self, string):
         """
