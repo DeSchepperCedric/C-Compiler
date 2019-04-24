@@ -445,15 +445,9 @@ class FuncDecl(SymbolDecl):
                                        add_open_close=add_open_close)
 
     def addToSymbolTable(self, symbol_table):
-<<<<<<< HEAD
-        # TODO, this declaration has to conform with any previous declarations
-        #       can override previous non-function declarations
-        #       and has to be inserted into the global scope
-=======
         glob_sym_tbl = symbol_table.getGlobalScope()
 
         new_func_type = FunctionType(self.symbol_type, [type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list])
->>>>>>> 37d2f2435b8ca7ec288bc34cfb5f1e7d7ed0605e
 
         # symbol lookups
         local_type, local_scope = symbol_table.lookup(self.symbol_id, own_scope_only=True)
@@ -466,11 +460,6 @@ class FuncDecl(SymbolDecl):
                             .format(self.symbol_id, new_func_type.toString(), self.getLineNr(), local_type.toString()))
             raise AstTypingException()
 
-<<<<<<< HEAD
-        symbol_table.insert(self.symbol_id, FunctionType(self.symbol_type,
-                                                         [type_to_string(param.getParamType(), param.getPointerCount())
-                                                          for param in self.param_list]))
-=======
         # check if the symbol is present throughout the symbol tree and is a function
         # if so, the new declaration must have the exact same type as previous declarations
         # if the symbol is present in the tree but has correct type, it does not matter, new declaration will simply override in local scope
@@ -493,7 +482,6 @@ class FuncDecl(SymbolDecl):
         # check if not present in global scope => add to global scope
         if global_type == 0:
             glob_sym_tbl.insert(self.symbol_id, new_func_type)
->>>>>>> 37d2f2435b8ca7ec288bc34cfb5f1e7d7ed0605e
 
 
 class FuncDef(TopLevelNode):
