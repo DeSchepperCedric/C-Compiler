@@ -30,6 +30,9 @@ class LLVMGenerator:
         elif isinstance(node, AssignmentExpr):
             return self.assignmentExpr(node)
 
+        elif isinstance(node, AddressExpr):
+            return self.addressExpr(node)
+
         elif isinstance(node, IdentifierExpr):
             return self.identifierExpr(node)
 
@@ -217,10 +220,14 @@ class LLVMGenerator:
 
         is_global = node.getSymbolTable().isGlobal(var_id)
 
-
-        if is_global:
+        if is_global and isinstance(node.getInitExpr(), ConstantExpr):
             # node.getInitExpr() should return a ConstantExpr
             code += "@{} = global {} {}".format(var_id, var_type, node.getInitExpr().getValue())
+
+        elif is_global and isinstance(node.getInitExpr(), AddressExpr):
+            target_reg = "@" + node.getInitExpr().getTargetExpr().getIdentifierName()
+            code += "@{} = global {} {}".format(var_id, var_type, target_reg)
+
         else:
             new_code, register = self.astNodeToLLVM(node.getInitExpr())
             code += new_code
@@ -434,14 +441,6 @@ class LLVMGenerator:
             type_string = type_string.replace("bool", "i1")
             return type_string
 
-        # TODO convert to new system
-        # TODO add char/string
-        if type == "float":
-            return "float"
-        elif type == "int":
-            return "i32"
-        elif type == "bool":
-            return "i1"
         return ""
 
     def identifierExpr(self, node):
@@ -666,6 +665,27 @@ class LLVMGenerator:
         double_val = struct.pack('>d', single_precision_val)
         double_hex = "0x" + double_val.hex()
         return double_hex
+
+    def addressExpr(self, node):
+
+        # %1 = alloca i32*, align 8
+        code, target_reg = self.astNodeToLLVM(node.getTargetExpr())
+        expr_type = self.getLLVMType(node.getTargetExpr().getExpressionType())
+
+        register = self.cur_reg
+        self.cur_reg += 1
+        code += self.allocate(register, expr_type, False)
+        code += self.storeVariable(register, target_reg, expr_type, False)
+
+        expr_type += "*"
+
+        code += self.allocate(self.cur_reg, expr_type, False)
+        code += self.storeVariable(self.cur_reg, register, expr_type, False)
+
+        self.cur_reg += 1
+        return code, self.cur_reg - 1
+
+
 
 
 
