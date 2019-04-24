@@ -23,3 +23,8 @@ class AstTypingException(CompilerException):
     """
     pass
 
+class AstPruningException(CompilerException):
+    """
+        Exception thrown when an error occurs while AST pruning w.r.t. 'return', 'contine', 'break'
+    """
+    pass
