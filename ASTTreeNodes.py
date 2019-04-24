@@ -211,6 +211,28 @@ class ProgramNode(ASTNode):
 
         return symbol_table
 
+    def pruneDeadCode(self):
+    	"""
+			Removes all the code that has become unreachable because of return, break and continue.
+
+			Returns true if pruning occurred, false otherwise.
+
+			Note: since pruning propagates up the AST-tree, the return value can be used to propagate the pruning.
+    	"""
+
+    	# iterate over children:
+    	#  if func:
+    	#	prune body
+
+    	# in body:
+    	# iterate over children:
+    	#   if pruning statement:
+    	#		skip all the other children
+    	#	    and return that pruning has occurred
+
+
+    	pass
+
     def toDot(self, parent_nr=None, begin_nr=1, add_open_close=False):
         return self.M_defaultToDotImpl(children=self.children,
                                        parent_nr=parent_nr,
@@ -2305,7 +2327,7 @@ class ArrayAccessExpr(Expression):
         index_type = self.index_expr.resolveExpressionType(symbol_table)
 
         # index type needs to be compatible with 
-        if not is_conversion_possible('int', index_type.toString()):
+        if not is_conversion_possible(VariableType('int'), index_type):
             Logger.error("Invalid index expression passed to array '{}' on line {}: Type '{}' is requested, incompatible type '{}' was given."
                             .format(target_name, self.getLineNr(), 'int', index_type.toString()))
             raise AstTypingException()
