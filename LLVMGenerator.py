@@ -39,6 +39,8 @@ class LLVMGenerator:
             return self.funcDecl(node)
         elif isinstance(node, FuncDef):
             return self.funcDef(node)
+        elif isinstance(node, FuncCallExpr):
+            return self.funcCallExpr(node)
 
         elif isinstance(node, AddExpr):
             return self.arithmeticExpr(node, "add")
@@ -359,6 +361,18 @@ class LLVMGenerator:
         self.cur_reg += 1
         new_code, reg = self.astNodeToLLVM(node.getBody())
         code += new_code
+
+        # replace by if return_type == "void" at some point when == issue is fixed
+        return_found = False
+        for child in node.getBody().getChildren():
+            if isinstance(child, ReturnStatement) or isinstance(child, ReturnWithExprStatement):
+                return_found = True
+                break
+
+        # TODO find out why this doesn't work
+        if not return_found:
+            code += "ret void\n"
+
         code += "}\n"
 
         # exit scope
@@ -368,6 +382,7 @@ class LLVMGenerator:
     def funcCallExpr(self, node):
         # "%retval = call i32 @test(i32 %argc)"
         # first load the correct variables to use as arguments
+
         code = ""
         first_arg = True
         arg_list = "("
@@ -376,21 +391,35 @@ class LLVMGenerator:
                 arg_list += ","
             else:
                 first_arg = False
+
             arg_code, arg_reg = self.astNodeToLLVM(arg)
+
             code += arg_code
 
             arg_type = self.getLLVMType(arg.getExpressionType())
             arg_list += "{} %{}".format(arg_type, arg_reg)
         arg_list += ")"
 
-        func_reg = self.cur_reg
-        self.cur_reg += 1
-        code += "%{} = call ".format(func_reg)
 
         return_type = self.getLLVMType(node.getExpressionType())
-        code += "{} @{}".format(return_type, node.getFunctionID())
+
+        func_reg = self.cur_reg
+        # void function result can't be assigned
+        if return_type == "void":
+            code += "call "
+        else:
+            code += "%{} = call ".format(func_reg)
+            self.cur_reg += 1
+
+        code += "{} @{}".format(return_type, node.getFunctionID().getIdentifierName())
         code += arg_list
         code += "\n"
+        # store variable after call (when not void as return type)
+        if not return_type == "void":
+            code += self.allocate(self.cur_reg, return_type, False)
+            code += self.storeVariable(self.cur_reg, func_reg, return_type, False)
+            func_reg = self.cur_reg
+            self.cur_reg += 1
 
         return code, func_reg
 
@@ -424,7 +453,7 @@ class LLVMGenerator:
         var_type = self.getLLVMType(node.getExpressionType())
 
         if node.getSymbolTable().isGlobal(identifier):
-            return self.loadVariable(identifier, var_type, True), -1
+            return self.loadVariable(identifier, var_type, True)
         else:
             t, table = node.getSymbolTable().lookup(identifier)
             var_name = table + "." + identifier
