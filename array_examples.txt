@@ -1,0 +1,72 @@
+
+
+######################################
+
+int a[5];
+%1 = alloca [5 x i32], align 16
+
+
+
+int a[5];
+a[1] = 60;
+%1 = alloca [5 x i32], align 16
+%2 = getelementptr inbounds [5 x i32], [5 x i32]* %1, i64 0, i64 1
+store i32 60, i32* %2, align 4
+
+
+######################################
+
+int x = 6;
+int y = 20;
+
+int a[x + y];
+
+%1 = alloca i32, align 4 # int x;
+store i32 6, i32* %1, align 4 # int x = 6;
+%2 = alloca i32, align 4 # int y;
+store i32 20, i32* %2, align 4 # int y = 20;
+
+# gewoon x + y uitrekenen en in een register duwen
+<ARRAY_PTR_REG??> = alloca i32, i64 <EXPR_RESULT_REG>, align 16
+
+
+######################################
+
+int x = 6;
+int y = 20;
+
+int a[x + y];
+
+a[3] = 20;
+
+%1 = alloca i32, align 4 # int x;
+store i32 6, i32* %1, align 4 # int x = 6;
+%2 = alloca i32, align 4 # int y;
+store i32 20, i32* %2, align 4 # int y = 20;
+
+# gewoon x + y uitrekenen en in een register duwen
+<ARRAY_PTR_REG??> = alloca i32, i64 <EXPR_RESULT_REG>, align 16
+
+ %10 = getelementptr inbounds i32, i32* %9, i64 3 # retrieve element
+ store i32 20, i32* %10, align 4                  # a[3] = 20;
+
+######################################
+
+
+int* a[20];
+%1 = alloca [6 x i32*], align 16
+
+
+######################################
+
+
+int a[20];
+int* ptr_to_array_begin = a;
+
+%1 = alloca [6 x i32], align 16 # declare array
+
+%2 = alloca i32*, align 8 # declare ptr
+%3 = getelementptr inbounds [6 x i32], [6 x i32]* %1, i32 0, i32 0 # retrieve array address
+store i32* %3, i32** %2, align 8  # assign to pointer
+
+
