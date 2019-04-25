@@ -220,10 +220,7 @@ class ProgramNode(ASTNode):
         # iterate over children
         for tln in self.children:
             if isinstance(tln, FuncDef):  # functions contain statements that can be pruned
-                pruned = tln.pruneDeadCode()
-
-                if pruned:
-                    has_pruned = True
+                tln.pruneDeadCode()
         # ENDFOR
 
     def toDot(self, parent_nr=None, begin_nr=1, add_open_close=False):
