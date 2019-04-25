@@ -89,7 +89,8 @@ class ParserVisitor(CVisitor):
 
         param_list = [self.manuallyVisitChild(decl) for decl in param_declarations]
 
-        return FuncDecl(ctx.temp_typeName, func_id, ptr_count, param_list).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+        return FuncDecl(ctx.temp_typeName, func_id, ptr_count, param_list).setLineNr(ctx.start.line).setColNr(
+            ctx.start.column)
 
     # Visit a parse tree produced by CParser#varDeclSimple.
     def visitVarDeclSimple(self, ctx: CParser.VarDeclSimpleContext):
@@ -119,7 +120,8 @@ class ParserVisitor(CVisitor):
             raise AstCreationException()
 
         # temporarily set type to None
-        return ArrayDecl(ctx.temp_typeName, var_id, ptr_count, size_expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+        return ArrayDecl(ctx.temp_typeName, var_id, ptr_count, size_expr).setLineNr(ctx.start.line).setColNr(
+            ctx.start.column)
 
     # Visit a parse tree produced by CParser#varDeclInit.
     def visitVarDeclInit(self, ctx: CParser.VarDeclInitContext):
@@ -135,7 +137,8 @@ class ParserVisitor(CVisitor):
             raise AstCreationException()
 
         # temporarily set type to None
-        return VarDeclWithInit(ctx.temp_typeName, var_id, ptr_count, init_expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+        return VarDeclWithInit(ctx.temp_typeName, var_id, ptr_count, init_expr).setLineNr(ctx.start.line).setColNr(
+            ctx.start.column)
 
     # Visit a parse tree produced by CParser#param.
     def visitParam(self, ctx: CParser.ParamContext):
@@ -162,9 +165,8 @@ class ParserVisitor(CVisitor):
         # tuple that contains the declared identifier and the pointer count
         func_id, ptr_count = self.manuallyVisitChild(ctx.getChild(1))
 
-
         # the body is the last statement
-        body_child = ctx.getChild(ctx.getChildCount()-1)
+        body_child = ctx.getChild(ctx.getChildCount() - 1)
         compound_statement = self.manuallyVisitChild(body_child)[0]
         body = Body(compound_statement.child_list).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
@@ -172,16 +174,16 @@ class ParserVisitor(CVisitor):
         # child list without the first and last child
         param_section = list(ctx.getChildren())[2:-1]
 
-        param_children = filter(lambda c : not c.getText() in ['(', ',', ')'], param_section)
+        param_children = filter(lambda c: not c.getText() in ['(', ',', ')'], param_section)
 
         param_nodes = [self.manuallyVisitChild(child) for child in param_children]
 
-        return FuncDef(return_type, func_id, ptr_count, param_nodes, body).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+        return FuncDef(return_type, func_id, ptr_count, param_nodes, body).setLineNr(ctx.start.line).setColNr(
+            ctx.start.column)
 
     # Visit a parse tree produced by CParser#statement.
     def visitStatement(self, ctx: CParser.StatementContext):
         return self.manuallyVisitChild(ctx.getChild(0))
-
 
     # Visit a parse tree produced by CParser#if_statement.
     def visitIf_statement(self, ctx: CParser.If_statementContext):
@@ -229,7 +231,7 @@ class ParserVisitor(CVisitor):
 
         # returns list of statements
         body_statements = self.manuallyVisitChild(ctx.getChild(4))
-        
+
         # if the statement after the forloop loop, is a compound statement
         # we use its contents instead of the compound itself.
         if len(body_statements) == 1 and isinstance(body_statements[0], CompoundStmt):
@@ -247,7 +249,7 @@ class ParserVisitor(CVisitor):
         # expression? SC assignment_expr? SC expression? # forCondNoDecl
 
         targets = ["INIT", "COND", "ITER"]
-        cur_target = 0 # specifies what we're looking for
+        cur_target = 0  # specifies what we're looking for
 
         init_list = []
         cond_expr = BoolConstantExpr("true").setLineNr(ctx.start.line).setColNr(ctx.start.column) # empty condition is "true"
@@ -276,7 +278,7 @@ class ParserVisitor(CVisitor):
         # while ( expr ) statement
         cond_expr = self.manuallyVisitChild(ctx.getChild(2))
         body_statements = self.manuallyVisitChild(ctx.getChild(4))
-        
+
         # if the statement after the while loop, is a compound statement
         # we use its contents instead of the compound itself.
         if len(body_statements) == 1 and isinstance(body_statements[0], CompoundStmt):
@@ -334,12 +336,12 @@ class ParserVisitor(CVisitor):
         return [ReturnStatement().setLineNr(ctx.start.line).setColNr(ctx.start.column)]
 
     # Visit a parse tree produced by CParser#jumpReturnWithExpr.
-    def visitJumpReturnWithExpr(self, ctx:CParser.JumpReturnWithExprContext):
+    def visitJumpReturnWithExpr(self, ctx: CParser.JumpReturnWithExprContext):
 
         # child 0: 'return'
         # child 1: return value
         return_value = self.manuallyVisitChild(ctx.getChild(1))
-        
+
         # child 2: ';'
 
         return [ReturnWithExprStatement(return_value).setLineNr(ctx.start.line).setColNr(ctx.start.column)]
@@ -362,7 +364,8 @@ class ParserVisitor(CVisitor):
         expr_list = self.manuallyVisitChild(ctx.getChild(0))
 
         # one statement per expression
-        statement_list = [ExpressionStatement(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column) for expr in expr_list]
+        statement_list = [ExpressionStatement(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column) for expr in
+                          expr_list]
 
         # return statements
         return statement_list
@@ -387,7 +390,9 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if not is_valid_assignment_target_expr(left):
-            Logger.error("Invalid target '{}' for assignment on line {}.".format(get_full_context_source(ctx.getChild(0)), ctx.start.line))
+            Logger.error(
+                "Invalid target '{}' for assignment on line {}.".format(get_full_context_source(ctx.getChild(0)),
+                                                                        ctx.start.line))
             raise AstCreationException()
 
         if operator == "=":
@@ -413,7 +418,6 @@ class ParserVisitor(CVisitor):
         if ctx.getChildCount() == 1:
             return self.manuallyVisitChild(ctx.getChild(0))
 
-
         # TODO check constant
 
         # get left: child #0
@@ -431,7 +435,7 @@ class ParserVisitor(CVisitor):
             return self.manuallyVisitChild(ctx.getChild(0))
 
         # TODO check constant
-        
+
         # get left: child #0
         left = self.manuallyVisitChild(ctx.getChild(0))
         # child #1: "&&" or "and"
@@ -451,10 +455,10 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == "==":
-        	# TODO check constant
+            # TODO check constant
             return EqualityExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "!=":
-        	# TODO check constant
+            # TODO check constant
             return InequalityExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for equality expr: {}".format(operator))
@@ -470,16 +474,16 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == ">":
-        	# TODO check constant
+            # TODO check constant
             return CompGreater(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "<":
-        	# TODO check constant
+            # TODO check constant
             return CompLess(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == ">=":
-        	# TODO check constant
+            # TODO check constant
             return CompGreaterEqual(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "<=":
-        	# TODO check constant
+            # TODO check constant
             return CompLessEqual(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for comparison expr: {}".format(operator))
@@ -495,10 +499,10 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == "+":
-        	# TODO check constant
+            # TODO check constant
             return AddExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "-":
-        	# TODO check constant
+            # TODO check constant
             return SubExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for additive expr: {}".format(operator))
@@ -514,13 +518,13 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == "*":
-        	# TODO check constant
+            # TODO check constant
             return MulExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "/":
-        	# TODO check constant
+            # TODO check constant
             return DivExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "%":
-        	# TODO check constant
+            # TODO check constant
             return ModExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for multiplicative expr: {}".format(operator))
@@ -551,15 +555,15 @@ class ParserVisitor(CVisitor):
         expr = self.manuallyVisitChild(ctx.getChild(1))
 
         if operator == "+":
-        	# TODO check constant
+            # TODO check constant
             return PlusPrefixExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "-":
-        	# TODO check constant
+            # TODO check constant
             return MinPrefixExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "not" or operator == '!':
-        	# TODO check constant
+            # TODO check constant
             return LogicNotExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "*":
@@ -727,7 +731,7 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#str_constant.
     def visitStr_constant(self, ctx: CParser.Str_constantContext):
-        constant = ctx.getText().rstrip("\"").lstrip("\"") # remove "
+        constant = ctx.getText().rstrip("\"").lstrip("\"")  # remove "
         return StringConstantExpr(constant).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#char_constant.
@@ -746,12 +750,13 @@ def is_valid_assignment_target_expr(target_expr):
         Note: it should also be determine if the type of the node still allows for 
         a valid assignment, this function will only determine fitness w.r.t. Expression type.
     """
-    
+
     # note: this is obtained by analysing the grammar
     # Also retrieving an object with a getter-function and assigning to it is still possible due to the derefence expression:
     #       "*get_object_location() = new_object_value"
 
-    if isinstance(target_expr, ArrayAccessExpr) or isinstance(target_expr, IdentifierExpr) or isinstance(target_expr, PointerDerefExpr):
+    if isinstance(target_expr, ArrayAccessExpr) or isinstance(target_expr, IdentifierExpr) or isinstance(target_expr,
+                                                                                                         PointerDerefExpr):
         return True
 
     return False

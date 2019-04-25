@@ -2,22 +2,18 @@
 
 int a = 5;
 
-void t(int b);
-
-float q(int q);
-
-void t(int b){
-a = b;
-}
 
 
 int main(){
 
-int b;
-b = 2555;
+if(a > 5){
+return 5;
 
-char c;
-float q;
+
+}
+else{
+return 20;}
+
 return 0;
 
 }

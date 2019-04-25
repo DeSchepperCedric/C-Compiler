@@ -36,6 +36,8 @@ class LLVMGenerator:
 
         elif isinstance(node, AddressExpr):
             return self.addressExpr(node)
+        elif isinstance(node, PointerDerefExpr):
+            return self.pointerDerefExpr(node)
 
         elif isinstance(node, IdentifierExpr):
             return self.identifierExpr(node)
@@ -268,6 +270,7 @@ class LLVMGenerator:
         return code, -1
 
     def branchStatement(self, node):
+        """
         # no else statement will still generate a label
         # might be removed later
         code, register = self.astNodeToLLVM(node.getCondExpr())
@@ -307,6 +310,33 @@ class LLVMGenerator:
 
 
         return code, -1
+        """
+
+        # no else statement will still generate a label
+        # might be removed later
+        code, register = self.astNodeToLLVM(node.getCondExpr())
+        code += "br i1 %{}, label %if{}, label %else{}\n".format(register, register, register)
+
+
+        # if
+        reg_if_label = self.cur_reg
+        # code_if = "; <label>:{}:\n".format(reg_if_label)  # comment for clarity
+        code_if, reg = self.astNodeToLLVM(node.getIfBody())
+        code += "if{}:\n".format(register)
+        code += code_if
+        code += "br label %end{}\n".format(register)
+
+        self.cur_reg += 1
+        code_else, reg = self.astNodeToLLVM(node.getElseBody())
+        code += "else{}:\n".format(register)
+        code += code_else
+        code += "br label %end{}\n".format(register)
+
+        self.cur_reg += 1
+        code += "end{}:\n".format(register)
+
+        return code, -1
+
 
     def programNode(self, node):
         code = ""
@@ -694,7 +724,6 @@ class LLVMGenerator:
 
     def addressExpr(self, node):
 
-        # %1 = alloca i32*, align 8
         code, target_reg = self.astNodeToLLVM(node.getTargetExpr())
         expr_type = self.getLLVMType(node.getTargetExpr().getExpressionType())
 
@@ -709,6 +738,30 @@ class LLVMGenerator:
         code += self.storeVariable(self.cur_reg, register, expr_type, False)
 
         self.cur_reg += 1
+        return code, self.cur_reg - 1
+
+    def pointerDerefExpr(self, node):
+        #
+        if isinstance(node.getTargetPtr(), PointerDerefExpr):
+            expr_type = self.getLLVMType(node.getTargetPtr().getExpressionType())
+            target_reg = self.cur_reg - 1
+
+            load, target_reg = self.loadVariable(target_reg, expr_type, False)
+            code = load
+
+        else:
+            code, target_reg = self.astNodeToLLVM(node.getTargetPtr())
+            expr_type = self.getLLVMType(node.getTargetPtr().getExpressionType())
+
+        expr_type = expr_type[:-1]
+        load, register = self.loadVariable(target_reg, expr_type, False)
+        code += load
+
+        code += self.allocate(self.cur_reg, expr_type, False)
+        code += self.storeVariable(self.cur_reg, register, expr_type, False)
+
+        self.cur_reg += 1
+
         return code, self.cur_reg - 1
 
     def addStringToGlobal(self, string):
@@ -731,6 +784,7 @@ class LLVMGenerator:
         return reg
 
     def storeString(self, register):
+        # TODO
         # store i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str, i32 0, i32 0), i8** %2, align 8
         type_size = "["
         return "store i8 getelementptr inbounds"
