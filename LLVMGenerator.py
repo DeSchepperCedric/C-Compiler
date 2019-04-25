@@ -15,7 +15,6 @@ class LLVMGenerator:
         Returns LLVM code string + register number
         Only function to call outside the class
         """
-
         if isinstance(node, IncludeNode):
             return self.include()
 
@@ -374,7 +373,6 @@ class LLVMGenerator:
 
         return code, -1
 
-
     def programNode(self, node):
         code = ""
         for child in node.getChildren():
@@ -514,9 +512,6 @@ class LLVMGenerator:
             self.cur_reg += 1
 
         return code, func_reg
-
-    def isConstant(self, node):
-        return isinstance(node, ConstantExpr)
 
     def getLLVMType(self, type_node):
         """ Converts a symbolType to an LLVM type"""
@@ -659,8 +654,13 @@ class LLVMGenerator:
     def returnWithExprStatement(self, node):
 
         return_type = self.getLLVMType(node.getExpression().getExpressionType())
-        code, register = self.astNodeToLLVM(node.getExpression())
 
+        same_type = (self.getLLVMType(node.getExpression().getExpressionType()) == return_type)
+        if isinstance(node.getExpression(), ConstantExpr) and same_type:
+            code = "ret {} {}\n".format(return_type, node.getExpression().getValue())
+            return code, -1
+
+        code, register = self.astNodeToLLVM(node.getExpression())
         if not isinstance(node.getExpression(), IdentifierExpr):
             new_code, register = self.loadVariable(register, return_type, False)
             code += new_code

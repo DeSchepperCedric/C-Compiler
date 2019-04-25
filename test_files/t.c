@@ -1,15 +1,11 @@
 #include <stdio.h>
 
-int a = 5;
+int main(){
 
+int b = 10+5;
 
-
-void main(){
-
-a = 20;
-return;
+return 0;
 }
-
 
 
 
