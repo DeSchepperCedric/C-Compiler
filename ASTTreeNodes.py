@@ -850,7 +850,7 @@ class StatementContainer:
                 if child_pruned:
                     # if statement has pruned both branches
                     has_pruned = True
-                    break;
+                    break
             elif isinstance(child, WhileStmt):
                 # pass in_loop so that children are aware
                 child.pruneDeadCode(in_loop)  # return value does not matter.
@@ -864,7 +864,7 @@ class StatementContainer:
                 if child_pruned:
                     # pruning statement in compound statement will always prune
                     has_pruned = True
-                    break;
+                    break
 
         if has_pruned:
             # remove children
@@ -2069,20 +2069,13 @@ class ModExpr(Expression):
         left_type = self.left.resolveExpressionType(symbol_table)
         right_type = self.right.resolveExpressionType(symbol_table)
 
-        left_type_name = None
-        right_type_name = None
-
-        if left_type.isVar() and not left_type.isPtr() and not left_type.toString() == 'float':
-            left_type_name = left_type.toString()
-        else:
+        if not (left_type.isVar() and not left_type.isPtr() and not left_type.toString() == 'float'):
             Logger.error(
                 "Operands of modulo operator need to be of type 'bool', 'char', or 'int'. LHS argument of type '{}' was given on line {}."
                     .format(left_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
-        if right_type.isVar() and not right_type.isPtr() and not right_type.toString() == 'float':
-            right_type_name = right_type.toString()
-        else:
+        if not (right_type.isVar() and not right_type.isPtr() and not right_type.toString() == 'float'):
             Logger.error(
                 "Operands of modulo operator need to be of type 'bool', 'char', or 'int'. RHS side argument of type '{}' was given on line {}."
                     .format(right_type.toString(), self.getLineNr()))

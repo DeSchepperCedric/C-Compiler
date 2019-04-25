@@ -4,18 +4,10 @@ int a = 5;
 
 
 
-int main(){
+void main(){
 
-if(a > 5){
-return 5;
-
-
-}
-else{
-return 20;}
-
-return 0;
-
+a = 20;
+return;
 }
 
 

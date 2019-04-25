@@ -8,6 +8,7 @@ class LLVMGenerator:
         self.reg_stack = list()
         self.global_scope_string = ""
         self.string_to_regs = dict()
+        self.reg_to_string = dict()
 
     def astNodeToLLVM(self, node):
         """
