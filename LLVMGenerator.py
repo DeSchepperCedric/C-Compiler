@@ -27,6 +27,8 @@ class LLVMGenerator:
             return self.integerConstantExpr(node)
         elif isinstance(node, CharConstantExpr):
             return self.charConstantExpr(node)
+        elif isinstance(node, BoolConstantExpr):
+            return self.boolConstantExpr(node)
 
         elif isinstance(node, VarDeclDefault):
             return self.varDeclDefault(node)
@@ -92,7 +94,7 @@ class LLVMGenerator:
             return self.body(node)
         elif isinstance(node, ProgramNode):
             return self.programNode(node)
-        return "", self.cur_reg
+        return "", -1
 
     def boolConstantExpr(self, expr):
         """
@@ -102,9 +104,9 @@ class LLVMGenerator:
         register = self.cur_reg
         self.cur_reg += 1
         llvm_type = "i1"
-
+        value = 1 if expr.getBoolValue() == True else 0
         code += "%{} = alloca {}\n".format(register, llvm_type)
-        code += "store {} {}, {}* %{}\n".format(llvm_type, expr.getBoolValue(), llvm_type, register)
+        code += "store {} {}, {}* %{}\n".format(llvm_type, value, llvm_type, register)
 
         return code, register
 
@@ -322,42 +324,53 @@ class LLVMGenerator:
         # no else statement will still generate a label
         # might be removed later
         code, register = self.astNodeToLLVM(node.getCondExpr())
+        load, register = self.loadVariable(register, "i1", False)
+        code += load
         code += "br i1 %{}, label %if.{}, label %else.{}\n".format(register, register, register)
 
         # if
         code_if, reg = self.astNodeToLLVM(node.getIfBody())
+
         code += "\nif.{}:\n".format(register)
         code += code_if
         code += "br label %end.{}\n".format(register)
+        if "\nret" in code_if:
+            self.cur_reg += 1
 
         code_else, reg = self.astNodeToLLVM(node.getElseBody())
         code += "\nelse.{}:\n".format(register)
         code += code_else
         code += "br label %end.{}\n".format(register)
+        if "\nret" in code_else:
+            self.cur_reg += 1
 
         code += "\nend.{}:\n".format(register)
+        # self.cur_reg += 1
 
         return code, -1
 
     def whileStatement(self, node):
-
         code_cond, register = self.astNodeToLLVM(node.getCondExpr())
 
-        # code += "br i1 %{}, label %if{}, label %else{}\n".format(register, register, register)
+        # while(variable)
+        if not isinstance(node.getCondExpr(), IdentifierExpr):
+            load, register = self.loadVariable(register, "i1", False)
+            code_cond += load
+
         code = "br label %cond.{}\n".format(register)
         code += "\ncond.{}:\n".format(register)
         code += code_cond
         code += "br i1 %{}, label %while.{}, label %end.{}\n".format(register, register, register)
 
-
-        reg_if_label = self.cur_reg
-        # code_if = "; <label>:{}:\n".format(reg_if_label)  # comment for clarity
         code_while, reg = self.astNodeToLLVM(node.getBody())
         code += "\nwhile.{}:\n".format(register)
         code += code_while
         code += "br label %cond.{}\n".format(register)
+        if "\nret" in code_while:
+            self.cur += 1
 
         code += "\nend.{}:\n".format(register)
+
 
         return code, -1
 
@@ -697,6 +710,9 @@ class LLVMGenerator:
 
         self.cur_reg += 1
 
+        code += self.allocate(self.cur_reg, "i1", False)
+        code += self.storeVariable(self.cur_reg, self.cur_reg - 1, "i1", False)
+        self.cur_reg += 1
         return code, self.cur_reg - 1
 
     def include(self):
@@ -732,7 +748,7 @@ class LLVMGenerator:
             identifier = table + "." + identifier
             code += self.storeVariable(identifier, register, left_type, False)
 
-        return code, -1
+        return code, identifier
 
     def expressionStatement(self, node):
         return self.astNodeToLLVM(node.getExpression())
