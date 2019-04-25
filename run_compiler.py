@@ -29,7 +29,7 @@ def run_compiler(source_file_path, output_name):
 
     visitor = ParserVisitor()
     ast_tree = visitor.visitProgram(parse_tree) # create AST
-    #ast_tree.pruneDeadCode()                    # prune after continue, return and break
+    ast_tree.pruneDeadCode()                    # prune after continue, return and break
     ast_tree.genSymbolTable()                   # annotate AST with types and symbol table
     symbol_table = ast_tree.getSymbolTable()
 
