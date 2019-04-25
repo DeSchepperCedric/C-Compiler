@@ -270,6 +270,7 @@ class LLVMGenerator:
         return code, -1
 
     def branchStatement(self, node):
+        """
         # no else statement will still generate a label
         # might be removed later
         code, register = self.astNodeToLLVM(node.getCondExpr())
@@ -309,6 +310,33 @@ class LLVMGenerator:
 
 
         return code, -1
+        """
+
+        # no else statement will still generate a label
+        # might be removed later
+        code, register = self.astNodeToLLVM(node.getCondExpr())
+        code += "br i1 %{}, label %if{}, label %else{}\n".format(register, register, register)
+
+
+        # if
+        reg_if_label = self.cur_reg
+        # code_if = "; <label>:{}:\n".format(reg_if_label)  # comment for clarity
+        code_if, reg = self.astNodeToLLVM(node.getIfBody())
+        code += "if{}:\n".format(register)
+        code += code_if
+        code += "br label %end{}\n".format(register)
+
+        self.cur_reg += 1
+        code_else, reg = self.astNodeToLLVM(node.getElseBody())
+        code += "else{}:\n".format(register)
+        code += code_else
+        code += "br label %end{}\n".format(register)
+
+        self.cur_reg += 1
+        code += "end{}:\n".format(register)
+
+        return code, -1
+
 
     def programNode(self, node):
         code = ""
@@ -756,6 +784,7 @@ class LLVMGenerator:
         return reg
 
     def storeString(self, register):
+        # TODO
         # store i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str, i32 0, i32 0), i8** %2, align 8
         type_size = "["
         return "store i8 getelementptr inbounds"
