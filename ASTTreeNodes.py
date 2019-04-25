@@ -255,8 +255,8 @@ class IncludeNode(TopLevelNode):
 
     def addToSymbolTable(self, symbol_table):
         self.setSymbolTable(symbol_table)
-        symbol_table.insert("printf", FunctionType('void', []))
-        symbol_table.insert("scanf", FunctionType('void', []))
+        symbol_table.insert("printf", FunctionType('int', []))
+        symbol_table.insert("scanf", FunctionType('int', []))
 
 
 class SymbolDecl(TopLevelNode):
