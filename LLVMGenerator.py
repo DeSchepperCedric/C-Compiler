@@ -404,8 +404,8 @@ class LLVMGenerator:
 
     def funcParam(self, node):
         # param_type = self.getLLVMType(node.getExpressionType())
-        param_type = node.getParamType()
-        param_type = self.getLLVMType(VariableType(param_type))
+        param_type, t = node.getSymbolTable().lookup(node.getParamID())
+        param_type = self.getLLVMType(param_type)
         return param_type
 
     def funcDecl(self, node):
@@ -506,26 +506,27 @@ class LLVMGenerator:
             arg_list += "{} %{}".format(arg_type, arg_reg)
         arg_list += ")"
 
-        return_type = self.getLLVMType(node.getExpressionType())
-
+        function_id = node.getFunctionID().getIdentifierName()
+        reg_type = self.getLLVMType(node.getExpressionType())
+        return_type = reg_type if function_id != "printf" else "i32 (i8*, ...)"
         func_reg = self.cur_reg
         # void function result can't be assigned
-        if return_type == "void":
+        if reg_type == "void":
             code += "call "
         else:
             code += "%{} = call ".format(func_reg)
             self.cur_reg += 1
 
-        code += "{} @{}".format(return_type, node.getFunctionID().getIdentifierName())
+        code += "{} @{}".format(return_type, function_id)
+
         code += arg_list
         code += "\n"
         # store variable after call (when not void as return type)
-        if not return_type == "void":
-            code += self.allocate(self.cur_reg, return_type, False)
-            code += self.storeVariable(self.cur_reg, func_reg, return_type, False)
+        if not reg_type == "void":
+            code += self.allocate(self.cur_reg, reg_type, False)
+            code += self.storeVariable(self.cur_reg, func_reg, reg_type, False)
             func_reg = self.cur_reg
             self.cur_reg += 1
-
         return code, func_reg
 
     def getLLVMType(self, type_node):
