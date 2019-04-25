@@ -28,6 +28,8 @@ class LLVMGenerator:
             return self.charConstantExpr(node)
         elif isinstance(node, BoolConstantExpr):
             return self.boolConstantExpr(node)
+        elif isinstance(node, StringConstantExpr):
+            return self.stringConstantExpr(node)
 
         elif isinstance(node, VarDeclDefault):
             return self.varDeclDefault(node)
@@ -142,16 +144,28 @@ class LLVMGenerator:
         """
         Return a constant integer with its type and the register it's stored in
         """
-        code = ""
         register = self.cur_reg
         self.cur_reg += 1
 
         llvm_type = "i8"
 
-        code += "%{} = alloca {}\n".format(register, llvm_type)
+        code = "%{} = alloca {}\n".format(register, llvm_type)
         code += "store {} {}, {}* %{}\n".format(llvm_type, ord(expr.getCharValue()[1]), llvm_type, register)
 
         return code, register
+
+    def stringConstantExpr(self, expr):
+        register = self.cur_reg
+        self.cur_reg += 1
+
+        string_reg = self.addStringToGlobal(expr.getStrValue())
+        llvm_type = "i8*"
+
+        code = "%{} = alloca {}\n".format(register, llvm_type)
+        code += self.storeString(string_reg, register)
+        return code, register
+
+
 
     def loadVariable(self, register, var_type, is_global):
         """
@@ -243,7 +257,6 @@ class LLVMGenerator:
         var_type, table = node.getSymbolTable().lookup(var_id)
         var_type = self.getLLVMType(var_type)
         code = ""
-
         is_global = node.getSymbolTable().isGlobal(var_id)
 
         if is_global and isinstance(node.getInitExpr(), ConstantExpr):
@@ -391,8 +404,8 @@ class LLVMGenerator:
 
     def funcParam(self, node):
         # param_type = self.getLLVMType(node.getExpressionType())
-        param_type = node.getParamType()
-        param_type = self.getLLVMType(VariableType(param_type))
+        param_type, t = node.getSymbolTable().lookup(node.getParamID())
+        param_type = self.getLLVMType(param_type)
         return param_type
 
     def funcDecl(self, node):
@@ -472,7 +485,6 @@ class LLVMGenerator:
     def funcCallExpr(self, node):
         # "%retval = call i32 @test(i32 %argc)"
         # first load the correct variables to use as arguments
-
         code = ""
         first_arg = True
         arg_list = "("
@@ -484,33 +496,37 @@ class LLVMGenerator:
 
             arg_code, arg_reg = self.astNodeToLLVM(arg)
 
-            code += arg_code
-
             arg_type = self.getLLVMType(arg.getExpressionType())
+
+            if isinstance(arg, ConstantExpr):
+                load, arg_reg = self.loadVariable(arg_reg, arg_type, False)
+                arg_code += load
+
+            code += arg_code
             arg_list += "{} %{}".format(arg_type, arg_reg)
         arg_list += ")"
 
-
-        return_type = self.getLLVMType(node.getExpressionType())
-
+        function_id = node.getFunctionID().getIdentifierName()
+        reg_type = self.getLLVMType(node.getExpressionType())
+        return_type = reg_type if function_id != "printf" else "i32 (i8*, ...)"
         func_reg = self.cur_reg
         # void function result can't be assigned
-        if return_type == "void":
+        if reg_type == "void":
             code += "call "
         else:
             code += "%{} = call ".format(func_reg)
             self.cur_reg += 1
 
-        code += "{} @{}".format(return_type, node.getFunctionID().getIdentifierName())
+        code += "{} @{}".format(return_type, function_id)
+
         code += arg_list
         code += "\n"
         # store variable after call (when not void as return type)
-        if not return_type == "void":
-            code += self.allocate(self.cur_reg, return_type, False)
-            code += self.storeVariable(self.cur_reg, func_reg, return_type, False)
+        if not reg_type == "void":
+            code += self.allocate(self.cur_reg, reg_type, False)
+            code += self.storeVariable(self.cur_reg, func_reg, reg_type, False)
             func_reg = self.cur_reg
             self.cur_reg += 1
-
         return code, func_reg
 
     def getLLVMType(self, type_node):
@@ -817,18 +833,18 @@ class LLVMGenerator:
         self.reg_to_string[reg] = string
 
         line = "@" + reg + " = private unnamed_addr constant "
-        line += "[" + str(len(string)) + " x i8]"
-        line += "c" + "\"" + string + "\00" + "\"" + "\n"
+        line += "[" + str(len(string) + 1) + " x i8] "
+        line += "c" + "\"" + string + "\\00" + "\"" + "\n"
 
         self.global_scope_string += line
         return reg
 
     def storeString(self, string_reg, reg_to):
         # store i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str, i32 0, i32 0), i8** %2, align 8
-        type_size = "[" + str(len(self.reg_to_string.get(string_reg))) + " x i8]"
-        code = "store i8 getelementptr inbounds"
+        type_size = "[" + str(len(self.reg_to_string.get(string_reg)) + 1) + " x i8]"
+        code = "store i8* getelementptr inbounds ("
         code += type_size + ", " + type_size + "*"
-        code += "@" + string_reg + ", i32 0, i32 0), "
+        code += " @" + string_reg + ", i32 0, i32 0), "
         code += "i8** " + "%{}".format(reg_to)
         code += "\n"
         return code
