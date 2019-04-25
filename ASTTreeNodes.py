@@ -72,15 +72,13 @@ class ASTNode:
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         """
             Gives a dot presententation for this node/branch/tree.
-            
+
             The opening and closing statements "digraph graphName{", "splines=ortho;", and "}" will only
             be included of 'add_open_close' is set to true.
-
             Example with add_open_close=False:
                 1 [label="20"];
                 2 [label="30"];
                 1 -> 2;
-
             Example with add_open_close=True:
                 digraph ast_tree {
                 splines=ortho;
@@ -88,12 +86,10 @@ class ASTNode:
                 2 [label="30"];
                 1 -> 2;
                 }
-
             Params:
                 'parent_nr': An integer that specifies the number of the parent node.
                 'begin_nr': An integer that specifies what number the beginning dot-node should have.
                 'add_open_close': Whether or not the open and closing statements must be added.
-
             The exact return value is a tuple. The first member is the number of the node that was last added
             to the dot file, the second member is a string that contains the dot contents of this branch.
         """
@@ -188,7 +184,7 @@ class ProgramNode(ASTNode):
     def getChildren(self):
         return self.children
 
-    def genSymbolTable(self):
+    def genSymbolTable(self, in_loop=False):
         """
             Recursively traverse the AST tree and create a symbol table for each scope.
             Type checking will also be performed at this stage.
@@ -212,26 +208,23 @@ class ProgramNode(ASTNode):
 
         return symbol_table
 
-    def pruneDeadCode(self):
+    def pruneDeadCode(self, in_loop=False):
         """
             Removes all the code that has become unreachable because of return, break and continue.
-
             Returns true if pruning occurred, false otherwise.
-
             Note: since pruning propagates up the AST-tree, the return value can be used to propagate the pruning.
         """
 
-        # iterate over children:
-        #  if func:
-        #	prune body
+        has_pruned = False
 
-        # in body:
-        # iterate over children:
-        #   if pruning statement:
-        #		skip all the other children
-        #	    and return that pruning has occurred
+        # iterate over children
+        for tln in self.children:
+            if isinstance(tln, FuncDef):  # functions contain statements that can be pruned
+                pruned = tln.pruneDeadCode()
 
-        pass
+                if pruned:
+                    has_pruned = True
+        # ENDFOR
 
     def toDot(self, parent_nr=None, begin_nr=1, add_open_close=False):
         return self.M_defaultToDotImpl(children=self.children,
@@ -292,7 +285,7 @@ class SymbolDecl(TopLevelNode):
 
     def getType(self):
         """
-           Retrieve a string that contains the name of the type of the symbol. 
+           Retrieve a string that contains the name of the type of the symbol.
         """
         return self.symbol_type
 
@@ -481,7 +474,7 @@ class FuncDecl(SymbolDecl):
         if local_type != 0 and (local_type.isVar() or local_type.isArray()):
             Logger.error(
                 "Error when declaring function symbol '{}' of type '{}' on line {}: symbol already declared with type '{}'."
-                .format(self.symbol_id, new_func_type.toString(), self.getLineNr(), local_type.toString()))
+                    .format(self.symbol_id, new_func_type.toString(), self.getLineNr(), local_type.toString()))
             raise AstTypingException()
 
         # check if the symbol is present throughout the symbol tree and is a function
@@ -490,7 +483,7 @@ class FuncDecl(SymbolDecl):
         if tree_wide_type != 0 and tree_wide_type.isFunction() and tree_wide_type.toString() != new_func_type.toString():
             Logger.error(
                 "Error when declaring function symbol '{}' of type '{}' on line {}: function already declared with type '{}'."
-                .format(self.symbol_id, new_func_type.toString(), self.getLineNr(), tree_wide_type.toString()))
+                    .format(self.symbol_id, new_func_type.toString(), self.getLineNr(), tree_wide_type.toString()))
             raise AstTypingException()
 
         # if the declaration already exists, use existing object
@@ -613,6 +606,10 @@ class FuncDef(TopLevelNode):
 
         return symbol_table
 
+    def pruneDeadCode(self, in_loop=False):
+        # pass to body
+        return self.body.pruneDeadCode()
+
 
 class StatementContainer:
     """
@@ -632,7 +629,6 @@ class StatementContainer:
     def addScopeToSymbolTable(self, parent_table, as_child):
         """
             Add the symbols declared in this statement container to the specified symbol table.
-
             Param:
                 'parent_table': The table that is the parent of this scope, or the statements in this scope.
                 'as_child': Whether or not the symbols should be added as a child table.
@@ -685,7 +681,7 @@ class StatementContainer:
                 if not is_conversion_possible(VariableType('bool'), cond_expr_type):
                     Logger.error(
                         "Conditonal expression in if-statement evaluates to type '{}'. Must be compatible with 'bool'. Error on line {}."
-                            .format(cond_expr_type.toString(), self.getLineNr()))
+                            .format(cond_expr_type.toString(), child.getLineNr()))
                     raise AstTypingException()
 
             elif isinstance(child, ForStmt):
@@ -718,8 +714,9 @@ class StatementContainer:
                     expr.resolveExpressionType(symbol_table)
 
                 for expr in child.getIterList():
-                    expr.setExprTreeSymbolTable(symbol_table)
-                    expr.resolveExpressionType(symbol_table)
+                    if isinstance(expr, Expression):  # skip empty node
+                        expr.setExprTreeSymbolTable(symbol_table)
+                        expr.resolveExpressionType(symbol_table)
 
                 # annotate the conditional expression with symbol table and resolve expression_type
                 cond_expr = child.getCondExpr()
@@ -732,7 +729,7 @@ class StatementContainer:
                 if not is_conversion_possible(VariableType('bool'), cond_expr_type):
                     Logger.error(
                         "Conditonal expression in for-statement evaluates to type '{}'. Must be compatible with 'bool'. Error on line {}."
-                            .format(cond_expr_type.toString(), self.getLineNr()))
+                            .format(cond_expr_type.toString(), child.getLineNr()))
                     raise AstTypingException()
 
             elif isinstance(child, WhileStmt):
@@ -758,7 +755,7 @@ class StatementContainer:
                 if not is_conversion_possible(VariableType('bool'), cond_expr_type):
                     Logger.error(
                         "Conditonal expression in for-statement evaluates to type '{}'. Must be compatible with 'bool'. Error on line {}."
-                            .format(cond_expr_type.toString(), self.getLineNr()))
+                            .format(cond_expr_type.toString(), child.getLineNr()))
                     raise AstTypingException()
 
             elif isinstance(child, CompoundStmt):
@@ -785,17 +782,100 @@ class StatementContainer:
                 if not is_conversion_possible(function_return_type, return_expr_type):
                     Logger.error(
                         "Expression of type '{}' cannot be used as return value for function with return type '{}' on line {}."
-                            .format(return_expr_type.toString(), function_return_type.toString(), self.getLineNr()))
+                            .format(return_expr_type.toString(), function_return_type.toString(), child.getLineNr()))
                     raise AstTypingException()
 
                 if will_conversion_narrow(function_return_type, return_expr_type):
                     Logger.warning(
                         "Returning expression of type '{}' in function with return type '{}' will result in narrowing on line {}."
-                            .format(return_expr_type.toString(), function_return_type.toString(), self.getLineNr()))
+                            .format(return_expr_type.toString(), function_return_type.toString(), child.getLineNr()))
                     # no exception needed
+            elif isinstance(child, ReturnStatement):
+                function_return_type = self.parent_function_type.getReturnType()
+
+                if not function_return_type.toString() == "void":
+                    Logger.error(
+                        "Invalid return with no value in function with non-void return type on line {}.".format(
+                            child.getLineNr()))
+                raise AstTypingException()
             # ENDIF
 
         return symbol_table
+
+    def pruneDeadCode(self, in_loop=False):
+        # iterate over children
+        #   -> break, continue, return: start pruning
+        #       -> remove all other children
+        #       -> return true: means that this body intiated the pruning, the parent node will know what to do with it.
+        #   -> if, for, while: tell node to prune it's body
+
+        has_pruned = False
+
+        for i in range(0, len(self.child_list)):
+            child = self.child_list[i]
+
+            if isinstance(child, ReturnStatement):
+                # pruning statement
+                has_pruned = True
+                break
+            elif isinstance(child, ReturnWithExprStatement):
+                # pruning statement
+                has_pruned = True
+                break
+            elif isinstance(child, BreakStatement):
+                # check if is in loop
+                if not in_loop:
+                    Logger.error("Invalid break statement on line {}: break statement only allowed in loop.".format(
+                        child.getLineNr()))
+                    raise AstPruningException()
+
+                # pruning statement
+                has_pruned = True
+                break
+            elif isinstance(child, ContinueStatement):
+                # check if is in loop
+                if not in_loop:
+                    Logger.error(
+                        "Invalid continue statement on line {}: continue statement only allowed in loop.".format(
+                            child.getLineNr()))
+                    raise AstPruningException()
+
+                # pruning statement
+                has_pruned = True
+                break
+            elif isinstance(child, BranchStmt):
+                # pass in_loop so that children are aware
+                child_pruned = child.pruneDeadCode(in_loop)
+
+                if child_pruned:
+                    # if statement has pruned both branches
+                    has_pruned = True
+                    break;
+            elif isinstance(child, WhileStmt):
+                # pass in_loop so that children are aware
+                child.pruneDeadCode(in_loop)  # return value does not matter.
+            elif isinstance(child, ForStmt):
+                # pass in_loop so that children are aware
+                child.pruneDeadCode(in_loop)  # return value does not matter.
+            elif isinstance(child, CompoundStmt):
+                # pass in_loop so that children are aware
+                child_pruned = child.pruneDeadCode(in_loop)
+
+                if child_pruned:
+                    # pruning statement in compound statement will always prune
+                    has_pruned = True
+                    break;
+
+        if has_pruned:
+            # remove children
+            # the i-th element (0-indexed) was the last child that is not to be pruned:
+            # take slice of list
+            self.child_list = self.child_list[:i + 1]
+
+            return True
+
+        else:
+            return False
 
     def setParentFunctionType(self, func_type):
         """
@@ -915,6 +995,10 @@ class WhileStmt(Statement):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def pruneDeadCode(self, in_loop=False):
+        self.body.pruneDeadCode(in_loop=True)
+        return False  # no guarantees that the while loop will always be exectued, so no prune propagation
+
 
 class ForStmt(Statement):
     """
@@ -924,7 +1008,7 @@ class ForStmt(Statement):
     def __init__(self, init_list, condition_expr, iter_list, body):
         """
             'init_list': a list of declarations, or expressions.
-            'condition_expr': an expression that will be evaluated to determine whether or not to 
+            'condition_expr': an expression that will be evaluated to determine whether or not to
             continue iterating, or None.
             'iter_list': a list of expressions that will be performed at the end of each iteration.
         """
@@ -952,6 +1036,12 @@ class ForStmt(Statement):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def pruneDeadCode(self, in_loop=False):
+        # init list, iter list and cond_expr don't need to be pruned, since no return or break can exist there
+        self.body.pruneDeadCode(
+            in_loop=True)  # set in_loop to true so that children know that "break" and "continue" are valid
+        return False  # no guarantees that the while loop will always be exectued, so no prune propagation
+
 
 class BranchStmt(Statement):
     """
@@ -978,6 +1068,16 @@ class BranchStmt(Statement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def pruneDeadCode(self, in_loop=False):
+        # we pass "in_loop" so that when the if-statement is part of a loop, the child-bodies know this
+        if_pruned = self.if_body.pruneDeadCode(in_loop)
+        else_pruned = self.else_body.pruneDeadCode(in_loop)
+
+        if if_pruned and else_pruned:
+            return True
+        else:
+            return False
 
 
 class JumpStatement(Statement):
@@ -1093,9 +1193,7 @@ class Expression(ASTNode):
             This will assign types to the expression nodes in the expression tree.
             If an identifier is encountered, it's type will be extracted from the specified
             symbol table.
-
             Return value: None
-
             !! Use getExpressionType() to retrieve the resolved type. !!
         """
         pass
@@ -1103,9 +1201,7 @@ class Expression(ASTNode):
     def getExpressionType(self):
         """
             Retrieve the type of the expression.
-
             Returns a string with the name of the type
-
             !! First use resolveExpressionType() to calculate the type. !!
         """
         return self.expression_type
@@ -2331,7 +2427,6 @@ class ArrayAccessExpr(Expression):
     def __init__(self, target_array, index_expr):
         """
             Constructor.
-
             Params:
                 'target_array': IdentifierExpr that represents the array.
                 'index_expr': Expression that evaluates to a type compatible with 'int'
@@ -2373,11 +2468,11 @@ class ArrayAccessExpr(Expression):
         # check that index expression can evaluated to int
         index_type = self.index_expr.resolveExpressionType(symbol_table)
 
-        # index type needs to be compatible with 
+        # index type needs to be compatible with
         if not is_conversion_possible(VariableType('int'), index_type):
             Logger.error(
                 "Invalid index expression passed to array '{}' on line {}: Type '{}' is requested, incompatible type '{}' was given."
-                .format(target_name, self.getLineNr(), 'int', index_type.toString()))
+                    .format(target_name, self.getLineNr(), 'int', index_type.toString()))
             raise AstTypingException()
 
         return self.expression_type
@@ -2572,7 +2667,6 @@ class IdentifierExpr(Expression):
     def __init__(self, identifier: str):
         """
             Constructor.
-
             Param:
                 'identifier': A string that contains the name of the identifier.
         """
@@ -2616,7 +2710,6 @@ class ConstantExpr(Expression):
     def __init__(self, constant_expr_type, value):
         """
             Constructor.
-
             Params:
                 value: the value of the constant. These are not Expression objects.
         """
@@ -2739,7 +2832,7 @@ def get_maximal_type(type_a, type_b):
     type_a_idx = type_list.index(type_a.toString())
     type_b_idx = type_list.index(type_b.toString())
 
-    max_id = max(type_a_idx, type_a_idx)
+    max_id = max(type_a_idx, type_b_idx)
 
     return VariableType(type_list[max_id])
 
@@ -2772,7 +2865,6 @@ def is_non_void(type):
 def is_conversion_possible(target, value):
     """
         Determine whether or not a conversion from the original type to the target type is possible.
-
         The following assignments are supported
          > T = T, with T not being 'void'
          > T* = T*

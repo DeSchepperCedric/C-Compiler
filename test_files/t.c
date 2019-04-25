@@ -6,15 +6,13 @@ int a = 5;
 
 int main(){
 
-int* b = &a;
+if(a > 5){
+return 5;
 
-int** c = &b;
 
-int*** d = &c;
-
-int* q = **d;
-
-q = b;
+}
+else{
+return 20;}
 
 return 0;
 

@@ -229,6 +229,7 @@ class ParserVisitor(CVisitor):
 
         init_list, cond_expr, iter_list = self.manuallyVisitChild(ctx.getChild(2))
 
+        # returns list of statements
         body_statements = self.manuallyVisitChild(ctx.getChild(4))
 
         # if the statement after the forloop loop, is a compound statement
@@ -250,9 +251,11 @@ class ParserVisitor(CVisitor):
         targets = ["INIT", "COND", "ITER"]
         cur_target = 0  # specifies what we're looking for
 
-        init_list = [EmptyNode().setLineNr(ctx.start.line).setColNr(ctx.start.column)]
-        cond_expr = EmptyNode().setLineNr(ctx.start.line).setColNr(ctx.start.column)
-        iter_list = [EmptyNode().setLineNr(ctx.start.line).setColNr(ctx.start.column)]
+        init_list = []
+        cond_expr = BoolConstantExpr("true").setLineNr(ctx.start.line).setColNr(ctx.start.column) # empty condition is "true"
+        iter_list = []
+
+
 
         for i in range(0, ctx.getChildCount()):
             if ctx.getChild(i).getText() == ";":
@@ -571,9 +574,17 @@ class ParserVisitor(CVisitor):
 
         # note: the postfix counterparts are handled somewhere else
         elif operator == "++":
+            if not is_valid_assignment_target_expr(expr):
+                Logger.error("Invalid target '{}' for prefix increment on line '{}'".format(get_full_context_source(ctx.getChild(1)), ctx.start.line))
+                raise AstCreationException()
+
             return PrefixIncExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "--":
+            if not is_valid_assignment_target_expr(expr):
+                Logger.error("Invalid target '{}' for prefix decrement on line '{}'".format(get_full_context_source(ctx.getChild(1)), ctx.start.line))
+                raise AstCreationException()
+
             return PrefixDecExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         else:
@@ -599,6 +610,11 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#postfixDec.
     def visitPostfixDec(self, ctx: CParser.PostfixDecContext):
         expression = self.manuallyVisitChild(ctx.getChild(0))
+
+        if not is_valid_assignment_target_expr(expression):
+            Logger.error("Invalid target '{}' for postfix decrement on line '{}'".format(get_full_context_source(ctx.getChild(0)), ctx.start.line))
+            raise AstCreationException()
+
         return PostfixDecExpr(expression).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#primitiveExpr.
@@ -625,6 +641,10 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#postfixInc.
     def visitPostfixInc(self, ctx: CParser.PostfixIncContext):
         expression = self.manuallyVisitChild(ctx.getChild(0))
+
+        if not is_valid_assignment_target_expr(expression):
+            Logger.error("Invalid target '{}' for postfix decrement on line '{}'".format(get_full_context_source(ctx.getChild(0)), ctx.start.line))
+            raise AstCreationException()
 
         return PostfixIncExpr(expression).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
