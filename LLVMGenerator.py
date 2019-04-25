@@ -215,11 +215,16 @@ class LLVMGenerator:
         var_type = self.getLLVMType(var_type)
         value = 0 if "float" not in var_type else self.floatToHex(0.0)
 
+        is_pointer = True if "*" in var_type else False
+
+        value = value if not is_pointer else "null"
         code = ""
         if node.getSymbolTable().isGlobal(var_id):
-            # code += "@{} = global {} 0".format(var_id, var_type)
-            code += "@{} = alloca {}\n".format(var_id, var_type)
-            code += "store {} {}, {}* {}\n".format(var_type, value, var_id, var_type)
+
+            code += "@{} = global {} {}".format(var_id, var_type, value)
+
+            # code += "@{} = alloca {}\n".format(var_id, var_type)
+            # code += "store {} {}, {}* {}\n".format(var_type, value, var_id, var_type)
         else:
 
             t, table = node.getSymbolTable().lookup(var_id)
@@ -429,7 +434,6 @@ class LLVMGenerator:
         if return_type == "void" and not return_found:
             code += "ret void\n"
 
-
         code += "}\n"
 
         # exit scope
@@ -562,6 +566,7 @@ class LLVMGenerator:
         code += self.storeVariable(self.cur_reg, self.cur_reg - 1, llvm_type, False)
 
         self.cur_reg += 1
+
 
         return code, self.cur_reg - 1
 
@@ -775,6 +780,7 @@ class LLVMGenerator:
             reg = reg + "." + str(len(self.string_to_regs))
 
         self.string_to_regs[string] = reg
+        self.reg_to_string[reg] = string
 
         line = "@" + reg + " = private unnamed_addr constant "
         line += "[" + str(len(string)) + " x i8]"
@@ -783,8 +789,13 @@ class LLVMGenerator:
         self.global_scope_string += line
         return reg
 
-    def storeString(self, register):
-        # TODO
+    def storeString(self, string_reg, reg_to):
         # store i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str, i32 0, i32 0), i8** %2, align 8
-        type_size = "["
-        return "store i8 getelementptr inbounds"
+        type_size = "[" + str(len(self.reg_to_string.get(string_reg))) + " x i8]"
+        code = "store i8 getelementptr inbounds"
+        code += type_size + ", " + type_size + "*"
+        code += "@" + string_reg + ", i32 0, i32 0), "
+        code += "i8** " + "%{}".format(reg_to)
+        code += "\n"
+
+        return code
