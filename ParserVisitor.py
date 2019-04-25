@@ -570,9 +570,17 @@ class ParserVisitor(CVisitor):
 
         # note: the postfix counterparts are handled somewhere else
         elif operator == "++":
+            if not is_valid_assignment_target_expr(expr):
+                Logger.error("Invalid target '{}' for prefix increment on line '{}'".format(get_full_context_source(ctx.getChild(1)), ctx.start.line))
+                raise AstCreationException()
+
             return PrefixIncExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "--":
+            if not is_valid_assignment_target_expr(expr):
+                Logger.error("Invalid target '{}' for prefix decrement on line '{}'".format(get_full_context_source(ctx.getChild(1)), ctx.start.line))
+                raise AstCreationException()
+
             return PrefixDecExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         else:
@@ -598,6 +606,11 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#postfixDec.
     def visitPostfixDec(self, ctx: CParser.PostfixDecContext):
         expression = self.manuallyVisitChild(ctx.getChild(0))
+
+        if not is_valid_assignment_target_expr(expression):
+            Logger.error("Invalid target '{}' for postfix decrement on line '{}'".format(get_full_context_source(ctx.getChild(0)), ctx.start.line))
+            raise AstCreationException()
+
         return PostfixDecExpr(expression).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#primitiveExpr.
@@ -624,6 +637,10 @@ class ParserVisitor(CVisitor):
     # Visit a parse tree produced by CParser#postfixInc.
     def visitPostfixInc(self, ctx: CParser.PostfixIncContext):
         expression = self.manuallyVisitChild(ctx.getChild(0))
+
+        if not is_valid_assignment_target_expr(expression):
+            Logger.error("Invalid target '{}' for postfix decrement on line '{}'".format(get_full_context_source(ctx.getChild(0)), ctx.start.line))
+            raise AstCreationException()
 
         return PostfixIncExpr(expression).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
