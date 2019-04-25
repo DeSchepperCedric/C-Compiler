@@ -798,7 +798,7 @@ class StatementContainer:
 
                 if not function_return_type.toString() == "void":
                     Logger.error("Invalid return with no value in function with non-void return type on line {}.".format(child.getLineNr()))
-                raise AstTypingException()
+                    raise AstTypingException()
             # ENDIF
 
         return symbol_table
