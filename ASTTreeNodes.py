@@ -188,7 +188,7 @@ class ProgramNode(ASTNode):
     def getChildren(self):
         return self.children
 
-    def genSymbolTable(self):
+    def genSymbolTable(self, in_loop = False):
         """
             Recursively traverse the AST tree and create a symbol table for each scope.
             Type checking will also be performed at this stage.
@@ -212,27 +212,25 @@ class ProgramNode(ASTNode):
 
         return symbol_table
 
-    def pruneDeadCode(self):
-    	"""
-			Removes all the code that has become unreachable because of return, break and continue.
+    def pruneDeadCode(self, in_loop = False):
+        """
+            Removes all the code that has become unreachable because of return, break and continue.
 
-			Returns true if pruning occurred, false otherwise.
+            Returns true if pruning occurred, false otherwise.
 
-			Note: since pruning propagates up the AST-tree, the return value can be used to propagate the pruning.
-    	"""
+            Note: since pruning propagates up the AST-tree, the return value can be used to propagate the pruning.
+        """
 
-    	# iterate over children:
-    	#  if func:
-    	#	prune body
+        has_pruned = False
 
-    	# in body:
-    	# iterate over children:
-    	#   if pruning statement:
-    	#		skip all the other children
-    	#	    and return that pruning has occurred
+        # iterate over children
+        for tln in self.children:
+            if isinstance(tln, FuncDef): # functions contain statements that can be pruned
+                pruned = tln.pruneDeadCode()
 
-
-    	pass
+                if pruned:
+                    has_pruned = True
+        # ENDFOR
 
     def toDot(self, parent_nr=None, begin_nr=1, add_open_close=False):
         return self.M_defaultToDotImpl(children=self.children,
@@ -610,6 +608,10 @@ class FuncDef(TopLevelNode):
 
         return symbol_table
 
+    def pruneDeadCode(self, in_loop = False):
+        # pass to body
+        return self.body.pruneDeadCode()
+
 
 class StatementContainer:
     """
@@ -682,7 +684,7 @@ class StatementContainer:
                 if not is_conversion_possible(VariableType('bool'), cond_expr_type):
                     Logger.error(
                         "Conditonal expression in if-statement evaluates to type '{}'. Must be compatible with 'bool'. Error on line {}."
-                        .format(cond_expr_type.toString(), self.getLineNr()))
+                        .format(cond_expr_type.toString(), child.getLineNr()))
                     raise AstTypingException()
 
             elif isinstance(child, ForStmt):
@@ -715,8 +717,9 @@ class StatementContainer:
                     expr.resolveExpressionType(symbol_table)
 
                 for expr in child.getIterList():
-                    expr.setExprTreeSymbolTable(symbol_table)
-                    expr.resolveExpressionType(symbol_table)
+                    if isinstance(expr, Expression): # skip empty node
+                        expr.setExprTreeSymbolTable(symbol_table)
+                        expr.resolveExpressionType(symbol_table)
 
                 # annotate the conditional expression with symbol table and resolve expression_type
                 cond_expr = child.getCondExpr()
@@ -729,7 +732,7 @@ class StatementContainer:
                 if not is_conversion_possible(VariableType('bool'), cond_expr_type):
                     Logger.error(
                         "Conditonal expression in for-statement evaluates to type '{}'. Must be compatible with 'bool'. Error on line {}."
-                        .format(cond_expr_type.toString(), self.getLineNr()))
+                        .format(cond_expr_type.toString(), child.getLineNr()))
                     raise AstTypingException()
 
             elif isinstance(child, WhileStmt):
@@ -755,7 +758,7 @@ class StatementContainer:
                 if not is_conversion_possible(VariableType('bool'), cond_expr_type):
                     Logger.error(
                         "Conditonal expression in for-statement evaluates to type '{}'. Must be compatible with 'bool'. Error on line {}."
-                        .format(cond_expr_type.toString(), self.getLineNr()))
+                        .format(cond_expr_type.toString(), child.getLineNr()))
                     raise AstTypingException()
 
             elif isinstance(child, CompoundStmt):
@@ -782,17 +785,95 @@ class StatementContainer:
                 if not is_conversion_possible(function_return_type, return_expr_type):
                     Logger.error(
                         "Expression of type '{}' cannot be used as return value for function with return type '{}' on line {}."
-                        .format(return_expr_type.toString(), function_return_type.toString(), self.getLineNr()))
+                        .format(return_expr_type.toString(), function_return_type.toString(), child.getLineNr()))
                     raise AstTypingException()
 
                 if will_conversion_narrow(function_return_type, return_expr_type):
                     Logger.warning(
                         "Returning expression of type '{}' in function with return type '{}' will result in narrowing on line {}."
-                        .format(return_expr_type.toString(), function_return_type.toString(), self.getLineNr()))
+                        .format(return_expr_type.toString(), function_return_type.toString(), child.getLineNr()))
                     # no exception needed
+            elif isinstance(child, ReturnStatement):
+                function_return_type = self.parent_function_type.getReturnType()
+
+                if not function_return_type.toString() == "void":
+                    Logger.error("Invalid return with no value in function with non-void return type on line {}.".format(child.getLineNr()))
+                raise AstTypingException()
             # ENDIF
 
         return symbol_table
+
+    def pruneDeadCode(self, in_loop = False):
+        # iterate over children
+        #   -> break, continue, return: start pruning
+        #       -> remove all other children
+        #       -> return true: means that this body intiated the pruning, the parent node will know what to do with it.
+        #   -> if, for, while: tell node to prune it's body
+
+        has_pruned = False
+
+        for i in range(0, len(self.child_list)):
+            child = self.child_list[i]
+
+            if isinstance(child, ReturnStatement):
+                # pruning statement
+                has_pruned = True
+                break
+            elif isinstance(child, ReturnWithExprStatement):
+                # pruning statement
+                has_pruned = True
+                break
+            elif isinstance(child, BreakStatement):
+                # check if is in loop
+                if not in_loop:
+                    Logger.error("Invalid break statement on line {}: break statement only allowed in loop.".format(child.getLineNr()))
+                    raise AstPruningException()
+
+                # pruning statement
+                has_pruned = True
+                break
+            elif isinstance(child, ContinueStatement):
+                # check if is in loop
+                if not in_loop:
+                    Logger.error("Invalid continue statement on line {}: continue statement only allowed in loop.".format(child.getLineNr()))
+                    raise AstPruningException()
+
+                # pruning statement
+                has_pruned = True
+                break
+            elif isinstance(child, BranchStmt):
+                # pass in_loop so that children are aware
+                child_pruned = child.pruneDeadCode(in_loop) 
+
+                if child_pruned:
+                    # if statement has pruned both branches
+                    has_pruned = True
+                    break;
+            elif isinstance(child, WhileStmt):
+                 # pass in_loop so that children are aware
+                child.pruneDeadCode(in_loop) # return value does not matter.
+            elif isinstance(child, ForStmt):
+                 # pass in_loop so that children are aware
+                child.pruneDeadCode(in_loop) # return value does not matter.
+            elif isinstance(child, CompoundStmt):
+                # pass in_loop so that children are aware
+                child_pruned = child.pruneDeadCode(in_loop)
+
+                if child_pruned:
+                    # pruning statement in compound statement will always prune
+                    has_pruned = True
+                    break;
+
+        if has_pruned:
+            # remove children
+            # the i-th element (0-indexed) was the last child that is not to be pruned:
+            # take slice of list
+            self.child_list = self.child_list[:i+1]
+
+            return True
+
+        else:
+            return False
 
     def setParentFunctionType(self, func_type):
         """
@@ -912,6 +993,10 @@ class WhileStmt(Statement):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def pruneDeadCode(self, in_loop = False):
+        self.body.pruneDeadCode(in_loop = True)
+        return False # no guarantees that the while loop will always be exectued, so no prune propagation
+
 
 class ForStmt(Statement):
     """
@@ -949,6 +1034,11 @@ class ForStmt(Statement):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def pruneDeadCode(self, in_loop = False):
+        # init list, iter list and cond_expr don't need to be pruned, since no return or break can exist there
+        self.body.pruneDeadCode(in_loop = True) # set in_loop to true so that children know that "break" and "continue" are valid
+        return False # no guarantees that the while loop will always be exectued, so no prune propagation
+
 
 class BranchStmt(Statement):
     """
@@ -975,6 +1065,16 @@ class BranchStmt(Statement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def pruneDeadCode(self, in_loop = False):
+        # we pass "in_loop" so that when the if-statement is part of a loop, the child-bodies know this
+        if_pruned = self.if_body.pruneDeadCode(in_loop)
+        else_pruned = self.else_body.pruneDeadCode(in_loop)
+
+        if if_pruned and else_pruned:
+            return True
+        else:
+            return False
 
 
 class JumpStatement(Statement):
@@ -2735,7 +2835,7 @@ def get_maximal_type(type_a, type_b):
     type_a_idx = type_list.index(type_a.toString())
     type_b_idx = type_list.index(type_b.toString())
 
-    max_id = max(type_a_idx, type_a_idx)
+    max_id = max(type_a_idx, type_b_idx)
 
     return VariableType(type_list[max_id])
 
