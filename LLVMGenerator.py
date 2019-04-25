@@ -83,6 +83,8 @@ class LLVMGenerator:
 
         elif isinstance(node, BranchStmt):
             return self.branchStatement(node)
+        elif isinstance(node, WhileStmt):
+            return self.whileStatement(node)
 
         elif isinstance(node, ExpressionStatement):
             return self.expressionStatement(node)
@@ -149,7 +151,6 @@ class LLVMGenerator:
         code += "store {} {}, {}* %{}\n".format(llvm_type, ord(expr.getCharValue()[1]), llvm_type, register)
 
         return code, register
-
 
     def loadVariable(self, register, var_type, is_global):
         """
@@ -321,25 +322,42 @@ class LLVMGenerator:
         # no else statement will still generate a label
         # might be removed later
         code, register = self.astNodeToLLVM(node.getCondExpr())
-        code += "br i1 %{}, label %if{}, label %else{}\n".format(register, register, register)
-
+        code += "br i1 %{}, label %if.{}, label %else.{}\n".format(register, register, register)
 
         # if
+        code_if, reg = self.astNodeToLLVM(node.getIfBody())
+        code += "\nif.{}:\n".format(register)
+        code += code_if
+        code += "br label %end.{}\n".format(register)
+
+        code_else, reg = self.astNodeToLLVM(node.getElseBody())
+        code += "\nelse.{}:\n".format(register)
+        code += code_else
+        code += "br label %end.{}\n".format(register)
+
+        code += "\nend.{}:\n".format(register)
+
+        return code, -1
+
+    def whileStatement(self, node):
+
+        code_cond, register = self.astNodeToLLVM(node.getCondExpr())
+
+        # code += "br i1 %{}, label %if{}, label %else{}\n".format(register, register, register)
+        code = "br label %cond.{}\n".format(register)
+        code += "\ncond.{}:\n".format(register)
+        code += code_cond
+        code += "br i1 %{}, label %while.{}, label %end.{}\n".format(register, register, register)
+
+
         reg_if_label = self.cur_reg
         # code_if = "; <label>:{}:\n".format(reg_if_label)  # comment for clarity
-        code_if, reg = self.astNodeToLLVM(node.getIfBody())
-        code += "if{}:\n".format(register)
-        code += code_if
-        code += "br label %end{}\n".format(register)
+        code_while, reg = self.astNodeToLLVM(node.getBody())
+        code += "\nwhile.{}:\n".format(register)
+        code += code_while
+        code += "br label %cond.{}\n".format(register)
 
-        self.cur_reg += 1
-        code_else, reg = self.astNodeToLLVM(node.getElseBody())
-        code += "else{}:\n".format(register)
-        code += code_else
-        code += "br label %end{}\n".format(register)
-
-        self.cur_reg += 1
-        code += "end{}:\n".format(register)
+        code += "\nend.{}:\n".format(register)
 
         return code, -1
 
@@ -797,5 +815,4 @@ class LLVMGenerator:
         code += "@" + string_reg + ", i32 0, i32 0), "
         code += "i8** " + "%{}".format(reg_to)
         code += "\n"
-
         return code
