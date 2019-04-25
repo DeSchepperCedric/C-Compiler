@@ -1999,7 +1999,7 @@ class DivExpr(Expression):
     """
 
     def __init__(self, left, right):
-        super().__init__(expression_type="ModExpr")
+        super().__init__(expression_type="DivExpr")
         self.left = left
         self.right = right
 

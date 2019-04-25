@@ -398,13 +398,21 @@ class ParserVisitor(CVisitor):
         if operator == "=":
             return AssignmentExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "+=":
-            return AddAssignmentExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+            add_expr = AddExpr(left, right)
+            return AssignmentExpr(left, add_expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+            # return AddAssignmentExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "-=":
-            return SubAssignmentExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+            sub_expr = SubExpr(left, right)
+            return AssignmentExpr(left, sub_expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+            # return SubAssignmentExpr(left, ri ght).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "*=":
-            return MulAssignmentExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+            mul_expr = MulExpr(left, right)
+            return AssignmentExpr(left, mul_expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+            # return MulAssignmentExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "/=":
-            return DivAssignmentExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+            div_expr = DivExpr(left, right)
+            return AssignmentExpr(left, div_expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+            # return DivAssignmentExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for assignment expr: {}".format(operator))
 

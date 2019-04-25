@@ -15,7 +15,6 @@ class LLVMGenerator:
         Returns LLVM code string + register number
         Only function to call outside the class
         """
-
         if isinstance(node, IncludeNode):
             return self.include()
 
@@ -373,7 +372,6 @@ class LLVMGenerator:
 
 
         return code, -1
-
 
     def programNode(self, node):
         code = ""
