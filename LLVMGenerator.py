@@ -390,10 +390,10 @@ class LLVMGenerator:
         self.cur_reg = 0
         code = ""
         return_type, scope = node.getSymbolTable().lookup(node.getFuncID())
-        return_type = self.getLLVMType(return_type.getReturnType()) + " "
+        return_type = self.getLLVMType(return_type.getReturnType())
         function_name = "@" + node.getFuncID()
 
-        code += "define " + return_type + function_name + "("
+        code += "define " + return_type + " " + function_name + "("
         first_param = True
         for param in node.getParamList():
             if not first_param:
@@ -418,17 +418,16 @@ class LLVMGenerator:
         self.cur_reg += 1
         new_code, reg = self.astNodeToLLVM(node.getBody())
         code += new_code
-
         # replace by if return_type == "void" at some point when == issue is fixed
         return_found = False
         for child in node.getBody().getChildren():
-            if isinstance(child, ReturnStatement) or isinstance(child, ReturnWithExprStatement):
+            if isinstance(child, ReturnStatement):
                 return_found = True
                 break
 
-        # TODO find out why this doesn't work
-        if not return_found:
+        if return_type == "void" and not return_found:
             code += "ret void\n"
+
 
         code += "}\n"
 
