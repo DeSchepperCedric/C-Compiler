@@ -47,7 +47,10 @@ def run_compiler(source_file_path, output_name):
         symboltable_dot_repr = symbol_table.toDot()
         symboltable_dotfile.write(symboltable_dot_repr)
 
-    print(LLVMGenerator().astNodeToLLVM(ast_tree))
+    with open("./output/" + output_name + ".ll", 'w') as llvm_file:
+        llvm_code = LLVMGenerator().astNodeToLLVM(ast_tree)
+        llvm_file.write(llvm_code)
+
 
 
 def main(argv):

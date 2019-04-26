@@ -276,13 +276,10 @@ class LLVMGenerator:
                 code += new_code
 
             var_id = table + "." + var_id
-
             code += self.allocate(var_id, var_type, is_global)
-
             # otherwise type isn't correct
             if not isinstance(node.getInitExpr(), IdentifierExpr):
                 load, register = self.loadVariable(register, var_type, False)
-
                 code += load
 
             code += self.storeVariable(var_id, register, var_type, is_global)
@@ -488,6 +485,8 @@ class LLVMGenerator:
         code = ""
         first_arg = True
         arg_list = "("
+        function_id = node.getFunctionID().getIdentifierName()
+        load_groups = list()
         for arg in node.getArguments():
             if not first_arg:
                 arg_list += ","
@@ -502,13 +501,24 @@ class LLVMGenerator:
                 load, arg_reg = self.loadVariable(arg_reg, arg_type, False)
                 arg_code += load
 
+            if isinstance(arg, AddressExpr) and function_id == "scanf":
+                load, arg_reg = self.loadVariable(arg_reg, arg_type, False)
+                arg_code += load
+                arg_id = arg.getTargetExpr().getIdentifierName()
+                is_global = node.getSymbolTable().isGlobal(arg_id)
+                var_type, t = node.getSymbolTable().lookup(arg_id)
+
+                reg = (t + "." + arg_id) if not is_global else arg_id
+
+                load_groups.append((reg, arg_reg, arg_type[:-1], is_global))
+
             code += arg_code
             arg_list += "{} %{}".format(arg_type, arg_reg)
         arg_list += ")"
 
         function_id = node.getFunctionID().getIdentifierName()
         reg_type = self.getLLVMType(node.getExpressionType())
-        return_type = reg_type if function_id != "printf" else "i32 (i8*, ...)"
+        return_type = reg_type if function_id not in ["printf", "scanf"] else "i32 (i8*, ...)"
         func_reg = self.cur_reg
         # void function result can't be assigned
         if reg_type == "void":
@@ -527,6 +537,12 @@ class LLVMGenerator:
             code += self.storeVariable(self.cur_reg, func_reg, reg_type, False)
             func_reg = self.cur_reg
             self.cur_reg += 1
+
+        for reg, arg_reg, arg_type, is_global in load_groups:
+            load, load_reg = self.loadVariable(arg_reg, arg_type, is_global)
+            code += load
+            code += self.storeVariable(reg, load_reg, arg_type, is_global)
+
         return code, func_reg
 
     def getLLVMType(self, type_node):
