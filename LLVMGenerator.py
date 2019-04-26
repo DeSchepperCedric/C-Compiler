@@ -522,6 +522,11 @@ class LLVMGenerator:
 
                 load_groups.append((reg, arg_reg, arg_type[:-1], is_global))
 
+            # extra load necessary because we did a redundant store
+            if isinstance(arg, PointerDerefExpr) and function_id == "printf":
+                load, arg_reg = self.loadVariable(arg_reg, arg_type, False)
+                arg_code += load
+
             code += arg_code
             arg_list += "{} %{}".format(arg_type, arg_reg)
         arg_list += ")"
