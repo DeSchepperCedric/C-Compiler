@@ -841,15 +841,19 @@ class LLVMGenerator:
         :param string: string to be added
         :return: register the string is located in
         """
+        c = string.count("\\n")
+        c += string.count("\\t")
+        c *= 2
+        string = string.replace("\\n", "\\0A").replace("\\t", "\\09")
         reg = ".str"
         if len(self.string_to_regs) > 0:
             reg = reg + "." + str(len(self.string_to_regs))
 
         self.string_to_regs[string] = reg
-        self.reg_to_string[reg] = string
+        self.reg_to_string[reg] = (string, len(string) + 1 - c)
 
         line = "@" + reg + " = private unnamed_addr constant "
-        line += "[" + str(len(string) + 1) + " x i8] "
+        line += "[" + str(len(string) + 1 - c) + " x i8] "
         line += "c" + "\"" + string + "\\00" + "\"" + "\n"
 
         self.global_scope_string += line
@@ -857,7 +861,7 @@ class LLVMGenerator:
 
     def storeString(self, string_reg, reg_to):
         # store i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str, i32 0, i32 0), i8** %2, align 8
-        type_size = "[" + str(len(self.reg_to_string.get(string_reg)) + 1) + " x i8]"
+        type_size = "[" + str(self.reg_to_string.get(string_reg)[1]) + " x i8]"
         code = "store i8* getelementptr inbounds ("
         code += type_size + ", " + type_size + "*"
         code += " @" + string_reg + ", i32 0, i32 0), "
