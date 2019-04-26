@@ -1,6 +1,7 @@
 from ASTTreeNodes import *
 import struct as struct
 
+
 class LLVMGenerator:
     def __init__(self):
         self.cur_reg = 0
@@ -165,8 +166,6 @@ class LLVMGenerator:
         code += self.storeString(string_reg, register)
         return code, register
 
-
-
     def loadVariable(self, register, var_type, is_global):
         """
 
@@ -268,12 +267,24 @@ class LLVMGenerator:
             code += "@{} = global {} {}".format(var_id, var_type, target_reg)
 
         else:
+
             new_code, register = self.astNodeToLLVM(node.getInitExpr())
             code += new_code
 
-            if var_type != expr_type:
-                new_code, register = self.convertToType(register, expr_type, var_type)
-                code += new_code
+            if var_type != expr_type and isinstance(node.getInitExpr(), IdentifierExpr):
+                convert, register = self.convertToType(register, expr_type, var_type)
+                code += convert
+            # more loads/stores to fix type
+            elif var_type != expr_type:
+                load, register = self.loadVariable(register, expr_type, is_global)
+                code += load
+                convert, register = self.convertToType(register, expr_type, var_type)
+                code += convert
+                code += self.allocate(self.cur_reg, var_type, is_global)
+                store = self.storeVariable(self.cur_reg, register, var_type, is_global)
+                register = self.cur_reg
+                self.cur_reg += 1
+                code += store
 
             var_id = table + "." + var_id
             code += self.allocate(var_id, var_type, is_global)
@@ -379,7 +390,6 @@ class LLVMGenerator:
             self.cur += 1
 
         code += "\nend.{}:\n".format(register)
-
 
         return code, -1
 
@@ -625,7 +635,6 @@ class LLVMGenerator:
 
         self.cur_reg += 1
 
-
         return code, self.cur_reg - 1
 
     def getStrongestType(self, a, b):
@@ -665,7 +674,7 @@ class LLVMGenerator:
             return code, self.cur_reg - 1
 
         elif "float" in type:
-            code += " %{} = fptosi float %{} to i32\n".format(self.cur_reg, reg)
+            code += "%{} = fptosi float %{} to i32\n".format(self.cur_reg, reg)
             self.cur_reg += 1
             return code, self.cur_reg - 1
 
@@ -757,19 +766,14 @@ class LLVMGenerator:
         right_type = self.getLLVMType(node.getRight().getExpressionType())
         left_type = self.getLLVMType(node.getLeft().getExpressionType())
         identifier = node.getLeft().getIdentifierName()
-
         if not isinstance(node.getRight(), IdentifierExpr):
-            load, register = self.loadVariable(register, right_type, False)
+            load, register = self.loadVariable(register, right_type, node.getSymbolTable().isGlobal(identifier))
 
             code += load
-
         if right_type == left_type:
             pass
-        elif left_type == "int":
-            convert, register = self.convertToInt(register, right_type)
-            code += convert
-        elif left_type == "float":
-            convert, register = self.convertToFloat(register, right_type)
+        else:
+            convert, register = self.convertToType(register, right_type, left_type)
             code += convert
 
         if node.getSymbolTable().isGlobal(identifier):
