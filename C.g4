@@ -5,7 +5,7 @@ program : top_level_node+ EOF;
 top_level_node
         : include
         | declaration SC
-        | func_def
+        | func_def SC?
         ;
 
 // include for <stdio.h>
@@ -120,7 +120,7 @@ multiplicative_expr : cast_expr
 					;
 
 
-cast_expr: (LEFT_PAREN prim_type RIGHT_PAREN)* unary_expr;
+cast_expr: (LEFT_PAREN prim_type pointer* RIGHT_PAREN)? unary_expr;
 
 unary_expr // note: does not get visited
         : postfix_expr             # unaryAsPostfix

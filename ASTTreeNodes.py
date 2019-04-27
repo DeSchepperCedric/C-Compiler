@@ -34,10 +34,7 @@ class ASTNode:
         else:
             symbol_table_flag = ""
 
-        if self.symbol_table is None:
-            return self.node_name + symbol_table_flag + expr_type
-        else:  # if the symbol table is present, annotate with star
-            return self.node_name + symbol_table_flag + expr_type
+        return self.node_name + symbol_table_flag + expr_type
 
     def getSymbolTable(self):
         """
@@ -801,6 +798,9 @@ class StatementContainer:
 
                 # pass function type to the node
                 child.setFunctionType(self.parent_function_type)
+            elif isinstance(child, CastExpr):
+                child.setExprTreeSymbolTable(symbol_table)
+                child.resolveExpressionType(symbol_table)
             # ENDIF
 
         return symbol_table
@@ -2114,24 +2114,23 @@ class ModExpr(Expression):
                                        add_open_close=add_open_close)
 
 
-# TODO: find out how!
 class CastExpr(Expression):
     """
         Node that represents a cast expression.
     """
 
-    def __init__(self, type_list, expression):
+    def __init__(self, target_type, expression):
         """
         Params:
-            'type_list': list of str.
+            'target_type': A VariableType that specifies the target type.
             'expression': The Expression that is cast to the specified types.
         """
-        super().__init__(expression_type="CastExpr\\nTypes:{}".format(type_list))
-        self.type_list = type_list
+        super().__init__(expression_type="CastExpr\\nTarget type:{}".format(target_type.toString()))
+        self.target_type = target_type
         self.expression = expression
 
-    def getTypeList(self):
-        return self.type_list
+    def getTargetType(self):
+        return self.target_type
 
     def getExpr(self):
         return self.expression
@@ -2140,6 +2139,21 @@ class CastExpr(Expression):
         self.setSymbolTable(symbol_table)
 
         self.expression.setExprTreeSymbolTable(symbol_table)
+
+    def resolveExpressionType(self, symbol_table):
+        self.expression.resolveExpressionType(symbol_table)
+
+        # TODO cast checks
+        if not is_conversion_possible(self.target_type, self.expression.getExpressionType()):
+            Logger.error("Cannot cast value of type '{}' to value of type '{}' on line {}."
+                            .format(self.expression.getExpressionType().toString(), 
+                                    self.target_type.toString(), 
+                                    self.getLineNr()))
+            raise AstTypingException()
+
+        self.expression_type = self.target_type
+
+        return self.target_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[self.expression],
