@@ -47,18 +47,23 @@ def run_compiler(source_file_path, output_name):
         symboltable_dot_repr = symbol_table.toDot()
         symboltable_dotfile.write(symboltable_dot_repr)
 
-    print(LLVMGenerator().astNodeToLLVM(ast_tree))
+    with open("./output/" + output_name + ".ll", 'w') as llvm_file:
+        llvm_code = LLVMGenerator().astNodeToLLVM(ast_tree)
+        llvm_file.write(llvm_code)
+
 
 
 def main(argv):
     # the name that will be used to form output files
     output_name = os.path.basename(argv[1])
 
+    output_name = "".join(output_name.split(".")[:-1])
+
     try:
         run_compiler(source_file_path = argv[1], output_name=output_name)
     except CompilerException as e:
         Logger.error("Compiler was terminated due to errors in the specified C source file.")
-    #except Exception as e:
+    # except Exception as e:
     #    Logger.error("Unexpected error of type '{}': {}".format(type(e), str(e)))
 
 if __name__ == "__main__":
