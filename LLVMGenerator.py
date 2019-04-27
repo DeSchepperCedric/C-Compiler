@@ -894,8 +894,7 @@ class LLVMGenerator:
         identifier = node.getLeft().getIdentifierName()
         # extra load necessary
         if not isinstance(node.getRight(), IdentifierExpr):
-            load, register = self.loadVariable(register, right_type, node.getSymbolTable().isGlobal(identifier))
-
+            load, register = self.loadVariable(register, right_type, False)
             code += load
 
         # type conversion
@@ -905,13 +904,12 @@ class LLVMGenerator:
             convert, register = self.convertToType(register, right_type, left_type)
             code += convert
 
-        if node.getSymbolTable().isGlobal(identifier):
-
-            code += self.storeVariable(identifier, register, left_type, True)
-        else:
+        is_global = node.getSymbolTable().isGlobal(identifier)
+        if not is_global:
             t, table = node.getSymbolTable().lookup(identifier)
             identifier = table + "." + identifier
-            code += self.storeVariable(identifier, register, left_type, False)
+
+        code += self.storeVariable(identifier, register, left_type, is_global)
 
         return code, identifier
 
