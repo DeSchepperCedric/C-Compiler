@@ -28,6 +28,19 @@ void funcDecide()
 	}
 }
 
+char* retrieveValue(int i, float f, char c)
+{
+	printf("i=%d\n", i);
+	printf("f=%f\n", f);
+	printf("c=%c\n", c);
+
+	char* str = "A string that will be returned.";
+
+	printf("Returning '%s'", str);
+
+	return str;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -40,6 +53,16 @@ int main(int argc, char** argv)
 
 	printf("Calling funcDecide(). Expected: calling funcA()\n");
 	funcDecide();
+
+	int i = 0;
+	float j = 3.141592;
+	char x = 'a';
+
+	printf("Calling function with (%d, %f, %c)\n", i, j, x);
+
+	char* retval = retrieveValue(i, j, c);
+
+	printf("Received '%s'", retval);
 
 	return 0;
 }
