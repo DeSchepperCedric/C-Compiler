@@ -99,8 +99,8 @@ class LLVMGenerator:
 
         elif isinstance(node, ExpressionStatement):
             return self.expressionStatement(node)
-        elif isinstance(node, Body):
-            return self.body(node)
+        elif isinstance(node, StatementContainer):  # Body & CompoundStmt
+            return self.statementContainer(node)
         elif isinstance(node, ProgramNode):
             return self.programNode(node)
 
@@ -412,7 +412,7 @@ class LLVMGenerator:
         code = self.global_scope_string + code
         return code
 
-    def body(self, node):
+    def statementContainer(self, node):
         code = ""
         for child in node.getChildren():
             new_code, reg = self.astNodeToLLVM(child)
