@@ -5,7 +5,7 @@ program : top_level_node+ EOF;
 top_level_node
         : include
         | declaration SC
-        | func_def
+        | func_def SC?
         ;
 
 // include for <stdio.h>
