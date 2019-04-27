@@ -586,7 +586,6 @@ class LLVMGenerator:
 
     def getLLVMType(self, type_node):
         """ Converts a symbolType to an LLVM type"""
-        print(type(type_node))
         if type_node.isFunction():
             type_string = type_node.getReturnTypeAsString()
 
@@ -797,12 +796,12 @@ class LLVMGenerator:
 
         code, register = self.astNodeToLLVM(node.getExpression())
 
-
-
+        # extra load needed when not an identifier
         if not isinstance(node.getExpression(), IdentifierExpr):
             new_code, register = self.loadVariable(register, expr_type, False)
             code += new_code
 
+        # type conversion
         if function_return_type != expr_type:
             convert, register = self.convertToType(register, expr_type, function_return_type)
             code += convert
@@ -863,9 +862,15 @@ class LLVMGenerator:
         return "", -1
 
     def assignmentExpr(self, node):
+
+        # array[element] = value has to be done differently
+        if isinstance(node.getLeft(), ArrayAccessExpr):
+            return self.arrayElementAssignment(node)
+
         code, register = self.astNodeToLLVM(node.getRight())
         right_type = self.getLLVMType(node.getRight().getExpressionType())
         left_type = self.getLLVMType(node.getLeft().getExpressionType())
+
         identifier = node.getLeft().getIdentifierName()
         if not isinstance(node.getRight(), IdentifierExpr):
             load, register = self.loadVariable(register, right_type, node.getSymbolTable().isGlobal(identifier))
@@ -980,15 +985,13 @@ class LLVMGenerator:
 
         array_id = node.getID()
         array_type, table = node.getSymbolTable().lookup(array_id)
-        print("--------")
-        print(type(array_type))
         array_type = self.getLLVMType(array_type)
         code = ""
         is_global = node.getSymbolTable().isGlobal(array_id)
 
         array_code = "[{} x {}]".format(array_size, array_type)
         if is_global:
-            code = "@{} = global {} zeroinitializer".format(array_id, array_code)
+            code = "@{} = global {} zeroinitializer\n".format(array_id, array_code)
 
         else:
             array_id = table + "." + array_id
@@ -996,3 +999,32 @@ class LLVMGenerator:
             # TODO do i have to add store 0 to initialize every element to 0?
 
         return code, -1
+
+    def arrayElementAssignment(self, node):
+        code, register = self.astNodeToLLVM(node.getRight())
+        right_type = self.getLLVMType(node.getRight().getExpressionType())
+        left_type = self.getLLVMType(node.getLeft().getExpressionType())
+
+        identifier = node.getLeft().getTargetArray()
+
+        if not isinstance(node.getRight(), IdentifierExpr):
+            load, register = self.loadVariable(register, right_type, node.getSymbolTable().isGlobal(identifier))
+
+            code += load
+        if right_type == left_type:
+            pass
+        else:
+            convert, register = self.convertToType(register, right_type, left_type)
+            code += convert
+
+        if node.getSymbolTable().isGlobal(identifier):
+
+            code += self.storeVariable(identifier, register, left_type, True)
+        else:
+            t, table = node.getSymbolTable().lookup(identifier)
+            identifier = table + "." + identifier
+            code += self.storeVariable(identifier, register, left_type, False)
+
+        return code, identifier
+
+
