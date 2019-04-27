@@ -546,16 +546,20 @@ class ParserVisitor(CVisitor):
         if ctx.getChildCount() == 1:
             return self.manuallyVisitChild(ctx.getChild(0))
 
+        # format is now "prim_type pointerstar* expr"
+
         # the last child contains the expression
         expr = self.manuallyVisitChild(ctx.getChild(ctx.getChildCount() - 1))
 
-        # all the child nodes that contain a type
-        type_ctx_list = [ctx for ctx in list(ctx.getChildren())[0:-1] if not ctx.getText() in ['(', ')']]
+        # format: 
+        type_spec = [ctx for ctx in list(ctx.getChildren())[0:-1] if not ctx.getText() in ['(', ')']]
 
         # visit each type-child and retrieve type name
-        type_list = [self.manuallyVisitChild(ctx) for ctx in type_ctx_list]
+        type_list = [self.manuallyVisitChild(ctx) for ctx in type_spec]
 
-        return CastExpr(type_list, expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+        typename = "".join(type_list)
+
+        return CastExpr(VariableType(typename), expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#unaryAsPostfix.
     def visitUnaryAsPostfix(self, ctx: CParser.UnaryAsPostfixContext):
