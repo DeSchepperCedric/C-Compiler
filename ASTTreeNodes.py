@@ -707,18 +707,18 @@ class StatementContainer:
                 init_expr_list = [expr for expr in child.getInitList() if isinstance(expr, Expression)]
 
                 for expr in init_expr_list:
-                    expr.setExprTreeSymbolTable(symbol_table)
-                    expr.resolveExpressionType(symbol_table)
+                    expr.setExprTreeSymbolTable(for_scope)
+                    expr.resolveExpressionType(for_scope)
 
                 for expr in child.getIterList():
                     if isinstance(expr, Expression):  # skip empty node
-                        expr.setExprTreeSymbolTable(symbol_table)
-                        expr.resolveExpressionType(symbol_table)
+                        expr.setExprTreeSymbolTable(for_scope)
+                        expr.resolveExpressionType(for_scope)
 
                 # annotate the conditional expression with symbol table and resolve expression_type
                 cond_expr = child.getCondExpr()
-                cond_expr.setExprTreeSymbolTable(symbol_table)
-                cond_expr.resolveExpressionType(symbol_table)
+                cond_expr.setExprTreeSymbolTable(for_scope)
+                cond_expr.resolveExpressionType(for_scope)
 
                 # check that expression is compatible with bool
                 cond_expr_type = cond_expr.getExpressionType()
@@ -2101,7 +2101,9 @@ class ModExpr(Expression):
             raise AstTypingException()
 
         # always convert to int
-        self.expression_type = VariableType("int")
+
+        # get maximal type
+        self.expression_type = get_maximal_type(left_type, right_type)
 
         return self.expression_type
 
