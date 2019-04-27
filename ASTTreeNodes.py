@@ -1531,6 +1531,8 @@ class LogicOrExpr(Expression):
                          .format(left_type.toString(), right_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
+        # TODO narrowing warning?
+
         # return bool
         self.expression_type = VariableType('bool')
 
