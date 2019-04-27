@@ -64,14 +64,15 @@ class LLVMGenerator:
         elif isinstance(node, MulExpr):
             return self.arithmeticExpr(node, "mul")
         elif isinstance(node, DivExpr):
-            return self.arithmeticExpr(node, "div")
+            return self.arithmeticExpr(node, "sdiv")
         elif isinstance(node, ModExpr):
             return self.arithmeticExpr(node, "srem")
 
+        # format here is (node, int-op, float-op)
         elif isinstance(node, EqualityExpr):
-            return self.comparisonExpr(node, "eq", "eq")
+            return self.comparisonExpr(node, "eq", "oeq")
         elif isinstance(node, InequalityExpr):
-            return self.comparisonExpr(node, "ne", "ne")
+            return self.comparisonExpr(node, "ne", "one")
         elif isinstance(node, CompGreater):
             return self.comparisonExpr(node, "sgt", "ogt")
         elif isinstance(node, CompLess):
@@ -97,6 +98,9 @@ class LLVMGenerator:
             return self.body(node)
         elif isinstance(node, ProgramNode):
             return self.programNode(node)
+
+        raise Exception("Encountered unknown AST node of type '{}'".format(type(node)))
+
         return "", -1
 
     def boolConstantExpr(self, expr):
@@ -531,6 +535,12 @@ class LLVMGenerator:
                 arg_type = needed_param_type
                 arg_code += convert
 
+            # vararg functions do not take floats, all floats are converted to double
+            if function_id == "printf" and arg_type == "float":
+                convert, arg_reg = self.convertToType(arg_reg, arg_type, "double")
+                arg_type = "double"
+                arg_code += convert
+
             if isinstance(arg, AddressExpr) and function_id == "scanf":
                 load, arg_reg = self.loadVariable(arg_reg, arg_type, False)
                 arg_code += load
@@ -642,12 +652,16 @@ class LLVMGenerator:
             code_left, reg_left = self.convertToFloat(reg_left, type_left)
             code_right, reg_right = self.convertToFloat(reg_right, type_right)
 
+            # if we do division, the passed argument will be "sdiv", but we need "div" to make the trickwork
+            if operation == "sdiv":
+                operation = "div"
+
             code += code_left
             code += code_right
             code += "%{} = f{} float %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
             llvm_type = "float"
 
-        else:
+        elif strongest_type == "int":
             code_left, reg_left = self.convertToInt(reg_left, type_left)
             code_right, reg_right = self.convertToInt(reg_right, type_right)
 
@@ -655,6 +669,25 @@ class LLVMGenerator:
             code += code_right
             code += "%{} = {} i32 %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
             llvm_type = "i32"
+
+        elif strongest_type == "char":
+            code_left, reg_left = self.convertToChar(reg_left, type_left)
+            code_right, reg_right = self.convertToChar(reg_right, type_right)
+
+            code += code_left
+            code += code_right
+            code += "%{} = {} i8 %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
+            llvm_type = "i8"
+        elif strongest_type == "bool":
+            code_left, reg_left = self.convertToBool(reg_left, type_left)
+            code_right, reg_right = self.convertToBool(reg_right, type_right)
+
+            code += code_left
+            code += code_right
+            code += "%{} = {} i1 %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
+            llvm_type = "i1"
+        else:
+            raise Exception("Invalid return type from getStrongestType '{}'".format(strongest_type))
 
         self.cur_reg += 1
         code += self.allocate(self.cur_reg, llvm_type, False)
@@ -665,12 +698,20 @@ class LLVMGenerator:
         return code, self.cur_reg - 1
 
     def getStrongestType(self, a, b):
+        INTREP = ["int", "i32"]
+        CHARREP = ["char", "i8"]
+        BOOLREP = ["bool", "i1"]
+
         if a == "float" or b == "float":
             return "float"
-        elif a == "int" or b == "int":
+        elif a in INTREP or b in INTREP:
             return "int"
-        else:
+        elif a in CHARREP or b in CHARREP:
             return "char"
+        elif a in BOOLREP or b in BOOLREP:
+            return "bool"
+        else:
+            raise Exception("Invalid call to getStrongestType for '{}' and '{}'".format(a, b))
 
     def convertToFloat(self, reg, type):
         code = ""
@@ -687,6 +728,7 @@ class LLVMGenerator:
             self.cur_reg += 1
             return code, self.cur_reg - 1
         else:
+            raise Exception("Converting from '{}' to float for register '{}' is not defined.".format(type, reg))
             # what with other types?
             return code, reg
 
@@ -713,15 +755,68 @@ class LLVMGenerator:
 
 
         else:
+            raise Exception("Converting from '{}' to int for register '{}' is not defined.".format(type, reg))
             # what with other types?
+            return code, reg
+
+    def convertToDouble(self, reg, from_type):
+        code = ""
+        if "float" in from_type:
+            code += "%{} = fpext float %{} to double\n".format(self.cur_reg, reg)
+            self.cur_reg += 1
+            return code, self.cur_reg - 1
+        else:
+            raise Exception("Converting from '{}' to float for register '{}' is not defined.".format(type, reg))
+            return code, reg
+
+    def convertToChar(self, reg, from_type):
+        """
+            Returns LLVM IR code for converting the specified register of the specfied type to the "char"/"i8" type.
+        """
+        code = ""
+        if "char" in from_type or "i8" in from_type:
+            return code, reg
+        elif "i1" in from_type:
+            code += "%{} = zext i1 %{} to i8\n".format(self.cur_reg, reg)
+            self.cur_reg += 1
+            return code, self.cur_reg - 1
+        elif "i32" in from_type:
+            code += "%{} = trunc i32 %{} to i8".format(self.cur_reg, reg)
+            self.cur_reg += 1
+            return code, self.cur_reg - 1
+        elif "float" in from_type:
+            code += "%{} = fptosi float %{} to i8\n".format(self.cur_reg, reg)
+            self.cur_reg += 1
+            return code, self.cur_reg - 1
+        else:
+            raise Exception("Converting from '{}' to char for register '{}' is not defined.".format(from_type, reg))
+            return code, reg
+        # floating point conversion?
+
+    def convertToBool(self, reg, from_type):
+        """
+            Returns LLVM IR code for converting the specified register of the specified type to the "bool"/"i1" type.
+        """
+        code = ""
+        if "bool" in from_type or "i1" in from_type:
+            return code, reg
+        else:
+            raise Exception("Converting from '{}' to bool for register '{}' is not defined.".format(from_type, reg))
             return code, reg
 
     def convertToType(self, reg, old_type, new_type):
         if "int" in new_type or "i32" in new_type:
             return self.convertToInt(reg, old_type)
 
+        elif "char" in new_type or "i8" in new_type:
+            return self.convertToChar(reg, old_type)
+            raise Exception("Conversion from type '{}' to type '{}' in register '{}' is not possible.".format(old_type, new_type, reg))
         elif "float" in new_type:
             return self.convertToFloat(reg, old_type)
+        elif "double" in new_type:
+            return self.convertToDouble(reg, old_type)
+        else:
+            raise Exception("Conversion from type '{}' to type '{}' in register '{}' is not possible.".format(old_type, new_type, reg))
 
     def convertConstant(self, new_type, old_type, value):
         if old_type == "i8" and new_type != old_type:
@@ -829,7 +924,7 @@ class LLVMGenerator:
 
             code += code_left
             code += code_right
-            code += "%{} = icmp {} float %{}, %{}\n".format(self.cur_reg, float_op, reg_left, reg_right)
+            code += "%{} = fcmp {} float %{}, %{}\n".format(self.cur_reg, float_op, reg_left, reg_right)
         else:
             code_left, reg_left = self.convertToInt(reg_left, type_left)
             code_right, reg_right = self.convertToInt(reg_right, type_right)
@@ -934,10 +1029,13 @@ class LLVMGenerator:
         :param string: string to be added
         :return: register the string is located in
         """
+
+        # adjust string size based on the amount of \n and \t and \\ (backslash)
         c = string.count("\\n")
         c += string.count("\\t")
+        c += string.count("\\\\")
         c *= 2
-        string = string.replace("\\n", "\\0A").replace("\\t", "\\09")
+        string = string.replace("\\n", "\\0A").replace("\\t", "\\09").replace("\\\\", "\\5C")
         reg = ".str"
         if len(self.string_to_regs) > 0:
             reg = reg + "." + str(len(self.string_to_regs))
