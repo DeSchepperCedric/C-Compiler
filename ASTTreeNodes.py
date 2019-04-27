@@ -787,6 +787,9 @@ class StatementContainer:
                         "Returning expression of type '{}' in function with return type '{}' will result in narrowing on line {}."
                             .format(return_expr_type.toString(), function_return_type.toString(), child.getLineNr()))
                     # no exception needed
+
+                # pass function type to the node
+                child.setFunctionType(self.parent_function_type)
             elif isinstance(child, ReturnStatement):
                 function_return_type = self.parent_function_type.getReturnType()
 
@@ -795,6 +798,9 @@ class StatementContainer:
                         "Invalid return with no value in function with non-void return type on line {}.".format(
                             child.getLineNr()))
                     raise AstTypingException()
+
+                # pass function type to the node
+                child.setFunctionType(self.parent_function_type)
             # ENDIF
 
         return symbol_table
@@ -1093,6 +1099,13 @@ class ReturnStatement(JumpStatement):
 
     def __init__(self):
         super().__init__(jump_type="return")
+        self.function_type = None
+
+    def setFunctionType(self, func_type):
+        self.function_type = func_type
+
+    def getFunctionType(self):
+        return self.function_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[],
@@ -1109,6 +1122,13 @@ class ReturnWithExprStatement(JumpStatement):
     def __init__(self, expression):
         super().__init__(jump_type="returnWithExpr")
         self.expression = expression
+        self.function_type = None
+
+    def setFunctionType(self, func_type):
+        self.function_type = func_type
+
+    def getFunctionType(self):
+        return self.function_type
 
     def getExpression(self):
         return self.expression
