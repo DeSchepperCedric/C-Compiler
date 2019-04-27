@@ -119,6 +119,10 @@ class ParserVisitor(CVisitor):
             Logger.error("Cannot declare array with type 'void' at line {}.".format(ctx.start.line))
             raise AstCreationException()
 
+        if not isinstance(size_expr, IntegerConstantExpr):
+            Logger.error("Array size must be specified by integer constant. Error on line {}.".format(ctx.start.line))
+            raise AstCreationException()
+
         # temporarily set type to None
         return ArrayDecl(ctx.temp_typeName, var_id, ptr_count, size_expr).setLineNr(ctx.start.line).setColNr(
             ctx.start.column)
