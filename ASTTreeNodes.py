@@ -34,10 +34,7 @@ class ASTNode:
         else:
             symbol_table_flag = ""
 
-        if self.symbol_table is None:
-            return self.node_name + symbol_table_flag + expr_type
-        else:  # if the symbol table is present, annotate with star
-            return self.node_name + symbol_table_flag + expr_type
+        return self.node_name + symbol_table_flag + expr_type
 
     def getSymbolTable(self):
         """
