@@ -6,6 +6,8 @@
 
 int main(int argc, char** argv)
 {
+	int a[5+6];
+
 	printf("Branch taken on 'true':\n");
 	if(true)
 	{
