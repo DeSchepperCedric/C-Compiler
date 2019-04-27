@@ -99,8 +99,8 @@ class LLVMGenerator:
 
         elif isinstance(node, ExpressionStatement):
             return self.expressionStatement(node)
-        elif isinstance(node, Body):
-            return self.body(node)
+        elif isinstance(node, StatementContainer):  # Body & CompoundStmt
+            return self.statementContainer(node)
         elif isinstance(node, ProgramNode):
             return self.programNode(node)
 
@@ -309,47 +309,6 @@ class LLVMGenerator:
         return code, -1
 
     def branchStatement(self, node):
-        """
-        # no else statement will still generate a label
-        # might be removed later
-        code, register = self.astNodeToLLVM(node.getCondExpr())
-        branch_if = self.cur_reg
-
-        # we need to generate conditional code last since we need the correct register numbers
-        # cond
-        # code += "br i1 %{}, label %{}, label %{}\n\n".format(register, self.cur_reg, self.cur_reg + 1)
-        # self.cur_reg += 2
-
-        # if
-        reg_if_label = self.cur_reg
-        self.cur_reg += 1
-        # code_if = "; <label>:{}:\n".format(reg_if_label)  # comment for clarity
-        code_new_if, reg = self.astNodeToLLVM(node.getIfBody())
-        code_if = code_new_if
-
-        # else
-        reg_else_label = self.cur_reg
-        self.cur_reg += 1
-        # code_else = "; <label>:{}:\n".format(reg_else_label)  # comment for clarity
-        code_new_else, reg = self.astNodeToLLVM(node.getElseBody())
-        code_else = code_new_else
-        # cond
-        cond_code = "br i1 %{}, label %{}, label %{}\n\n".format(register, reg_if_label, reg_else_label)
-
-        code += cond_code
-
-        code += code_if
-        code += "br label %{}\n\n".format(self.cur_reg)
-
-        code += code_else
-        code += "br label %{}\n\n".format(self.cur_reg)
-
-        code += "; <label>:{}:\n".format(self.cur_reg)
-        self.cur_reg += 1
-
-
-        return code, -1
-        """
 
         # no else statement will still generate a label
         # might be removed later
@@ -412,7 +371,7 @@ class LLVMGenerator:
         code = self.global_scope_string + code
         return code
 
-    def body(self, node):
+    def statementContainer(self, node):
         code = ""
         for child in node.getChildren():
             new_code, reg = self.astNodeToLLVM(child)
@@ -426,25 +385,6 @@ class LLVMGenerator:
         return param_type
 
     def funcDecl(self, node):
-        """
-        return_type, t = node.getSymbolTable().lookup(node.getID())
-        return_type = self.getLLVMType(return_type)
-
-        function_name = "@" + node.getID()
-
-        code = "declare " + return_type + " " + function_name + "("
-        first_param = True
-        for param in node.getParams():
-            if not first_param:
-                code += ","
-            else:
-                first_param = False
-
-            code += self.funcParam(param)
-
-        code += ")\n"
-        return code, -1
-        """
         return "", -1
 
     def funcDef(self, node):
@@ -545,10 +485,7 @@ class LLVMGenerator:
                 arg_code += convert
 
             if isinstance(arg, AddressExpr) and function_id == "scanf":
-                """
-                load, arg_reg = self.loadVariable(arg_reg, arg_type, False)
-                arg_code += load
-                """
+
                 arg_id = arg.getTargetExpr().getIdentifierName()
                 is_global = node.getSymbolTable().isGlobal(arg_id)
                 var_type, t = node.getSymbolTable().lookup(arg_id)
@@ -556,14 +493,6 @@ class LLVMGenerator:
                 reg = (t + "." + arg_id) if not is_global else arg_id
 
                 load_groups.append((reg, arg_reg, arg_type[:-1], is_global))
-
-            # extra load necessary because we did a redundant store
-
-            """
-            if isinstance(arg, PointerDerefExpr) and function_id == "printf":
-                load, arg_reg = self.loadVariable(arg_reg, arg_type, False)
-                arg_code += load
-            """
 
             code += arg_code
 
@@ -965,8 +894,7 @@ class LLVMGenerator:
         identifier = node.getLeft().getIdentifierName()
         # extra load necessary
         if not isinstance(node.getRight(), IdentifierExpr):
-            load, register = self.loadVariable(register, right_type, node.getSymbolTable().isGlobal(identifier))
-
+            load, register = self.loadVariable(register, right_type, False)
             code += load
 
         # type conversion
@@ -976,13 +904,12 @@ class LLVMGenerator:
             convert, register = self.convertToType(register, right_type, left_type)
             code += convert
 
-        if node.getSymbolTable().isGlobal(identifier):
-
-            code += self.storeVariable(identifier, register, left_type, True)
-        else:
+        is_global = node.getSymbolTable().isGlobal(identifier)
+        if not is_global:
             t, table = node.getSymbolTable().lookup(identifier)
             identifier = table + "." + identifier
-            code += self.storeVariable(identifier, register, left_type, False)
+
+        code += self.storeVariable(identifier, register, left_type, is_global)
 
         return code, identifier
 
@@ -1024,19 +951,7 @@ class LLVMGenerator:
         #
         code = ""
         expr_type = self.getLLVMType(node.getTargetPtr().getExpressionType())
-        """
-        if isinstance(node.getTargetPtr(), PointerDerefExpr):
-            print("only here")
-            target_reg = self.cur_reg - 1
 
-            load, target_reg = self.loadVariable(target_reg, expr_type, False)
-            code += load
-
-        else:
-            print("here")
-            new_code, target_reg = self.astNodeToLLVM(node.getTargetPtr())
-            print(target_reg)
-        """
         code, target_reg = self.astNodeToLLVM(node.getTargetPtr())
         if isinstance(node.getTargetPtr(), PointerDerefExpr):
 
