@@ -37,6 +37,8 @@ class LLVMGenerator:
             return self.varDeclDefault(node)
         elif isinstance(node, VarDeclWithInit):
             return self.varDeclWithInit(node)
+        elif isinstance(node, ArrayDecl):
+            return self.arrayDecl(node)
         elif isinstance(node, AssignmentExpr):
             return self.assignmentExpr(node)
 
@@ -594,18 +596,22 @@ class LLVMGenerator:
 
     def getLLVMType(self, type_node):
         """ Converts a symbolType to an LLVM type"""
+        print(type(type_node))
         if type_node.isFunction():
-            type_node = type_node.getReturnType()
+            type_string = type_node.getReturnTypeAsString()
 
-        if type_node.isVar():
+        elif type_node.isVar():
             type_string = type_node.toString()
 
-            type_string = type_string.replace("int", "i32")
-            type_string = type_string.replace("bool", "i1")
-            type_string = type_string.replace("char", "i8")
-            return type_string
+        elif type_node.isArray():
+            type_string = type_node.getEntryTypeAsString()
 
-        return ""
+        else:
+            raise Exception("Incorrect type node")
+        type_string = type_string.replace("int", "i32")
+        type_string = type_string.replace("bool", "i1")
+        type_string = type_string.replace("char", "i8")
+        return type_string
 
     def identifierExpr(self, node):
         """
@@ -847,10 +853,10 @@ class LLVMGenerator:
 
         # integer
         elif old_type == "i32" and new_type == "float":
-            return self.floatToHex(float(value))
+            return self.floatToHex(float(int(value)))
 
         elif old_type == "i32" and new_type == "i8":
-            return chr(value)
+            return chr(int(value))
 
         # bool
         elif old_type == "i1" and new_type == "i8":
@@ -875,21 +881,27 @@ class LLVMGenerator:
 
     def returnWithExprStatement(self, node):
 
-        return_type = self.getLLVMType(node.getExpression().getExpressionType())
-
-        same_type = (self.getLLVMType(node.getExpression().getExpressionType()) == return_type)
+        expr_type = self.getLLVMType(node.getExpression().getExpressionType())
+        function_return_type = self.getLLVMType(node.getFunctionType())
 
         if isinstance(node.getExpression(), ConstantExpr):
-            value = self.convertConstant(return_type, node.getExpression().getExpressionType(),
+            value = self.convertConstant(function_return_type, expr_type,
                                          node.getExpression().getValue())
-            code = "ret {} {}\n".format(return_type, value)
+            code = "ret {} {}\n".format(function_return_type, value)
             return code, -1
 
         code, register = self.astNodeToLLVM(node.getExpression())
+
+
+
         if not isinstance(node.getExpression(), IdentifierExpr):
-            new_code, register = self.loadVariable(register, return_type, False)
+            new_code, register = self.loadVariable(register, expr_type, False)
             code += new_code
-        code += "ret {} %{}\n".format(return_type, register)
+
+        if function_return_type != expr_type:
+            convert, register = self.convertToType(register, expr_type, function_return_type)
+            code += convert
+        code += "ret {} %{}\n".format(function_return_type, register)
         return code, -1
 
     def comparisonExpr(self, node, int_op, float_op):
@@ -1059,3 +1071,26 @@ class LLVMGenerator:
         code += "i8** " + "%{}".format(reg_to)
         code += "\n"
         return code
+
+    def arrayDecl(self, node):
+        # array size expression must be of a IntegerConstantExpression
+        array_size = node.getSizeExpr().getIntValue()
+
+        array_id = node.getID()
+        array_type, table = node.getSymbolTable().lookup(array_id)
+        print("--------")
+        print(type(array_type))
+        array_type = self.getLLVMType(array_type)
+        code = ""
+        is_global = node.getSymbolTable().isGlobal(array_id)
+
+        array_code = "[{} x {}]".format(array_size, array_type)
+        if is_global:
+            code = "@{} = global {} zeroinitializer".format(array_id, array_code)
+
+        else:
+            array_id = table + "." + array_id
+            code = self.allocate(array_id, array_code, False)
+            # TODO do i have to add store 0 to initialize every element to 0?
+
+        return code, -1

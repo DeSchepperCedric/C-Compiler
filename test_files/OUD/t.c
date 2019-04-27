@@ -1,16 +1,17 @@
 #include <stdio.h>
 
 
-
+int c[25];
 int b(int a){
 return a;
 }
 
+
 int main(){
-float bb = 5.5;
-int q = b(5.5);
-printf("%d test test test \n %f", q, 5.5);
-return 0;
+c[3] = 5;
+int a[5] = {0,5,0};
+
+return a[2];
 }
 
 

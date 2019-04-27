@@ -318,7 +318,7 @@ class ArrayDecl(SymbolDecl):
                          symbol_ptr_cnt=ptr_count)
         self.size_expr = size_expr
 
-    def getSizeExp(self):
+    def getSizeExpr(self):
         return self.size_expr
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
