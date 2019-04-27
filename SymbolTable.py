@@ -1,7 +1,4 @@
-
-
 class SymbolTable:
-
     table_counter = 0  # to name the tables
 
     def __init__(self, parent=None):
@@ -78,7 +75,7 @@ class SymbolTable:
         """
         cur = self
 
-        while(cur.parent is not None):
+        while (cur.parent is not None):
             cur = cur.parent
 
         return cur
@@ -95,6 +92,7 @@ class SymbolTable:
         dot += new_dot
         dot += "}\n"
         return dot
+
 
 def recursive_symbol_table(parent, cur_id):
     """
@@ -122,7 +120,8 @@ def print_symbol_table_node_to_dot(node, cur_id):
     :param cur_id: current node id
     :return: dot string
     """
-    dot = "\t{} [\n\t shape=plaintext \n \tlabel=< <table border=\'0\' cellborder=\'1\' cellspacing=\'0\'\n\t>".format(cur_id)
+    dot = "\t{} [\n\t shape=plaintext \n \tlabel=< <table border=\'0\' cellborder=\'1\' cellspacing=\'0\'\n\t>".format(
+        cur_id)
 
     dot += "\t<tr><td colspan=\"2\"> {} </td></tr>\n".format(node.name)
     for symbol, sym_type in node.symbols.items():
@@ -135,6 +134,7 @@ def print_symbol_table_node_to_dot(node, cur_id):
         dot += "\t</tr>\n"
     dot += "\t</table>  >];\n"
     return dot
+
 
 class SymbolType:
     def __init__(self):
@@ -149,8 +149,9 @@ class SymbolType:
     def isVar(self):
         return False
 
+
 class FunctionType(SymbolType):
-    def __init__(self, return_type : str, param_types : list, is_defined = False):
+    def __init__(self, return_type: str, param_types: list, is_defined=False):
         """
             Constructor
         """
@@ -183,7 +184,6 @@ class FunctionType(SymbolType):
         self.is_defined = True
 
     def toString(self, included_definition_flag=False):
-
         retval = self.return_type + "(" + ",".join(self.param_types) + ")"
 
         if included_definition_flag and self.is_defined:
@@ -191,8 +191,9 @@ class FunctionType(SymbolType):
 
         return retval
 
+
 class VariableType(SymbolType):
-    def __init__(self, variable_type : str):
+    def __init__(self, variable_type: str):
         """
              Constructor.
 
@@ -228,7 +229,7 @@ class VariableType(SymbolType):
 
 
 class ArrayType(SymbolType):
-    def __init__(self, entry_type : str):
+    def __init__(self, entry_type: str):
         """
             Constructor.
 
@@ -249,6 +250,7 @@ class ArrayType(SymbolType):
     def isArray(self):
         return True
 
+
 def main():
     root = SymbolTable()
     root.insert("i", "int")
@@ -261,8 +263,6 @@ def main():
 
     child3 = root.allocate()
     child3.insert("i", "float")
-
-
 
 
 if __name__ == "__main__":
