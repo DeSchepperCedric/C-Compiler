@@ -13,6 +13,7 @@ class LLVMGenerator:
         self.reg_to_string = dict()
 
     def astNodeToLLVM(self, node):
+        print(type(node))
         """
         Returns LLVM code string + register number
         Only function to call outside the class
@@ -37,6 +38,8 @@ class LLVMGenerator:
             return self.varDeclDefault(node)
         elif isinstance(node, VarDeclWithInit):
             return self.varDeclWithInit(node)
+        elif isinstance(node, ArrayDecl):
+            return self.arrayDecl(node)
         elif isinstance(node, AssignmentExpr):
             return self.assignmentExpr(node)
 
@@ -961,3 +964,23 @@ class LLVMGenerator:
         code += "i8** " + "%{}".format(reg_to)
         code += "\n"
         return code
+
+    def arrayDecl(self, node):
+        # array size expression must be of a IntegerConstantExpression
+        array_size = node.getSizeExpr().getIntValue()
+
+        array_id = node.getID()
+        array_type, table = node.getSymbolTable().lookup(array_id)
+        array_type = self.getLLVMType(array_id)
+        code = ""
+        is_global = node.getSymbolTable().isGlobal(array_id)
+
+        array_code = "[{} x {}]".format(array_size, array_type)
+        if is_global:
+            code = "@{} = global {} zeroinitializer".format(array_id, array_code)
+
+        else:
+            array_id = table + "." + array_id
+            code = self.allocate(array_id, array_code, False)
+
+        return code, -1
