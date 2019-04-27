@@ -11,6 +11,7 @@ class LLVMGenerator:
         self.global_scope_string = ""
         self.string_to_regs = dict()
         self.reg_to_string = dict()
+        self.array_sizes = dict()
 
     def astNodeToLLVM(self, node):
         """
@@ -49,6 +50,8 @@ class LLVMGenerator:
 
         elif isinstance(node, IdentifierExpr):
             return self.identifierExpr(node)
+        elif isinstance(node, ArrayAccessExpr):
+            return self.arrayElementAccess(node)
 
         elif isinstance(node, FuncParam):
             return self.funcParam(node)
@@ -101,9 +104,7 @@ class LLVMGenerator:
         elif isinstance(node, ProgramNode):
             return self.programNode(node)
 
-        raise Exception("Encountered unknown AST node of type '{}'".format(type(node)))
-
-        return "", -1
+        raise Exception("Encountered unknown AST node of type '{}'.\n This node has no support yet.".format(type(node)))
 
     def boolConstantExpr(self, expr):
         """
@@ -252,7 +253,8 @@ class LLVMGenerator:
             t, table = node.getSymbolTable().lookup(var_id)
             reg_name = table + "." + var_id
             code += "%{} = alloca {}\n".format(reg_name, var_type)
-            code += "store {} {}, {}* %{}\n".format(var_type, value, var_type, reg_name)
+            # LLVM seems to initialize to 0 automatically
+            # code += "store {} {}, {}* %{}\n".format(var_type, value, var_type, reg_name)
 
         code += "\n"
         return code, -1
@@ -526,8 +528,7 @@ class LLVMGenerator:
 
             arg_type = self.getLLVMType(arg.getExpressionType())
 
-            # handle strings separately since we split up the constant expressions
-            if isinstance(arg, ConstantExpr):
+            if not isinstance(arg, IdentifierExpr):
                 load, arg_reg = self.loadVariable(arg_reg, arg_type, False)
                 arg_code += load
 
@@ -544,8 +545,10 @@ class LLVMGenerator:
                 arg_code += convert
 
             if isinstance(arg, AddressExpr) and function_id == "scanf":
+                """
                 load, arg_reg = self.loadVariable(arg_reg, arg_type, False)
                 arg_code += load
+                """
                 arg_id = arg.getTargetExpr().getIdentifierName()
                 is_global = node.getSymbolTable().isGlobal(arg_id)
                 var_type, t = node.getSymbolTable().lookup(arg_id)
@@ -555,9 +558,12 @@ class LLVMGenerator:
                 load_groups.append((reg, arg_reg, arg_type[:-1], is_global))
 
             # extra load necessary because we did a redundant store
+
+            """
             if isinstance(arg, PointerDerefExpr) and function_id == "printf":
                 load, arg_reg = self.loadVariable(arg_reg, arg_type, False)
                 arg_code += load
+            """
 
             code += arg_code
 
@@ -596,7 +602,6 @@ class LLVMGenerator:
 
     def getLLVMType(self, type_node):
         """ Converts a symbolType to an LLVM type"""
-        print(type(type_node))
         if type_node.isFunction():
             type_string = type_node.getReturnTypeAsString()
 
@@ -639,7 +644,6 @@ class LLVMGenerator:
         # extra load not necessary when dealing with Identifiers
         if not isinstance(node.getLeft(), IdentifierExpr):
             load, reg_left = self.loadVariable(reg_left, type_left, False)
-
             code_left += load
 
         code_right, reg_right = self.astNodeToLLVM(node.getRight())
@@ -735,8 +739,6 @@ class LLVMGenerator:
             return code, self.cur_reg - 1
         else:
             raise Exception("Converting from '{}' to float for register '{}' is not defined.".format(type, reg))
-            # what with other types?
-            return code, reg
 
     def convertToInt(self, reg, type):
         code = ""
@@ -758,12 +760,8 @@ class LLVMGenerator:
             code += "%{} = fptosi float %{} to i32\n".format(self.cur_reg, reg)
             self.cur_reg += 1
             return code, self.cur_reg - 1
-
-
         else:
             raise Exception("Converting from '{}' to int for register '{}' is not defined.".format(type, reg))
-            # what with other types?
-            return code, reg
 
     def convertToDouble(self, reg, from_type):
         code = ""
@@ -773,7 +771,6 @@ class LLVMGenerator:
             return code, self.cur_reg - 1
         else:
             raise Exception("Converting from '{}' to float for register '{}' is not defined.".format(type, reg))
-            return code, reg
 
     def convertToChar(self, reg, from_type):
         """
@@ -796,8 +793,6 @@ class LLVMGenerator:
             return code, self.cur_reg - 1
         else:
             raise Exception("Converting from '{}' to char for register '{}' is not defined.".format(from_type, reg))
-            return code, reg
-        # floating point conversion?
 
     def convertToBool(self, reg, from_type):
         """
@@ -808,7 +803,6 @@ class LLVMGenerator:
             return code, reg
         else:
             raise Exception("Converting from '{}' to bool for register '{}' is not defined.".format(from_type, reg))
-            return code, reg
 
     def convertToType(self, reg, old_type, new_type):
         if "int" in new_type or "i32" in new_type:
@@ -816,13 +810,14 @@ class LLVMGenerator:
 
         elif "char" in new_type or "i8" in new_type:
             return self.convertToChar(reg, old_type)
-            raise Exception("Conversion from type '{}' to type '{}' in register '{}' is not possible.".format(old_type, new_type, reg))
         elif "float" in new_type:
             return self.convertToFloat(reg, old_type)
         elif "double" in new_type:
             return self.convertToDouble(reg, old_type)
         else:
-            raise Exception("Conversion from type '{}' to type '{}' in register '{}' is not possible.".format(old_type, new_type, reg))
+            raise Exception(
+                "Conversion from type '{}' to type '{}' in register '{}' is not possible.".format(old_type, new_type,
+                                                                                                  reg))
 
     def convertConstant(self, new_type, old_type, value):
         if old_type == "i8" and new_type != old_type:
@@ -892,12 +887,12 @@ class LLVMGenerator:
 
         code, register = self.astNodeToLLVM(node.getExpression())
 
-
-
+        # extra load needed when not an identifier
         if not isinstance(node.getExpression(), IdentifierExpr):
             new_code, register = self.loadVariable(register, expr_type, False)
             code += new_code
 
+        # type conversion
         if function_return_type != expr_type:
             convert, register = self.convertToType(register, expr_type, function_return_type)
             code += convert
@@ -958,14 +953,23 @@ class LLVMGenerator:
         return "", -1
 
     def assignmentExpr(self, node):
+
+        # array[element] = value has to be done differently
+        if isinstance(node.getLeft(), ArrayAccessExpr):
+            return self.arrayElementAssignment(node)
+
         code, register = self.astNodeToLLVM(node.getRight())
         right_type = self.getLLVMType(node.getRight().getExpressionType())
         left_type = self.getLLVMType(node.getLeft().getExpressionType())
+
         identifier = node.getLeft().getIdentifierName()
+        # extra load necessary
         if not isinstance(node.getRight(), IdentifierExpr):
             load, register = self.loadVariable(register, right_type, node.getSymbolTable().isGlobal(identifier))
 
             code += load
+
+        # type conversion
         if right_type == left_type:
             pass
         else:
@@ -998,31 +1002,46 @@ class LLVMGenerator:
         code, target_reg = self.astNodeToLLVM(node.getTargetExpr())
         expr_type = self.getLLVMType(node.getTargetExpr().getExpressionType())
 
-        register = self.cur_reg
-        self.cur_reg += 1
-        code += self.allocate(register, expr_type, False)
-        code += self.storeVariable(register, target_reg, expr_type, False)
+        # if we are loading an array element, we cant do the extra store
+        register = target_reg
+        if not isinstance(node.getTargetExpr(), ArrayAccessExpr):
+            register = self.cur_reg
+            self.cur_reg += 1
+            code += self.allocate(register, expr_type, False)
+            code += self.storeVariable(register, target_reg, expr_type, False)
 
+        second_reg = self.cur_reg
+        self.cur_reg += 1
         expr_type += "*"
 
-        code += self.allocate(self.cur_reg, expr_type, False)
-        code += self.storeVariable(self.cur_reg, register, expr_type, False)
+        code += self.allocate(second_reg, expr_type, False)
+        code += self.storeVariable(second_reg, register, expr_type, False)
 
-        self.cur_reg += 1
+
         return code, self.cur_reg - 1
 
     def pointerDerefExpr(self, node):
         #
+        code = ""
+        expr_type = self.getLLVMType(node.getTargetPtr().getExpressionType())
+        """
         if isinstance(node.getTargetPtr(), PointerDerefExpr):
-            expr_type = self.getLLVMType(node.getTargetPtr().getExpressionType())
+            print("only here")
             target_reg = self.cur_reg - 1
 
             load, target_reg = self.loadVariable(target_reg, expr_type, False)
-            code = load
+            code += load
 
         else:
-            code, target_reg = self.astNodeToLLVM(node.getTargetPtr())
-            expr_type = self.getLLVMType(node.getTargetPtr().getExpressionType())
+            print("here")
+            new_code, target_reg = self.astNodeToLLVM(node.getTargetPtr())
+            print(target_reg)
+        """
+        code, target_reg = self.astNodeToLLVM(node.getTargetPtr())
+        if isinstance(node.getTargetPtr(), PointerDerefExpr):
+
+            load, target_reg = self.loadVariable(target_reg, expr_type, False)
+            code += load
 
         expr_type = expr_type[:-1]
         load, register = self.loadVariable(target_reg, expr_type, False)
@@ -1078,19 +1097,85 @@ class LLVMGenerator:
 
         array_id = node.getID()
         array_type, table = node.getSymbolTable().lookup(array_id)
-        print("--------")
-        print(type(array_type))
         array_type = self.getLLVMType(array_type)
         code = ""
         is_global = node.getSymbolTable().isGlobal(array_id)
 
         array_code = "[{} x {}]".format(array_size, array_type)
         if is_global:
-            code = "@{} = global {} zeroinitializer".format(array_id, array_code)
+            code = "@{} = global {} zeroinitializer\n".format(array_id, array_code)
+
 
         else:
             array_id = table + "." + array_id
             code = self.allocate(array_id, array_code, False)
-            # TODO do i have to add store 0 to initialize every element to 0?
 
-        return code, -1
+        # we need access to the size during array access operations
+        self.array_sizes[array_id] = array_size
+        return code, array_id
+
+    def arrayAccessHelperString(self, reg_to, reg_from, element_type, index, is_global):
+        """returns string used by arrays to access an element"""
+        if self.array_sizes.get(reg_from) is None:
+            raise Exception("Can't access array.")
+        if index > self.array_sizes.get(reg_from):
+            raise Exception(
+                "Index {} is not accessible in an array with size {}.".format(index, self.array_sizes.get(reg_from)))
+
+        array_size = "[{} x {}]".format(self.array_sizes.get(reg_from), element_type)
+        array_size = "{}, {}*".format(array_size, array_size)
+        glob = "@" if is_global else "%"
+        get_code = "%{} = getelementptr inbounds {} {}{}".format(reg_to, array_size, glob, reg_from)
+        return "{}, i64 0, i64 {}\n".format(get_code, index)
+
+    def arrayElementAssignment(self, node):
+        """assign a value to an array element ex. a[3] = 5"""
+        code, register = self.astNodeToLLVM(node.getRight())
+        right_type = self.getLLVMType(node.getRight().getExpressionType())
+        left_type = self.getLLVMType(node.getLeft().getExpressionType())
+
+        identifier = node.getLeft().getTargetArray().getIdentifierName()
+
+        if not isinstance(node.getRight(), IdentifierExpr):
+            load, register = self.loadVariable(register, right_type, node.getSymbolTable().isGlobal(identifier))
+
+            code += load
+        if right_type == left_type:
+            pass
+        else:
+            convert, register = self.convertToType(register, right_type, left_type)
+            code += convert
+
+        is_global = node.getSymbolTable().isGlobal(identifier)
+        if not is_global:
+            t, table = node.getSymbolTable().lookup(identifier)
+            identifier = table + "." + identifier
+
+        element_reg = self.cur_reg
+        self.cur_reg += 1
+
+        index = node.getLeft().getIndexArray().getIntValue()
+        code += self.arrayAccessHelperString(element_reg, identifier, left_type, index, is_global)
+
+        code += self.storeVariable(element_reg, register, left_type, is_global)
+        return code, element_reg
+
+    def arrayElementAccess(self, node):
+        """
+        Access an element of an array. Only used to retrieve a value.
+        Storing a value is done using arrayElementAssignment.
+        """
+        element_reg = self.cur_reg
+        element_type = self.getLLVMType(node.getExpressionType())
+        identifier = node.getTargetArray().getIdentifierName()
+        index = node.getIndexArray().getIntValue()
+
+        is_global = node.getSymbolTable().isGlobal(identifier)
+        if not is_global:
+            t, table = node.getSymbolTable().lookup(identifier)
+            identifier = table + "." + identifier
+
+        code = self.arrayAccessHelperString(element_reg, identifier, element_type, index, is_global)
+        self.cur_reg += 1
+
+        return code, element_reg
