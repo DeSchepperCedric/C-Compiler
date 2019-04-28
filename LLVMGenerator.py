@@ -396,6 +396,10 @@ class LLVMGenerator:
         self.cur_reg = 0
         code = ""
         return_type, scope = node.getSymbolTable().lookup(node.getFuncID())
+
+        if not return_type.isDefined():
+            raise Exception("Function {} is not defined".format(node.getFuncID()))
+
         return_type = self.getLLVMType(return_type.getReturnType())
         function_name = "@" + node.getFuncID()
 
