@@ -60,10 +60,28 @@ int main(int argc, char** argv)
 
 	printf("Calling function with (%d, %f, %c)\n", i, j, x);
 
-	char* retval = retrieveValue(i, j, c);
+	char* retval = retrieveValue(i, j, x);
 
 	printf("Received '%s'", retval);
+
+	void func_defined_after_call();
+
+	func_defined_after_call();
+
+	printf("Entering compound statement.\n");
+	{
+		printf("i=%d\n", i);
+
+		printf("Declaring variable i\n");
+		int i = 20;
+		printf("i=%d\n", i);
+	}
 
 	return 0;
 }
 
+
+void func_defined_after_call()
+{
+	printf("Called 'func_defined_after_call'\n");
+}

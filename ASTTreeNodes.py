@@ -2407,9 +2407,23 @@ class FuncCallExpr(Expression):
             raise AstTypingException()
 
         if function_name in ['printf', 'scanf']:
-            # TODO checks for printf, scanf
+
+            # check argument length
+            if len(self.argument_list) == 0:
+                Logger.log("Function '{}' needs at least one argument, function called with no arguments on line '{}'"
+                                .format(function_name, self.getLineNr()))
+                raise AstTypingException()
+            
             for arg in self.argument_list:
                 arg.resolveExpressionType(symbol_table)
+
+            # check arg #0
+            arg_0_typename = self.argument_list[0].getExpressionType().toString()
+            if not arg_0_typename == "char*":
+                Logger.error("The first argument of '{}' needs to be of type 'char*' while argument of type '{}' was given. Error on line {}."
+                                .format(function_name, arg_0_typename, self.getLineNr()))
+                raise AstTypingException()
+
         else:
             # check argument count
             if len(self.argument_list) != len(function_type.getParamTypes()):
