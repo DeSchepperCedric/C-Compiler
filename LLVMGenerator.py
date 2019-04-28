@@ -52,6 +52,8 @@ class LLVMGenerator:
             return self.identifierExpr(node)
         elif isinstance(node, ArrayAccessExpr):
             return self.arrayElementAccess(node)
+        elif isinstance(node, CastExpr):
+            return self.castExpr(node)
 
         elif isinstance(node, FuncParam):
             return self.funcParam(node)
@@ -1180,6 +1182,30 @@ class LLVMGenerator:
 
         return code, element_reg
 
+    def castExpr(self, node):
+        """
+            Generate code to perform a cast to the specified type.
+        """
+
+        expr_code, expr_reg = self.astNodeToLLVM(node.getExpr()) # convert expression to LLVM code
+        source_type = self.getLLVMType(node.getExpr().getExpressionType()) # get type of expression
+        target_type = self.getLLVMType(node.getTargetType()) # get target type
+        convert, convert_reg = self.convertToType(expr_reg, source_type, target_type) # perform conversion
+
+        # get target type
+
+        code = ""
+
+        code += expr_code # add expression
+        code += convert   # add conversion
+
+        # store the converted variable
+        code += self.allocate(self.cur_reg, target_type, is_global=False)
+        code += self.storeVariable(self.cur_reg, convert_reg, target_type, is_global=False)
+        self.cur_reg += 1
+
+        return code, self.cur_reg - 1 # return code, and the location of the conversion
+
     def prefixArithmetics(self, node, operation):
         target = node.getExpr()
         expr_type = self.getLLVMType(target.getExpressionType())
@@ -1306,8 +1332,4 @@ class LLVMGenerator:
 
         else:
             raise Exception("Prefix arithmetics aren't supported for type {}".format(type(target)))
-
-
-
-
 
