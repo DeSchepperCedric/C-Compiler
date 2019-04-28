@@ -1993,9 +1993,9 @@ class PrefixIncExpr(Expression):
         target_type = self.expression.resolveExpressionType(symbol_table)
 
         # ptr, array and function is not allowed
-        if not target_type.isVar():
+        if not is_non_ptr_variable_type(target_type):
             Logger.error(
-                "Prefix increment cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
+                "Prefix increment cannot be performed on arrays, pointers, or functions. Tried to apply on type '{}' on line {}."
                     .format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
@@ -2034,9 +2034,9 @@ class PrefixDecExpr(Expression):
         target_type = self.expression.resolveExpressionType(symbol_table)
 
         # ptr, array and function is not allowed
-        if not target_type.isVar():
+        if not is_non_ptr_variable_type(target_type):
             Logger.error(
-                "Prefix decrement cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
+                "Prefix decrement cannot be performed on arrays, pointers, or functions. Tried to apply on type '{}' on line {}."
                     .format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
@@ -2075,9 +2075,9 @@ class PostfixIncExpr(Expression):
         target_type = self.expression.resolveExpressionType(symbol_table)
 
         # ptr, array and function is not allowed
-        if not target_type.isVar():
+        if not is_non_ptr_variable_type(target_type):
             Logger.error(
-                "Postfix increment cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
+                "Postfix increment cannot be performed on arrays, pointers, or functions. Tried to apply on type '{}' on line {}."
                     .format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
@@ -2116,9 +2116,9 @@ class PostfixDecExpr(Expression):
         target_type = self.expression.resolveExpressionType(symbol_table)
 
         # ptr, array and function is not allowed
-        if not target_type.isVar():
+        if not is_non_ptr_variable_type(target_type):
             Logger.error(
-                "Postfix decrement cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
+                "Postfix decrement cannot be performed on arrays, pointers, or functions. Tried to apply on type '{}' on line {}."
                     .format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
