@@ -486,7 +486,7 @@ class LLVMGenerator:
             needed_param_type = self.getLLVMType(
                 VariableType(needed_param_type)) if needed_param_type is not None else None
 
-            if isinstance(arg, ConstantExpr) and not function_id in ["scanf", "printf"]:
+            if isinstance(arg, ConstantExpr) and function_id not in ["scanf", "printf"]:
                 constant_type = self.getLLVMType(arg.getExpressionType())
                 value = self.convertConstant(needed_param_type, constant_type, arg.getValue())
                 arg_list += "{} {}".format(needed_param_type, value)
@@ -1173,3 +1173,4 @@ class LLVMGenerator:
         code += self.arrayAccessHelperString(element_reg, identifier, element_type, index, is_global)
 
         return code, element_reg
+
