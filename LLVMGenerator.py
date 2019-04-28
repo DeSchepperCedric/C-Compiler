@@ -114,7 +114,7 @@ class LLVMGenerator:
         register = self.cur_reg
         self.cur_reg += 1
         llvm_type = "i1"
-        value = 1 if expr.getBoolValue() == True else 0
+        value = 1 if expr.getBoolValue() is True else 0
         code += "%{} = alloca {}\n".format(register, llvm_type)
         code += "store {} {}, {}* %{}\n".format(llvm_type, value, llvm_type, register)
 
@@ -929,7 +929,7 @@ class LLVMGenerator:
 
         code, target_reg = self.astNodeToLLVM(node.getTargetExpr())
         expr_type = self.getLLVMType(node.getTargetExpr().getExpressionType())
-
+        print(type(node.getTargetExpr().getExpressionType()))
         # if we are loading an array element, we cant do the extra store
         register = target_reg
         if not isinstance(node.getTargetExpr(), ArrayAccessExpr):
