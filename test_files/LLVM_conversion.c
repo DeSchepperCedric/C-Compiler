@@ -82,5 +82,13 @@ int main(int argc, char** argv)
 	int retval = func_with_int_return();
 	printf("func_with_int_return: received '%d'.\n", retval);
 
+	// explicit cast
+
+	float float_value = 43583.165896;
+	int casted_int = (int) float_value;
+
+	printf("float_value = %f\n", float_value);
+	printf("casted_int = %d\n",  casted_int);
+
 	return 0;
 }
