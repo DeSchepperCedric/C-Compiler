@@ -1,18 +1,23 @@
 #include <stdio.h>
 
-void a(int q);
-void t(int b){
-    int a[5];
-    a[2 + 1] = 255;
-    a[0] = 5;
-    a[3] += a[0];
-    printf("%d", a[b+1+2-2]);
-
-}
+    int b[5];
 int main(int argc, char** argv)
 {
-    a(2);
+    int a = 5;
+    b[3] = 500;
 
+    b[2] = b[3];
 
+    ++b[2];
+
+    int q = 5;
+    q++;
+    printf("%d\n", q);
+    printf("%d\n", q++);
+    printf("%d\n", q);
+
+    printf("%d\n", b[2]);
+    printf("%d\n", b[2]++);
+    printf("%d\n", b[2]);
     return 0;
 }

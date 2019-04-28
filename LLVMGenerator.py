@@ -75,6 +75,15 @@ class LLVMGenerator:
         elif isinstance(node, ModExpr):
             return self.arithmeticExpr(node, "srem")
 
+        elif isinstance(node, PrefixIncExpr):
+            return self.prefixArithmetics(node, "add")
+        elif isinstance(node, PrefixDecExpr):
+            return self.prefixArithmetics(node, "sub")
+        elif isinstance(node, PostfixIncExpr):
+            return self.postfixArithmetics(node, "add")
+        elif isinstance(node, PostfixDecExpr):
+            return self.postfixArithmetics(node, "sub")
+
         # format here is (node, int-op, float-op)
         elif isinstance(node, EqualityExpr):
             return self.comparisonExpr(node, "eq", "oeq")
@@ -216,24 +225,7 @@ class LLVMGenerator:
         return "{}{} = alloca {}\n".format(glob, register, llvm_type)
 
     def varDeclDefault(self, node):
-        """
-        # default initialization to 0. Might be improved later
-        var_type = node.getType() + str(node.getPointerCount())
-        var_id = node.getID()
-        code = ""
-        if node.getSymbolTable().isGlobal(var_id):
-            code += "@{} = global {} 0".format(var_id, var_type)
-            # code += "store {} 0, {}* @{}".format(var_type, var_type, var_id)
-        else:
-            t, table = node.getSymbolTable().lookup(var_id)
-            reg_name = table + "." + var_id
-            self.variable_reg[reg_name] = self.cur_reg
-            code += "%{} = {} 0".format(self.cur_reg, var_type)
-            self.cur_reg += 1
 
-        code += "\n"
-        return code
-        """
         # default initialization to 0. Might be improved later
         var_id = node.getID()
         var_type, t = node.getSymbolTable().lookup(var_id)
@@ -488,7 +480,7 @@ class LLVMGenerator:
             needed_param_type = self.getLLVMType(
                 VariableType(needed_param_type)) if needed_param_type is not None else None
 
-            if isinstance(arg, ConstantExpr) and not function_id in ["scanf", "printf"]:
+            if isinstance(arg, ConstantExpr) and function_id not in ["scanf", "printf"]:
                 constant_type = self.getLLVMType(arg.getExpressionType())
                 value = self.convertConstant(needed_param_type, constant_type, arg.getValue())
                 arg_list += "{} {}".format(needed_param_type, value)
@@ -1096,13 +1088,14 @@ class LLVMGenerator:
     def arrayElementAssignment(self, node):
         """assign a value to an array element ex. a[3] = 5"""
         code, register = self.astNodeToLLVM(node.getRight())
+
         right_type = self.getLLVMType(node.getRight().getExpressionType())
         left_type = self.getLLVMType(node.getLeft().getExpressionType())
 
         identifier = node.getLeft().getTargetArray().getIdentifierName()
 
         if not isinstance(node.getRight(), IdentifierExpr):
-            load, register = self.loadVariable(register, right_type, node.getSymbolTable().isGlobal(identifier))
+            load, register = self.loadVariable(register, right_type, False)
             code += load
         if right_type == left_type:
             pass
@@ -1143,7 +1136,7 @@ class LLVMGenerator:
 
         code += self.arrayAccessHelperString(element_reg, identifier, left_type, index, is_global)
 
-        code += self.storeVariable(element_reg, register, left_type, is_global)
+        code += self.storeVariable(element_reg, register, left_type, False)
         return code, element_reg
 
     def arrayElementAccess(self, node):
@@ -1212,3 +1205,132 @@ class LLVMGenerator:
         self.cur_reg += 1
 
         return code, self.cur_reg - 1 # return code, and the location of the conversion
+
+    def prefixArithmetics(self, node, operation):
+        target = node.getExpr()
+        expr_type = self.getLLVMType(target.getExpressionType())
+        code, register = self.astNodeToLLVM(target)
+
+        operation = "f{}".format(operation) if expr_type == "float" else operation
+        value = 1.0 if expr_type == "float" else 1
+
+        # extra load not necessary when dealing with Identifiers
+        if not isinstance(target, IdentifierExpr):
+            load, register = self.loadVariable(register, expr_type, False)
+            code += load
+
+        if isinstance(target, IdentifierExpr):
+            identifier = target.getIdentifierName()
+            is_global = node.getSymbolTable().isGlobal(identifier)
+            if not is_global:
+                t, table = node.getSymbolTable().lookup(identifier)
+                identifier = table + "." + identifier
+
+            code += "%{} = {} i32 %{}, {}\n".format(self.cur_reg, operation, register, value)
+
+            code += self.storeVariable(identifier, self.cur_reg, expr_type, is_global)
+            self.cur_reg += 1
+            return code, self.cur_reg - 1
+
+        elif isinstance(target, ArrayAccessExpr):
+            identifier = target.getTargetArray().getIdentifierName()
+            is_global = node.getSymbolTable().isGlobal(identifier)
+            if not is_global:
+                t, table = node.getSymbolTable().lookup(identifier)
+                identifier = table + "." + identifier
+            index_code, index_reg = self.astNodeToLLVM(target.getIndexArray())
+            code += index_code
+
+            # extra load when not identifier
+            if not isinstance(target.getIndexArray(), IdentifierExpr):
+                load, index_reg = self.loadVariable(index_reg, expr_type, False)
+                code += load
+
+            index = "%" + str(index_reg)
+
+            element_reg = self.cur_reg
+            self.cur_reg += 1
+            code += self.arrayAccessHelperString(element_reg, identifier, expr_type, index, is_global)
+
+            load, loaded_reg = self.loadVariable(element_reg, expr_type, False)
+            code += load
+
+            code += "%{} = {} i32 %{}, {}\n".format(self.cur_reg, operation, loaded_reg, value)
+
+            code += self.storeVariable(element_reg, self.cur_reg, expr_type, False)
+            self.cur_reg += 1
+            return code, element_reg
+
+        else:
+            raise Exception("Prefix arithmetics aren't supported for type {}".format(type(target)))
+
+    def postfixArithmetics(self, node, operation):
+        target = node.getExpr()
+        expr_type = self.getLLVMType(target.getExpressionType())
+        code, register = self.astNodeToLLVM(target)
+
+        operation = "f{}".format(operation) if expr_type == "float" else operation
+        value = 1.0 if expr_type == "float" else 1
+
+        # extra load not necessary when dealing with Identifiers
+        if not isinstance(target, IdentifierExpr):
+            load, register = self.loadVariable(register, expr_type, False)
+            code += load
+
+        if isinstance(target, IdentifierExpr):
+            identifier = target.getIdentifierName()
+            is_global = node.getSymbolTable().isGlobal(identifier)
+            if not is_global:
+                t, table = node.getSymbolTable().lookup(identifier)
+                identifier = table + "." + identifier
+
+            code += "%{} = {} i32 %{}, {}\n".format(self.cur_reg, operation, register, value)
+
+            postfix_reg = self.cur_reg + 1
+
+            # we need to return unaltered value
+            code += self.allocate(postfix_reg, expr_type, False)
+            code += self.storeVariable(postfix_reg, register, expr_type, False)
+
+            code += self.storeVariable(identifier, self.cur_reg, expr_type, is_global)
+            self.cur_reg += 2
+            return code, postfix_reg
+
+        elif isinstance(target, ArrayAccessExpr):
+            identifier = target.getTargetArray().getIdentifierName()
+            is_global = node.getSymbolTable().isGlobal(identifier)
+            if not is_global:
+                t, table = node.getSymbolTable().lookup(identifier)
+                identifier = table + "." + identifier
+            index_code, index_reg = self.astNodeToLLVM(target.getIndexArray())
+            code += index_code
+
+            # extra load when not identifier
+            if not isinstance(target.getIndexArray(), IdentifierExpr):
+                load, index_reg = self.loadVariable(index_reg, expr_type, False)
+                code += load
+
+            index = "%" + str(index_reg)
+
+            element_reg = self.cur_reg
+            self.cur_reg += 1
+            code += self.arrayAccessHelperString(element_reg, identifier, expr_type, index, is_global)
+
+            load, loaded_reg = self.loadVariable(element_reg, expr_type, False)
+            code += load
+
+            code += "%{} = {} i32 %{}, {}\n".format(self.cur_reg, operation, loaded_reg, value)
+
+            postfix_reg = self.cur_reg + 1
+
+            # we need to return unaltered value
+            code += self.allocate(postfix_reg, expr_type, False)
+            code += self.storeVariable(postfix_reg, register, expr_type, False)
+
+            code += self.storeVariable(element_reg, self.cur_reg, expr_type, False)
+            self.cur_reg += 2
+            return code, postfix_reg
+
+        else:
+            raise Exception("Prefix arithmetics aren't supported for type {}".format(type(target)))
+
