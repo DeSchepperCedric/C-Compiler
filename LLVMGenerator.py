@@ -324,15 +324,15 @@ class LLVMGenerator:
         code += "\nif.{}:\n".format(register)
         code += code_if
         code += "br label %end.{}\n".format(register)
-        if "\nret" in code_if:
-            self.cur_reg += 1
+        # if "\nret" in code_if or code_if.startswith("ret"):
+        #     self.cur_reg += 1
 
         code_else, reg = self.astNodeToLLVM(node.getElseBody())
         code += "\nelse.{}:\n".format(register)
         code += code_else
         code += "br label %end.{}\n".format(register)
-        if "\nret" in code_else:
-            self.cur_reg += 1
+        # if "\nret" in code_else or code_else.startswith("ret"):
+        #     self.cur_reg += 1
 
         code += "\nend.{}:\n".format(register)
         # self.cur_reg += 1
@@ -356,8 +356,8 @@ class LLVMGenerator:
         code += "\nwhile.{}:\n".format(register)
         code += code_while
         code += "br label %cond.{}\n".format(register)
-        if "\nret" in code_while:
-            self.cur += 1
+        # if "\nret" in code_while or code_while.startswith("ret"):
+        #     self.cur += 1
 
         code += "\nend.{}:\n".format(register)
 
@@ -425,14 +425,37 @@ class LLVMGenerator:
         new_code, reg = self.astNodeToLLVM(node.getBody())
         code += new_code
         # replace by if return_type == "void" at some point when == issue is fixed
-        return_found = False
-        for child in node.getBody().getChildren():
-            if isinstance(child, ReturnStatement):
-                return_found = True
-                break
 
-        if return_type == "void" and not return_found:
-            code += "ret void\n"
+        # # search algorithm: warning, this can be naive and does not take into account compound, if, else, while, for etc.
+        # return_found = False
+        # for child in node.getBody().getChildren():
+        #     if isinstance(child, ReturnStatement):
+        #         return_found = True
+        #         break
+
+        # print("'{}'".format(return_type))
+
+        # if return_type == "void" and not return_found:
+        #     print("ok")
+        #     code += "ret void\n"
+
+        # check if last statement is a return
+
+        statements = list(filter(lambda s: s.strip() != "", code.split("\n")))
+
+        if not statements[-1].startswith("ret"):
+            # TODO type check
+            if return_type in ["i32", "i8", "i1"]:
+                code += "ret {} 0\n".format(return_type)
+            elif return_type == "float":
+                code += "ret float 0.0\n"
+            elif return_type.endswith("*"):
+                code += "ret {} null\n".format(return_type)
+            elif return_type == "void":
+                code += "ret void\n"
+            else:
+                raise Exception("Unknown return type. {}".format(return_type))
+
 
         code += "}\n"
 
@@ -802,7 +825,8 @@ class LLVMGenerator:
             return value
 
     def returnStatement(self):
-        return "ret void\n", -1
+        self.cur_reg += 1
+        return "ret void\n", self.cur_reg - 1
 
     def returnWithExprStatement(self, node):
 
@@ -813,7 +837,8 @@ class LLVMGenerator:
             value = self.convertConstant(function_return_type, expr_type,
                                          node.getExpression().getValue())
             code = "ret {} {}\n".format(function_return_type, value)
-            return code, -1
+            self.cur_reg += 1
+            return code, self.cur_reg - 1
 
         code, register = self.astNodeToLLVM(node.getExpression())
 
@@ -827,7 +852,9 @@ class LLVMGenerator:
             convert, register = self.convertToType(register, expr_type, function_return_type)
             code += convert
         code += "ret {} %{}\n".format(function_return_type, register)
-        return code, -1
+
+        self.cur_reg += 1
+        return code, self.cur_reg - 1
 
     def comparisonExpr(self, node, int_op, float_op):
         code = ""
