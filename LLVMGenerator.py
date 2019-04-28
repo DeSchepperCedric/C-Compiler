@@ -114,7 +114,7 @@ class LLVMGenerator:
         register = self.cur_reg
         self.cur_reg += 1
         llvm_type = "i1"
-        value = 1 if expr.getBoolValue() == True else 0
+        value = 1 if expr.getBoolValue() is True else 0
         code += "%{} = alloca {}\n".format(register, llvm_type)
         code += "store {} {}, {}* %{}\n".format(llvm_type, value, llvm_type, register)
 
@@ -396,6 +396,10 @@ class LLVMGenerator:
         self.cur_reg = 0
         code = ""
         return_type, scope = node.getSymbolTable().lookup(node.getFuncID())
+
+        if not return_type.isDefined():
+            raise Exception("Function {} is not defined".format(node.getFuncID()))
+
         return_type = self.getLLVMType(return_type.getReturnType())
         function_name = "@" + node.getFuncID()
 
@@ -970,8 +974,8 @@ class LLVMGenerator:
         code, target_reg = self.astNodeToLLVM(node.getTargetExpr())
         expr_type = self.getLLVMType(node.getTargetExpr().getExpressionType())
 
-        # if we are loading an array element, we cant do the extra store
         register = target_reg
+        # if we are loading an array element, we cant do the extra store
         if not isinstance(node.getTargetExpr(), ArrayAccessExpr):
             register = self.cur_reg
             self.cur_reg += 1
@@ -1074,17 +1078,18 @@ class LLVMGenerator:
 
     def arrayAccessHelperString(self, reg_to, reg_from, element_type, index, is_global):
         """returns string used by arrays to access an element"""
+        """
         if self.array_sizes.get(reg_from) is None:
             raise Exception("Can't access array.")
         if index > self.array_sizes.get(reg_from):
             raise Exception(
                 "Index {} is not accessible in an array with size {}.".format(index, self.array_sizes.get(reg_from)))
-
+        """
         array_size = "[{} x {}]".format(self.array_sizes.get(reg_from), element_type)
         array_size = "{}, {}*".format(array_size, array_size)
         glob = "@" if is_global else "%"
         get_code = "%{} = getelementptr inbounds {} {}{}".format(reg_to, array_size, glob, reg_from)
-        return "{}, i64 0, i64 {}\n".format(get_code, index)
+        return "{}, i32 0, i32 {}\n".format(get_code, index)
 
     def arrayElementAssignment(self, node):
         """assign a value to an array element ex. a[3] = 5"""
@@ -1096,7 +1101,6 @@ class LLVMGenerator:
 
         if not isinstance(node.getRight(), IdentifierExpr):
             load, register = self.loadVariable(register, right_type, node.getSymbolTable().isGlobal(identifier))
-
             code += load
         if right_type == left_type:
             pass
@@ -1110,9 +1114,31 @@ class LLVMGenerator:
             identifier = table + "." + identifier
 
         element_reg = self.cur_reg
+
+        if isinstance(node.getLeft().getIndexArray(), IntegerConstantExpr):
+            index = node.getLeft().getIndexArray().getIntValue()
+        else:
+            index_code, index_reg = self.astNodeToLLVM(node.getLeft().getIndexArray())
+            code += index_code
+
+            expr_type = self.getLLVMType(node.getLeft().getIndexArray().getExpressionType())
+
+            # extra load when not identifier
+            if not isinstance(node.getLeft().getIndexArray(), IdentifierExpr):
+                load, index_reg = self.loadVariable(index_reg, expr_type, False)
+                code += load
+
+            if expr_type != "i32":
+                convert, index_reg = self.convertToInt(index_reg, expr_type)
+                code += convert
+                load, index_reg = self.loadVariable(index_reg, "i32", False)
+                code += load
+
+            index = "%" + str(index_reg)
+
+        element_reg = self.cur_reg
         self.cur_reg += 1
 
-        index = node.getLeft().getIndexArray().getIntValue()
         code += self.arrayAccessHelperString(element_reg, identifier, left_type, index, is_global)
 
         code += self.storeVariable(element_reg, register, left_type, is_global)
@@ -1126,14 +1152,37 @@ class LLVMGenerator:
         element_reg = self.cur_reg
         element_type = self.getLLVMType(node.getExpressionType())
         identifier = node.getTargetArray().getIdentifierName()
-        index = node.getIndexArray().getIntValue()
+        code = ""
 
         is_global = node.getSymbolTable().isGlobal(identifier)
         if not is_global:
             t, table = node.getSymbolTable().lookup(identifier)
             identifier = table + "." + identifier
 
-        code = self.arrayAccessHelperString(element_reg, identifier, element_type, index, is_global)
+        if isinstance(node.getIndexArray(), IntegerConstantExpr):
+            index = node.getIndexArray().getIntValue()
+        else:
+
+            index_code, index_reg = self.astNodeToLLVM(node.getIndexArray())
+            code += index_code
+
+            expr_type = self.getLLVMType(node.getIndexArray().getExpressionType())
+
+            # extra load when not identifier
+            if not isinstance(node.getIndexArray(), IdentifierExpr):
+                load, index_reg = self.loadVariable(index_reg, expr_type, False)
+                code += load
+
+            if expr_type != "i32":
+                convert, index_reg = self.convertToInt(index_reg, expr_type)
+                code += convert
+                load, index_reg = self.loadVariable(index_reg, "i32", False)
+                code += load
+
+            index = "%" + str(index_reg)
+
+        element_reg = self.cur_reg
         self.cur_reg += 1
+        code += self.arrayAccessHelperString(element_reg, identifier, element_type, index, is_global)
 
         return code, element_reg

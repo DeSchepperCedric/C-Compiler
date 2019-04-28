@@ -31,16 +31,20 @@ int main(int argc, char** argv)
 {
     int fib_result = fib_recursive(10);
 
-    printf("fib recursive: %d\n", fib_result);
+    // Demonstrate pointers
+    int* ptr_fib_result = &fib_result;
+    int** ptr_ptr_fib_result = &ptr_fib_result;
+
+    printf("fib recursive: %d\n", **ptr_ptr_fib_result);
 
 
-    printf("Calculating the first 50 fibonacci numbers.\n");
-    int fib_nrs[50];
+    printf("Calculating the first 25 fibonacci numbers.\n");
+    int fib_nrs[25];
     fib_nrs[0] = 0;
     fib_nrs[1] = 1;
 
     int i = 2;
-    while(i < 50)
+    while(i < 25)
     {
     	fib_nrs[i] = fib_nrs[i-1] + fib_nrs[i-2];
 
@@ -48,7 +52,7 @@ int main(int argc, char** argv)
     }
 
     int j = 0;
-    while(j < 50)
+    while(j < 25)
     {
     	printf("fib[%d] = %d\n", j, fib_nrs[j]);
 
