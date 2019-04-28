@@ -1187,7 +1187,6 @@ class LLVMGenerator:
 
         operation = "f{}".format(operation) if expr_type == "float" else operation
         value = 1.0 if expr_type == "float" else 1
-
         # extra load not necessary when dealing with Identifiers
         if not isinstance(target, IdentifierExpr):
             load, register = self.loadVariable(register, expr_type, False)
@@ -1200,11 +1199,11 @@ class LLVMGenerator:
                 t, table = node.getSymbolTable().lookup(identifier)
                 identifier = table + "." + identifier
 
-            code += "%{} = {} i32 %{}, {}\n".format(self.cur_reg, operation, register, value)
+            code += "%{} = {} {} %{}, {}\n".format(self.cur_reg, operation, expr_type, register, value)
 
             code += self.storeVariable(identifier, self.cur_reg, expr_type, is_global)
             self.cur_reg += 1
-            return code, self.cur_reg - 1
+            return code, identifier
 
         elif isinstance(target, ArrayAccessExpr):
             identifier = target.getTargetArray().getIdentifierName()
@@ -1229,7 +1228,7 @@ class LLVMGenerator:
             load, loaded_reg = self.loadVariable(element_reg, expr_type, False)
             code += load
 
-            code += "%{} = {} i32 %{}, {}\n".format(self.cur_reg, operation, loaded_reg, value)
+            code += "%{} = {} {} %{}, {}\n".format(self.cur_reg, operation, expr_type, loaded_reg, value)
 
             code += self.storeVariable(element_reg, self.cur_reg, expr_type, False)
             self.cur_reg += 1
@@ -1258,7 +1257,7 @@ class LLVMGenerator:
                 t, table = node.getSymbolTable().lookup(identifier)
                 identifier = table + "." + identifier
 
-            code += "%{} = {} i32 %{}, {}\n".format(self.cur_reg, operation, register, value)
+            code += "%{} = {} {} %{}, {}\n".format(self.cur_reg, operation, expr_type, register, value)
 
             postfix_reg = self.cur_reg + 1
 
@@ -1293,7 +1292,7 @@ class LLVMGenerator:
             load, loaded_reg = self.loadVariable(element_reg, expr_type, False)
             code += load
 
-            code += "%{} = {} i32 %{}, {}\n".format(self.cur_reg, operation, loaded_reg, value)
+            code += "%{} = {} {} %{}, {}\n".format(self.cur_reg, operation, expr_type, loaded_reg, value)
 
             postfix_reg = self.cur_reg + 1
 
