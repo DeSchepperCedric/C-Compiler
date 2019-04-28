@@ -6,7 +6,7 @@
  - unary +,-
  - break, continue
  - no return warnings*
- - forloop
+ - forloop*
  - no init of variables without init expr: array decl, varDeclDefault
 
 => moet allemaal nog in LLVM
