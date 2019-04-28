@@ -956,9 +956,9 @@ class LLVMGenerator:
 
         code, target_reg = self.astNodeToLLVM(node.getTargetExpr())
         expr_type = self.getLLVMType(node.getTargetExpr().getExpressionType())
-        print(type(node.getTargetExpr().getExpressionType()))
-        # if we are loading an array element, we cant do the extra store
+
         register = target_reg
+        # if we are loading an array element, we cant do the extra store
         if not isinstance(node.getTargetExpr(), ArrayAccessExpr):
             register = self.cur_reg
             self.cur_reg += 1
@@ -1084,7 +1084,6 @@ class LLVMGenerator:
 
         if not isinstance(node.getRight(), IdentifierExpr):
             load, register = self.loadVariable(register, right_type, node.getSymbolTable().isGlobal(identifier))
-
             code += load
         if right_type == left_type:
             pass
@@ -1106,11 +1105,18 @@ class LLVMGenerator:
             code += index_code
 
             expr_type = self.getLLVMType(node.getLeft().getIndexArray().getExpressionType())
-            convert, index_reg = self.convertToInt(index_reg, expr_type)
-            code += convert
-            load, index_reg = self.loadVariable(index_reg, "i32", False)
 
-            code += load
+            # extra load when not identifier
+            if not isinstance(node.getLeft().getIndexArray(), IdentifierExpr):
+                load, index_reg = self.loadVariable(index_reg, expr_type, False)
+                code += load
+
+            if expr_type != "i32":
+                convert, index_reg = self.convertToInt(index_reg, expr_type)
+                code += convert
+                load, index_reg = self.loadVariable(index_reg, "i32", False)
+                code += load
+
             index = "%" + str(index_reg)
 
         element_reg = self.cur_reg
@@ -1139,19 +1145,27 @@ class LLVMGenerator:
         if isinstance(node.getIndexArray(), IntegerConstantExpr):
             index = node.getIndexArray().getIntValue()
         else:
+
             index_code, index_reg = self.astNodeToLLVM(node.getIndexArray())
             code += index_code
 
             expr_type = self.getLLVMType(node.getIndexArray().getExpressionType())
-            convert, index_reg = self.convertToInt(index_reg, expr_type)
-            code += convert
-            load, index_reg = self.loadVariable(index_reg, "i32", False)
-            code += load
+
+            # extra load when not identifier
+            if not isinstance(node.getIndexArray(), IdentifierExpr):
+                load, index_reg = self.loadVariable(index_reg, expr_type, False)
+                code += load
+
+            if expr_type != "i32":
+                convert, index_reg = self.convertToInt(index_reg, expr_type)
+                code += convert
+                load, index_reg = self.loadVariable(index_reg, "i32", False)
+                code += load
+
             index = "%" + str(index_reg)
 
         element_reg = self.cur_reg
         self.cur_reg += 1
-
         code += self.arrayAccessHelperString(element_reg, identifier, element_type, index, is_global)
 
         return code, element_reg
