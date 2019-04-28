@@ -247,6 +247,29 @@ class ParserVisitor(CVisitor):
 
         return [ForStmt(init_list, cond_expr, iter_list, body).setLineNr(ctx.start.line).setColNr(ctx.start.column)]
 
+        # # construct outer compound statement
+        # outer_compound = CompoundStmt([])
+
+        # init_list_statements = []
+
+        # for init_item in init_list:
+            
+
+
+        # convert to while loop:
+        #
+        # {
+        #   init statement: for expr in init: ExpressionStatement(expr), etc etc
+        # 
+        #   while(cond_expr)
+        #   {
+        #      {
+        #           <statements>
+        #      }
+        #      iter_expr: for expr in iter: ExpressionStatement(expr), etc etc
+        #   }
+    
+
     # Visit a parse tree produced by CParser#forCondWithDecl.
     def visitFor_condition(self, ctx: CParser.For_conditionContext):
         # declaration SC expression? SC expression? # forCondWithDecl

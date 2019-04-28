@@ -2,10 +2,11 @@
  - Constant folding*
  - int -> ptr, ptr -> int assignment
  - logic ops: &&, ||, not
- - increment, decrement
  - unary +,-
  - break, continue
  - no return warnings*
+ - forloop*
+
 
 => moet allemaal nog in LLVM
 (*) betekent dat de AST het nog niet kan
