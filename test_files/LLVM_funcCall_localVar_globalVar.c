@@ -1,5 +1,5 @@
 /**
- * Tests for arithmetic operations on integers.
+ * Tests for function calling, global vars, local vars.
  */
 
 #include <stdio.h>
@@ -36,7 +36,7 @@ char* retrieveValue(int i, float f, char c)
 
 	char* str = "A string that will be returned.";
 
-	printf("Returning '%s'", str);
+	printf("Returning '%s'\n", str);
 
 	return str;
 }
@@ -58,21 +58,22 @@ int main(int argc, char** argv)
 	float j = 3.141592;
 	char x = 'a';
 
-	printf("Calling function with (%d, %f, %c)\n", i, j, x);
+	printf("Calling function 'retrieveValue' with (%d, %f, '%c')\n", i, j, x);
 
 	char* retval = retrieveValue(i, j, x);
 
-	printf("Received '%s'", retval);
+	printf("Received '%s'\n", retval);
 
 	void func_defined_after_call();
 
+	printf("Calling 'func_defined_after_call'\n")
 	func_defined_after_call();
 
 	printf("Entering compound statement.\n");
 	{
 		printf("i=%d\n", i);
 
-		printf("Declaring variable i\n");
+		printf("Declaring variable i with initialiser '20'\n");
 		int i = 20;
 		printf("i=%d\n", i);
 	}
@@ -84,4 +85,6 @@ int main(int argc, char** argv)
 void func_defined_after_call()
 {
 	printf("Called 'func_defined_after_call'\n");
+
+	return;
 }

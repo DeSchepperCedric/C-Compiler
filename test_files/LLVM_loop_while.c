@@ -1,3 +1,6 @@
+/**
+ * Tests for while loops.
+ */
 
 #include <stdio.h>
 

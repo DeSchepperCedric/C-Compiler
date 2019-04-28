@@ -1,5 +1,5 @@
 /**
- * Tests for arithmetic operations on integers.
+ * Tests for pointer semantics.
  */
 
 #include <stdio.h>
@@ -12,10 +12,6 @@ void funcWithPtrParam(int* param_ptr)
 
 int main(int argc, char** argv)
 {
-	// int x[5];
- //    x[2] = 20;
- //    int* ptr = x;
-
 	int i = 5;
 	printf("i=%d\n", i);
 

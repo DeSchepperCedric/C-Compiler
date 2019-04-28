@@ -1,5 +1,5 @@
 /**
- * Tests for arithmetic operations on integers.
+ * Tests for if-else statements.
  */
 
 #include <stdio.h>

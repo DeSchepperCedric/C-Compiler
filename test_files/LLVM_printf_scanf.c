@@ -1,5 +1,5 @@
 /**
- * Tests for arithmetic operations on integers.
+ * Tests for printf, scanf functions.
  */
 
 #include <stdio.h>
@@ -15,11 +15,6 @@ int main(int argc, char** argv)
 	printf("Enter float:\n");
 	scanf("%f", &recieved_float);
 	printf("Received float: %f\n", recieved_float);
-
-	char str[255];
-	printf("Enter string:\n");
-	scanf("%s", &str);
-	printf("Received string: '%s'\n", str);
 
 	return 0;
 }
