@@ -9,7 +9,7 @@ class LLVMGenerator:
         self.variable_reg = dict()
         self.reg_stack = list()
         self.global_scope_string = ""
-        self.string_to_regs = dict()
+        self.string_counter = 0
         self.reg_to_string = dict()
         self.array_sizes = dict()
 
@@ -309,12 +309,13 @@ class LLVMGenerator:
         return code, -1
 
     def branchStatement(self, node):
-
         # no else statement will still generate a label
         # might be removed later
         code, register = self.astNodeToLLVM(node.getCondExpr())
-        load, register = self.loadVariable(register, "i1", False)
-        code += load
+        if not isinstance(node.getCondExpr(), IdentifierExpr):
+            load, register = self.loadVariable(register, "i1", False)
+            code += load
+
         code += "br i1 %{}, label %if.{}, label %else.{}\n".format(register, register, register)
 
         # if
@@ -983,10 +984,12 @@ class LLVMGenerator:
         c *= 2
         string = string.replace("\\n", "\\0A").replace("\\t", "\\09").replace("\\\\", "\\5C")
         reg = ".str"
-        if len(self.string_to_regs) > 0:
-            reg = reg + "." + str(len(self.string_to_regs))
 
-        self.string_to_regs[string] = reg
+        if self.string_counter > 0:
+
+            reg = reg + "." + str(self.string_counter)
+
+        self.string_counter += 1
         self.reg_to_string[reg] = (string, len(string) + 1 - c)
 
         line = "@" + reg + " = private unnamed_addr constant "
