@@ -18,7 +18,6 @@ class LLVMGenerator:
         Returns LLVM code string + register number
         Only function to call outside the class
         """
-        print(type(node))
         if isinstance(node, IncludeNode):
             return self.include()
 
