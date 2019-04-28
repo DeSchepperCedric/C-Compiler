@@ -758,15 +758,28 @@ class LLVMGenerator:
         code = ""
         if "bool" in from_type or "i1" in from_type:
             return code, reg
+        elif "int" in from_type or "i32" in from_type:
+            code += "%{} = icmp ne i32 %{}, 0\n".format(self.cur_reg, reg)
+            self.cur_reg += 1
+            return code, self.cur_reg - 1
+        elif "char" in from_type or "i8" in from_type:
+            code += "%{} = icmp ne i8 %{}, 0\n".format(self.cur_reg, reg)
+            self.cur_reg += 1
+            return code, self.cur_reg - 1
+        elif "float" in from_type:
+            code += "%{} = fcmp one float %{}, 0.0\n".format(self.cur_reg, reg)
+            self.cur_reg += 1
+            return code, self.cur_reg - 1
         else:
             raise Exception("Converting from '{}' to bool for register '{}' is not defined.".format(from_type, reg))
 
     def convertToType(self, reg, old_type, new_type):
         if "int" in new_type or "i32" in new_type:
             return self.convertToInt(reg, old_type)
-
         elif "char" in new_type or "i8" in new_type:
             return self.convertToChar(reg, old_type)
+        elif "bool" in new_type or "i1" in new_type:
+            return self.convertToBool(reg, old_type)
         elif "float" in new_type:
             return self.convertToFloat(reg, old_type)
         elif "double" in new_type:
