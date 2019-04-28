@@ -35,7 +35,7 @@ int main(int argc, char** argv)
     int* ptr_fib_result = &fib_result;
     int** ptr_ptr_fib_result = &ptr_fib_result;
 
-    printf("fib recursive: %d\n", **ptr_ptr_fib_result);
+    printf("10th fibonacci number (calculated using recursion): %d\n", **ptr_ptr_fib_result);
 
 
     printf("Calculating the first 25 fibonacci numbers.\n");

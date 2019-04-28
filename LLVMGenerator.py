@@ -1186,4 +1186,3 @@ class LLVMGenerator:
         code += self.arrayAccessHelperString(element_reg, identifier, element_type, index, is_global)
 
         return code, element_reg
-
