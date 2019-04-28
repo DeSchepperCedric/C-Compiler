@@ -571,7 +571,7 @@ class FuncDef(TopLevelNode):
         else:
             # symbol was not yet present
             # add symbol, and mark as defined
-            symbol_table.insert(self.func_id, FunctionType(self.return_type, [
+            symbol_table.insert(self.func_id, FunctionType(type_to_string(self.return_type, self.ptr_count), [
                 type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list],
                                                            is_defined=True))
 
@@ -590,7 +590,7 @@ class FuncDef(TopLevelNode):
 
         # this needs to be done first, since evaluating the body children requires the parent function type
         # pass the function type to the body so the return value can be type-checked
-        func_type = FunctionType(self.return_type,
+        func_type = FunctionType(type_to_string(self.return_type, self.ptr_count),
                                  [type_to_string(param.getParamType(), param.getPointerCount()) for param in
                                   self.param_list])
         self.body.setParentFunctionType(func_type)
@@ -2459,6 +2459,7 @@ class FuncCallExpr(Expression):
                     # no exception needed here
 
         self.expression_type = function_type.getReturnType()
+
 
         return self.expression_type
 
