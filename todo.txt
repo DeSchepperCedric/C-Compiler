@@ -1,4 +1,3 @@
- - Casts
  - Constant folding*
  - int -> ptr, ptr -> int assignment
  - logic ops: &&, ||, not
