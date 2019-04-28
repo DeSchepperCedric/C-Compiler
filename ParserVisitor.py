@@ -96,8 +96,8 @@ class ParserVisitor(CVisitor):
     def visitVarDeclSimple(self, ctx: CParser.VarDeclSimpleContext):
         var_id, ptr_count = self.manuallyVisitChild(ctx.getChild(0))
 
-        if ctx.temp_typeName == 'void' and ptr_count == 0:
-            Logger.error("Cannot declare variable with type 'void' at line {}.".format(ctx.start.line))
+        if ctx.temp_typeName == 'void':
+            Logger.error("Cannot declare variable or pointer with type 'void' at line {}.".format(ctx.start.line))
             raise AstCreationException()
 
         # temporarily set type to None
@@ -136,8 +136,8 @@ class ParserVisitor(CVisitor):
         var_id, ptr_count = self.manuallyVisitChild(ctx.getChild(0))
         init_expr = self.manuallyVisitChild(ctx.getChild(2))
 
-        if ctx.temp_typeName == 'void' and ptr_count == 0:
-            Logger.error("Cannot declare variable with type 'void' at line {}.".format(ctx.start.line))
+        if ctx.temp_typeName == 'void':
+            Logger.error("Cannot declare variable or pointer with type 'void' at line {}.".format(ctx.start.line))
             raise AstCreationException()
 
         # temporarily set type to None
