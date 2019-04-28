@@ -571,7 +571,7 @@ class FuncDef(TopLevelNode):
         else:
             # symbol was not yet present
             # add symbol, and mark as defined
-            symbol_table.insert(self.func_id, FunctionType(self.return_type, [
+            symbol_table.insert(self.func_id, FunctionType(type_to_string(self.return_type, self.ptr_count), [
                 type_to_string(param.getParamType(), param.getPointerCount()) for param in self.param_list],
                                                            is_defined=True))
 
@@ -590,7 +590,7 @@ class FuncDef(TopLevelNode):
 
         # this needs to be done first, since evaluating the body children requires the parent function type
         # pass the function type to the body so the return value can be type-checked
-        func_type = FunctionType(self.return_type,
+        func_type = FunctionType(type_to_string(self.return_type, self.ptr_count),
                                  [type_to_string(param.getParamType(), param.getPointerCount()) for param in
                                   self.param_list])
         self.body.setParentFunctionType(func_type)
@@ -1993,9 +1993,9 @@ class PrefixIncExpr(Expression):
         target_type = self.expression.resolveExpressionType(symbol_table)
 
         # ptr, array and function is not allowed
-        if not target_type.isVar():
+        if not is_non_ptr_variable_type(target_type):
             Logger.error(
-                "Prefix increment cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
+                "Prefix increment cannot be performed on arrays, pointers, or functions. Tried to apply on type '{}' on line {}."
                     .format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
@@ -2034,9 +2034,9 @@ class PrefixDecExpr(Expression):
         target_type = self.expression.resolveExpressionType(symbol_table)
 
         # ptr, array and function is not allowed
-        if not target_type.isVar():
+        if not is_non_ptr_variable_type(target_type):
             Logger.error(
-                "Prefix decrement cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
+                "Prefix decrement cannot be performed on arrays, pointers, or functions. Tried to apply on type '{}' on line {}."
                     .format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
@@ -2075,9 +2075,9 @@ class PostfixIncExpr(Expression):
         target_type = self.expression.resolveExpressionType(symbol_table)
 
         # ptr, array and function is not allowed
-        if not target_type.isVar():
+        if not is_non_ptr_variable_type(target_type):
             Logger.error(
-                "Postfix increment cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
+                "Postfix increment cannot be performed on arrays, pointers, or functions. Tried to apply on type '{}' on line {}."
                     .format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
@@ -2116,9 +2116,9 @@ class PostfixDecExpr(Expression):
         target_type = self.expression.resolveExpressionType(symbol_table)
 
         # ptr, array and function is not allowed
-        if not target_type.isVar():
+        if not is_non_ptr_variable_type(target_type):
             Logger.error(
-                "Postfix decrement cannot be performed on arrays or functions. Tried to apply on type '{}' on line {}."
+                "Postfix decrement cannot be performed on arrays, pointers, or functions. Tried to apply on type '{}' on line {}."
                     .format(target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
@@ -2459,6 +2459,7 @@ class FuncCallExpr(Expression):
                     # no exception needed here
 
         self.expression_type = function_type.getReturnType()
+
 
         return self.expression_type
 
