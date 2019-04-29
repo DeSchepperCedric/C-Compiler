@@ -56,7 +56,7 @@ int main(int argc, char** argv)
     {
     	printf("fib[%d] = %d\n", j, fib_nrs[j]);
 
-    	j += 1;
+    	j++;
     }
 
 	return 0;
