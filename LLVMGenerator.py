@@ -1204,7 +1204,7 @@ class LLVMGenerator:
         code += self.storeVariable(self.cur_reg, convert_reg, target_type, is_global=False)
         self.cur_reg += 1
 
-        return code, self.cur_reg - 1 # return code, and the location of the conversion
+        return code, self.cur_reg - 1  # return code, and the location of the conversion
 
     def prefixArithmetics(self, node, operation):
         target = node.getExpr()
