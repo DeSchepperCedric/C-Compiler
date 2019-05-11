@@ -229,38 +229,11 @@ class ParserVisitor(CVisitor):
     def visitForLoop(self, ctx: CParser.ForLoopContext):
         # FOR LEFT_PAREN for_condition RIGHT_PAREN statement # forLoop
 
-        # add body!
-
-        init_list, cond_expr, iter_list = self.manuallyVisitChild(ctx.getChild(2))
-
-        # returns list of statements
-        body_statements = self.manuallyVisitChild(ctx.getChild(4))
-
-        # if the statement after the forloop loop, is a compound statement
-        # we use its contents instead of the compound itself.
-        if len(body_statements) == 1 and isinstance(body_statements[0], CompoundStmt):
-            compound_statement = body_statements[0]
-
-            body = Body(compound_statement.child_list).setLineNr(ctx.start.line).setColNr(ctx.start.column)
-        else:
-            body = Body(body_statements).setLineNr(ctx.start.line).setColNr(ctx.start.column)
-
-        return [ForStmt(init_list, cond_expr, iter_list, body).setLineNr(ctx.start.line).setColNr(ctx.start.column)]
-
-        # # construct outer compound statement
-        # outer_compound = CompoundStmt([])
-
-        # init_list_statements = []
-
-        # for init_item in init_list:
-            
-
-
         # convert to while loop:
         #
         # {
         #   init statement: for expr in init: ExpressionStatement(expr), etc etc
-        # 
+        #
         #   while(cond_expr)
         #   {
         #      {
@@ -268,7 +241,36 @@ class ParserVisitor(CVisitor):
         #      }
         #      iter_expr: for expr in iter: ExpressionStatement(expr), etc etc
         #   }
-    
+
+        statements = list()
+
+        init_list, cond_expr, iter_list = self.manuallyVisitChild(ctx.getChild(2))
+
+
+
+        # returns list of statements
+        body_statements = self.manuallyVisitChild(ctx.getChild(4))
+
+        # if the statement after the forloop loop, is a compound statement
+        # we can use the compound.
+        # Otherwise, transform statement to compound.
+        if len(body_statements) == 1 and isinstance(body_statements[0], CompoundStmt):
+            pass
+            #body = Body(compound_statement.child_list).setLineNr(ctx.start.line).setolNr(ctx.start.column)
+        else:
+            # body = Body(body_statements).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+            body_statements = [CompoundStmt([body_statements])]
+
+        # extend with iter expr
+        body_statements.extend(iter_list)
+
+        while_body = Body(body_statements).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+        while_stat = WhileStmt(cond_expr, while_body).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+
+        statements.extend(init_list)
+        statements.append(while_stat)
+        print(statements)
+        return [CompoundStmt(statements).setLineNr(ctx.start.line).setColNr(ctx.start.column)]
 
     # Visit a parse tree produced by CParser#forCondWithDecl.
     def visitFor_condition(self, ctx: CParser.For_conditionContext):
