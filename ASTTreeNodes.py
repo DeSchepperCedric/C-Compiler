@@ -1201,6 +1201,9 @@ class BranchStmt(Statement):
         self.cond_expr, constants = self.cond_expr.constantFolding(constants)
         self.if_body, constants = self.if_body.constantFolding(constants)
         self.else_body, constants = self.else_body.constantFolding(constants)
+
+        
+
         return self, constants
 
 

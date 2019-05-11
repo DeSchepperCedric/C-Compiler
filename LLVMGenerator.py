@@ -307,8 +307,16 @@ class LLVMGenerator:
         # might be removed later
         code, register = self.astNodeToLLVM(node.getCondExpr())
         if not isinstance(node.getCondExpr(), IdentifierExpr):
-            load, register = self.loadVariable(register, "i1", False)
-            code += load
+            cond_type = self.getLLVMType(node.getCondExpr().getExpressionType())
+
+            if cond_type != "i1":
+                load, register = self.loadVariable(register, cond_type, False)
+                code += load
+                convert, register = self.convertToType(register, cond_type, "i1")
+                code += convert
+            else:
+                load, register = self.loadVariable(register, "i1", False)
+                code += load
 
         code += "br i1 %{}, label %if.{}, label %else.{}\n".format(register, register, register)
 
@@ -374,7 +382,6 @@ class LLVMGenerator:
         return code, -1
 
     def funcParam(self, node):
-        # param_type = self.getLLVMType(node.getExpressionType())
         param_type, t = node.getSymbolTable().lookup(node.getParamID())
         param_type = self.getLLVMType(param_type)
         return param_type
@@ -422,22 +429,6 @@ class LLVMGenerator:
         self.cur_reg += 1
         new_code, reg = self.astNodeToLLVM(node.getBody())
         code += new_code
-        # replace by if return_type == "void" at some point when == issue is fixed
-
-        # # search algorithm: warning, this can be naive and does not take into account compound, if, else, while, for etc.
-        # return_found = False
-        # for child in node.getBody().getChildren():
-        #     if isinstance(child, ReturnStatement):
-        #         return_found = True
-        #         break
-
-        # print("'{}'".format(return_type))
-
-        # if return_type == "void" and not return_found:
-        #     print("ok")
-        #     code += "ret void\n"
-
-        # check if last statement is a return
 
         statements = list(filter(lambda s: s.strip() != "", code.split("\n")))
 
