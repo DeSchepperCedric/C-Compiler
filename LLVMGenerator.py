@@ -18,6 +18,7 @@ class LLVMGenerator:
         Returns LLVM code string + register number
         Only function to call outside the class
         """
+
         if isinstance(node, IncludeNode):
             return self.include()
 
@@ -168,7 +169,6 @@ class LLVMGenerator:
         self.cur_reg += 1
 
         llvm_type = "i8"
-
         code = "%{} = alloca {}\n".format(register, llvm_type)
         code += "store {} {}, {}* %{}\n".format(llvm_type, ord(expr.getCharValue()[1]), llvm_type, register)
 
@@ -454,7 +454,6 @@ class LLVMGenerator:
             else:
                 raise Exception("Unknown return type. {}".format(return_type))
 
-
         code += "}\n"
 
         # exit scope
@@ -507,7 +506,6 @@ class LLVMGenerator:
                 arg_code += convert
 
             if isinstance(arg, AddressExpr) and function_id == "scanf":
-
                 arg_id = arg.getTargetExpr().getIdentifierName()
                 is_global = node.getSymbolTable().isGlobal(arg_id)
                 var_type, t = node.getSymbolTable().lookup(arg_id)
@@ -784,8 +782,9 @@ class LLVMGenerator:
                                                                                                   reg))
 
     def convertConstant(self, new_type, old_type, value):
-        if old_type == "i8" and new_type != old_type:
+        if old_type == "i8":
             value = value[1:-1]
+            value = ord(value)
 
         elif old_type == "i32" and new_type != old_type:
             value = int(value)
@@ -983,7 +982,6 @@ class LLVMGenerator:
         code += self.allocate(second_reg, expr_type, False)
         code += self.storeVariable(second_reg, register, expr_type, False)
 
-
         return code, self.cur_reg - 1
 
     def pointerDerefExpr(self, node):
@@ -993,7 +991,6 @@ class LLVMGenerator:
 
         code, target_reg = self.astNodeToLLVM(node.getTargetPtr())
         if isinstance(node.getTargetPtr(), PointerDerefExpr):
-
             load, target_reg = self.loadVariable(target_reg, expr_type, False)
             code += load
 
@@ -1024,7 +1021,6 @@ class LLVMGenerator:
         reg = ".str"
 
         if self.string_counter > 0:
-
             reg = reg + "." + str(self.string_counter)
 
         self.string_counter += 1
@@ -1187,23 +1183,29 @@ class LLVMGenerator:
             Generate code to perform a cast to the specified type.
         """
 
-        expr_code, expr_reg = self.astNodeToLLVM(node.getExpr()) # convert expression to LLVM code
-        source_type = self.getLLVMType(node.getExpr().getExpressionType()) # get type of expression
-        target_type = self.getLLVMType(node.getTargetType()) # get target type
-        convert, convert_reg = self.convertToType(expr_reg, source_type, target_type) # perform conversion
+        expr_code, expr_reg = self.astNodeToLLVM(node.getExpr())  # convert expression to LLVM code
+
+        source_type = self.getLLVMType(node.getExpr().getExpressionType())  # get type of expression
+        target_type = self.getLLVMType(node.getTargetType())  # get target type
+
+        load = ""
+        # extra load needed when not an identifier
+        if not isinstance(node.getExpr(), IdentifierExpr):
+            load, expr_reg = self.loadVariable(expr_reg, source_type, False)
+
+        convert, convert_reg = self.convertToType(expr_reg, source_type, target_type)  # perform conversion
 
         # get target type
 
         code = ""
-
-        code += expr_code # add expression
-        code += convert   # add conversion
+        code += expr_code  # add expression
+        code += load
+        code += convert  # add conversion
 
         # store the converted variable
         code += self.allocate(self.cur_reg, target_type, is_global=False)
         code += self.storeVariable(self.cur_reg, convert_reg, target_type, is_global=False)
         self.cur_reg += 1
-
         return code, self.cur_reg - 1  # return code, and the location of the conversion
 
     def prefixArithmetics(self, node, operation):
@@ -1332,4 +1334,3 @@ class LLVMGenerator:
 
         else:
             raise Exception("Prefix arithmetics aren't supported for type {}".format(type(target)))
-

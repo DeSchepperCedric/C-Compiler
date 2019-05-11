@@ -134,6 +134,16 @@ class ASTNode:
 
         return current_node_nr, dotdata
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        return self, constants
+
 
 class ASTTestTermNode(ASTNode):
     """
@@ -226,6 +236,17 @@ class ProgramNode(ASTNode):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Doesn't return since it's the program node.
+        """
+        for tln in self.children:
+            tln, constants = tln.constantFolding(constants)
+
 
 class TopLevelNode(ASTNode):
     """
@@ -313,7 +334,7 @@ class ArrayDecl(SymbolDecl):
                          symbol_type=array_type,
                          symbol_id=array_id,
                          symbol_ptr_cnt=ptr_count)
-        self.size_expr = size_expr
+        self.size_expr = size_efxpr
 
     def getSizeExpr(self):
         return self.size_expr
@@ -429,6 +450,23 @@ class VarDeclWithInit(SymbolDecl):
                 "Assigning expression of type '{}' to target of type '{}' will result in narrowing on line {}."
                     .format(expr_type.toString(), symbol_type.toString(), self.init_expr.getLineNr()))
             # no exception here, compilation may continue.
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.init_expr, constants = self.init_expr.constantFolding(constants)
+
+        if isinstance(self.init_expr, ConstantExpr):
+            t, table = self.getSymbolTable().lookup(self.symbol_id)
+            identifier = table + "." + self.symbol_id
+            constants[identifier] = self.init_expr
+
+        return self, constants
 
 
 class FuncDecl(SymbolDecl):
@@ -603,6 +641,18 @@ class FuncDef(TopLevelNode):
     def pruneDeadCode(self, in_loop=False):
         # pass to body
         return self.body.pruneDeadCode()
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.body, constants = self.body.constantFolding(constants)
+
+        return self, constants
 
 
 class StatementContainer:
@@ -888,6 +938,18 @@ class StatementContainer:
 
         self.parent_function_type = func_type
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        for child in self.child_list:
+            child, constants = child.constantFolding(constants)
+        return self, constants
+
 
 class Body(ASTNode, StatementContainer):
     """
@@ -903,6 +965,16 @@ class Body(ASTNode, StatementContainer):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        return StatementContainer.constantFolding(self, constants)
 
 
 class FuncParam(ASTNode):
@@ -975,6 +1047,17 @@ class CompoundStmt(Statement, StatementContainer):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        return StatementContainer.constantFolding(self, constants)
+
+
 
 class WhileStmt(Statement):
     """
@@ -1001,6 +1084,18 @@ class WhileStmt(Statement):
     def pruneDeadCode(self, in_loop=False):
         self.body.pruneDeadCode(in_loop=True)
         return False  # no guarantees that the while loop will always be exectued, so no prune propagation
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.cond_expr, constants = self.cond_expr.constantFolding(constants)
+        self.body, constants = self.body.constantFolding(constants)
+        return self, constants
 
 
 class ForStmt(Statement):
@@ -1045,6 +1140,19 @@ class ForStmt(Statement):
             in_loop=True)  # set in_loop to true so that children know that "break" and "continue" are valid
         return False  # no guarantees that the while loop will always be exectued, so no prune propagation
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.init_list, constants = self.init_list.constantFolding(constants)
+        self.cond_expr, constants = self.cond_expr.constantFolding(constants)
+        self.body, constants = self.body.constantFolding(constants)
+        return self, constants
+
 
 class BranchStmt(Statement):
     """
@@ -1081,6 +1189,19 @@ class BranchStmt(Statement):
             return True
         else:
             return False
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.cond_expr, constants = self.cond_expr.constantFolding(constants)
+        self.if_body, constants = self.if_body.constantFolding(constants)
+        self.else_body, constants = self.else_body.constantFolding(constants)
+        return self, constants
 
 
 class JumpStatement(Statement):
@@ -1139,6 +1260,17 @@ class ReturnWithExprStatement(JumpStatement):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.expression, constants = self.expression.constantFolding(constants)
+        return self, constants
+
 
 class BreakStatement(JumpStatement):
     """
@@ -1188,6 +1320,17 @@ class ExpressionStatement(Statement):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.expression, constants = self.expression.constantFolding(constants)
+        return self, constants
 
 
 class Expression(ASTNode):
@@ -1285,6 +1428,31 @@ class AssignmentExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.right, constants = self.right.constantFolding(constants)
+
+        if not isinstance(self.left, IdentifierExpr):
+            return self, constants
+
+        t, table = self.getSymbolTable().lookup(self.left.getIdentifierName())
+        identifier = table + "." + self.left.getIdentifierName()
+
+        if isinstance(self.right, ConstantExpr):
+            constants[identifier] = self.right
+        else:
+            try:
+                del constants[identifier]
+            except KeyError:
+                pass
+        return self, constants
+
 
 class LogicOrExpr(Expression):
     """
@@ -1332,6 +1500,18 @@ class LogicOrExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.left, constants = self.left.constantFolding(constants)
+        self.right, constants = self.right.constantFolding(constants)
+        return self, constants
+
 
 class LogicAndExpr(Expression):
     """
@@ -1376,6 +1556,18 @@ class LogicAndExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.left, constants = self.left.constantFolding(constants)
+        self.right, constants = self.right.constantFolding(constants)
+        return self, constants
 
 
 class EqualityExpr(Expression):
@@ -1422,6 +1614,18 @@ class EqualityExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.left, constants = self.left.constantFolding(constants)
+        self.right, constants = self.right.constantFolding(constants)
+        return self, constants
+
 
 class InequalityExpr(Expression):
     """
@@ -1466,6 +1670,18 @@ class InequalityExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.left, constants = self.left.constantFolding(constants)
+        self.right, constants = self.right.constantFolding(constants)
+        return self, constants
 
 
 class CompGreater(Expression):
@@ -1512,6 +1728,18 @@ class CompGreater(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.left, constants = self.left.constantFolding(constants)
+        self.right, constants = self.right.constantFolding(constants)
+        return self, constants
+
 
 class CompLess(Expression):
     """
@@ -1556,6 +1784,18 @@ class CompLess(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.left, constants = self.left.constantFolding(constants)
+        self.right, constants = self.right.constantFolding(constants)
+        return self, constants
 
 
 class CompGreaterEqual(Expression):
@@ -1602,6 +1842,18 @@ class CompGreaterEqual(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.left, constants = self.left.constantFolding(constants)
+        self.right, constants = self.right.constantFolding(constants)
+        return self, constants
+
 
 class CompLessEqual(Expression):
     """
@@ -1646,6 +1898,18 @@ class CompLessEqual(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.left, constants = self.left.constantFolding(constants)
+        self.right, constants = self.right.constantFolding(constants)
+        return self, constants
 
 
 class AddExpr(Expression):
@@ -1692,6 +1956,31 @@ class AddExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.left, constants = self.left.constantFolding(constants)
+        self.right, constants = self.right.constantFolding(constants)
+
+        if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
+            left_type = get_constant_type(self.left)
+            right_type = get_constant_type(self.right)
+            new_type = get_strongest_type(left_type, right_type)
+            a = change_constant_type(self.left.getValue(), left_type, new_type)
+            b = change_constant_type(self.right.getValue(), right_type, new_type)
+
+            result = a + b
+            node = create_constant_node(result, new_type)
+            node.resolveExpressionType(node.getSymbolTable())
+            return node, constants
+
+        return self, constants
+
 
 class SubExpr(Expression):
     """
@@ -1736,6 +2025,31 @@ class SubExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.left, constants = self.left.constantFolding(constants)
+        self.right, constants = self.right.constantFolding(constants)
+
+        if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
+            left_type = get_constant_type(self.left)
+            right_type = get_constant_type(self.right)
+            new_type = get_strongest_type(left_type, right_type)
+            a = change_constant_type(self.left.getValue(), left_type, new_type)
+            b = change_constant_type(self.right.getValue(), right_type, new_type)
+
+            result = a - b
+            node = create_constant_node(result, new_type)
+            node.resolveExpressionType(node.getSymbolTable())
+            return node, constants
+
+        return self, constants
 
 
 class MulExpr(Expression):
@@ -1782,6 +2096,31 @@ class MulExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.left, constants = self.left.constantFolding(constants)
+        self.right, constants = self.right.constantFolding(constants)
+
+        if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
+            left_type = get_constant_type(self.left)
+            right_type = get_constant_type(self.right)
+            new_type = get_strongest_type(left_type, right_type)
+            a = change_constant_type(self.left.getValue(), left_type, new_type)
+            b = change_constant_type(self.right.getValue(), right_type, new_type)
+
+            result = a * b
+            node = create_constant_node(result, new_type)
+            node.resolveExpressionType(node.getSymbolTable())
+            return node, constants
+
+        return self, constants
+
 
 class DivExpr(Expression):
     """
@@ -1826,6 +2165,31 @@ class DivExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.left, constants = self.left.constantFolding(constants)
+        self.right, constants = self.right.constantFolding(constants)
+
+        if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
+            left_type = get_constant_type(self.left)
+            right_type = get_constant_type(self.right)
+            new_type = get_strongest_type(left_type, right_type)
+            a = change_constant_type(self.left.getValue(), left_type, new_type)
+            b = change_constant_type(self.right.getValue(), right_type, new_type)
+
+            result = a / b
+            node = create_constant_node(result, new_type)
+            node.resolveExpressionType(node.getSymbolTable())
+            return node, constants
+
+        return self, constants
 
 
 class ModExpr(Expression):
@@ -1881,6 +2245,30 @@ class ModExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.left, constants = self.left.constantFolding(constants)
+        self.right, constants = self.right.constantFolding(constants)
+
+        if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
+            left_type = get_constant_type(self.left)
+            right_type = get_constant_type(self.right)
+            new_type = get_strongest_type(left_type, right_type)
+            a = change_constant_type(self.left.getValue(), left_type, new_type)
+            b = change_constant_type(self.right.getValue(), right_type, new_type)
+
+            result = a % b
+            node = create_constant_node(result, new_type)
+            node.resolveExpressionType(self.getSymbolTable())
+            return node, constants
+        return self, constants
+
 
 class CastExpr(Expression):
     """
@@ -1914,9 +2302,9 @@ class CastExpr(Expression):
         # TODO cast checks
         if not is_conversion_possible(self.target_type, self.expression.getExpressionType()):
             Logger.error("Cannot cast value of type '{}' to value of type '{}' on line {}."
-                            .format(self.expression.getExpressionType().toString(), 
-                                    self.target_type.toString(), 
-                                    self.getLineNr()))
+                         .format(self.expression.getExpressionType().toString(),
+                                 self.target_type.toString(),
+                                 self.getLineNr()))
             raise AstTypingException()
 
         self.expression_type = self.target_type
@@ -1928,6 +2316,17 @@ class CastExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.expression, constants = self.expression.constantFolding(constants)
+        return self, constants
 
 
 class LogicNotExpr(Expression):
@@ -1967,6 +2366,17 @@ class LogicNotExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.expression, constants = self.expression.constantFolding(constants)
+        return self, constants
 
 
 class PrefixIncExpr(Expression):
@@ -2009,6 +2419,17 @@ class PrefixIncExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.expression, constants = self.expression.constantFolding(constants)
+        return self, constants
+
 
 class PrefixDecExpr(Expression):
     """
@@ -2049,6 +2470,17 @@ class PrefixDecExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.expression, constants = self.expression.constantFolding(constants)
+        return self
 
 
 class PostfixIncExpr(Expression):
@@ -2091,6 +2523,17 @@ class PostfixIncExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.expression, constants = self.expression.constantFolding(constants)
+        return self
+
 
 class PostfixDecExpr(Expression):
     """
@@ -2131,6 +2574,17 @@ class PostfixDecExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.expression, constants = self.expression.constantFolding(constants)
+        return self, constants
 
 
 class PlusPrefixExpr(Expression):
@@ -2173,6 +2627,17 @@ class PlusPrefixExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.expression, constants = self.expression.constantFolding(constants)
+        return self, constants
+
 
 class MinPrefixExpr(Expression):
     """
@@ -2213,6 +2678,17 @@ class MinPrefixExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.expression, constants = self.expression.constantFolding(constants)
+        return self, constants
 
 
 class ArrayAccessExpr(Expression):
@@ -2411,17 +2887,18 @@ class FuncCallExpr(Expression):
             # check argument length
             if len(self.argument_list) == 0:
                 Logger.log("Function '{}' needs at least one argument, function called with no arguments on line '{}'"
-                                .format(function_name, self.getLineNr()))
+                           .format(function_name, self.getLineNr()))
                 raise AstTypingException()
-            
+
             for arg in self.argument_list:
                 arg.resolveExpressionType(symbol_table)
 
             # check arg #0
             arg_0_typename = self.argument_list[0].getExpressionType().toString()
             if not arg_0_typename == "char*":
-                Logger.error("The first argument of '{}' needs to be of type 'char*' while argument of type '{}' was given. Error on line {}."
-                                .format(function_name, arg_0_typename, self.getLineNr()))
+                Logger.error(
+                    "The first argument of '{}' needs to be of type 'char*' while argument of type '{}' was given. Error on line {}."
+                    .format(function_name, arg_0_typename, self.getLineNr()))
                 raise AstTypingException()
 
         else:
@@ -2459,7 +2936,6 @@ class FuncCallExpr(Expression):
                     # no exception needed here
 
         self.expression_type = function_type.getReturnType()
-
 
         return self.expression_type
 
@@ -2512,6 +2988,22 @@ class IdentifierExpr(Expression):
             # returned type can be of function, array or variable
             return self.expression_type
 
+    def constantFolding(self, constants):
+        """
+            Recursive constant folding with constant propagation.
+            Constant folding: Evaluate constant expressions at compile time.
+            Constant propagation: Substitute the values of known constants in expressions
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        t, table = self.getSymbolTable().lookup(self.identifier)
+        identifier = table + "." + self.identifier
+
+        if identifier in constants:
+            return constants[identifier], constants
+
+        return self, constants
+
 
 class ConstantExpr(Expression):
     """
@@ -2549,7 +3041,7 @@ class IntegerConstantExpr(ConstantExpr):
         super().__init__(constant_expr_type="IntConstant", value=integer_value)
 
     def getIntValue(self):
-        return int(self.getValue())
+        return int(round(float(self.getValue())))
 
     def resolveExpressionType(self, symbol_table):
         self.expression_type = VariableType('int')
@@ -2726,3 +3218,103 @@ def will_conversion_narrow(target, value):
         return True
 
     return False
+
+
+def change_constant_type(value, old_type, new_type):
+    if old_type == "float":
+        value = float(value)
+    elif old_type == "int":
+        value = int(round(float(value)))
+    elif old_type == "char":
+        value = value[1:-1]
+        value = ord(value)
+
+    if old_type == "int" and new_type != old_type:
+        value = int(value)
+
+    elif old_type == "float" and new_type != old_type:
+        value = float(value)
+
+    if old_type == "bool" and new_type != old_type:
+        value = False if value == "false" else value
+        value = True if value == "true" else value
+
+    if new_type == old_type:
+        return value
+
+    elif new_type == "bool":
+        return bool(value)
+
+    # character
+    elif old_type == 'char' and new_type == "float":
+        return float(ord(value))
+
+    elif old_type == "char" and new_type == "int":
+        return ord(value)
+
+    # integer
+    elif old_type == "int" and new_type == "float":
+        return float(int(value))
+
+    elif old_type == "int" and new_type == "char":
+        return chr(int(value))
+
+    # bool
+    elif old_type == "bool" and new_type == "char":
+        return chr(int(value))
+
+    elif old_type == "bool" and new_type == "int":
+        return int(bool(value))
+
+    elif old_type == "bool" and new_type == "float":
+        return float(bool(value))
+
+    elif old_type == "float" and new_type == "int":
+        return int(round(value))
+
+    elif old_type == "float":
+        return change_constant_type(new_type, "int", int(round(value)))
+    else:
+        return value
+
+
+def create_constant_node(value, type):
+    if type == "float":
+        return FloatConstantExpr(str(value))
+    elif type == "int":
+        return IntegerConstantExpr(str(value))
+    elif type == "char":
+        return CharConstantExpr("\'" + chr(value) + "\'")
+    elif type == "bool":
+        return BoolConstantExpr(str(value))
+    else:
+
+        raise Exception("Invalid call to create_constant_node for '{}'".format(type))
+
+
+def get_constant_type(constant):
+    if isinstance(constant, FloatConstantExpr):
+        return "float"
+    elif isinstance(constant, IntegerConstantExpr):
+        return "int"
+    elif isinstance(constant, CharConstantExpr):
+        return "char"
+    elif isinstance(constant, StringConstantExpr):
+        return "char*"
+    elif isinstance(constant, BoolConstantExpr):
+        return "bool"
+    else:
+        raise Exception("Unrecognised constant type")
+
+
+def get_strongest_type(a, b):
+    if a == "float" or b == "float":
+        return "float"
+    elif a == "int" or b == "int":
+        return "int"
+    elif a == "char" or b == "char":
+        return "char"
+    elif a == "bool" or b == "bool":
+        return "bool"
+    else:
+        raise Exception("Invalid call to ge_strongest_type for '{}' and '{}'".format(a, b))
