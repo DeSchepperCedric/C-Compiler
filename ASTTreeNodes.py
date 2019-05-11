@@ -1624,6 +1624,18 @@ class EqualityExpr(Expression):
         """
         self.left, constants = self.left.constantFolding(constants)
         self.right, constants = self.right.constantFolding(constants)
+
+        if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
+            left_type = get_constant_type(self.left)
+            right_type = get_constant_type(self.right)
+            comp_type = get_strongest_type(left_type, right_type)
+            a = change_constant_type(self.left.getValue(), left_type, comp_type)
+            b = change_constant_type(self.right.getValue(), right_type, comp_type)
+
+            result = (a == b)
+            node = BoolConstantExpr(str(result))
+            node.resolveExpressionType(node.getSymbolTable())
+            return node, constants
         return self, constants
 
 
@@ -1681,6 +1693,18 @@ class InequalityExpr(Expression):
         """
         self.left, constants = self.left.constantFolding(constants)
         self.right, constants = self.right.constantFolding(constants)
+
+        if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
+            left_type = get_constant_type(self.left)
+            right_type = get_constant_type(self.right)
+            comp_type = get_strongest_type(left_type, right_type)
+            a = change_constant_type(self.left.getValue(), left_type, comp_type)
+            b = change_constant_type(self.right.getValue(), right_type, comp_type)
+
+            result = (a != b)
+            node = BoolConstantExpr(str(result))
+            node.resolveExpressionType(node.getSymbolTable())
+            return node, constants
         return self, constants
 
 
@@ -1738,6 +1762,18 @@ class CompGreater(Expression):
         """
         self.left, constants = self.left.constantFolding(constants)
         self.right, constants = self.right.constantFolding(constants)
+
+        if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
+            left_type = get_constant_type(self.left)
+            right_type = get_constant_type(self.right)
+            comp_type = get_strongest_type(left_type, right_type)
+            a = change_constant_type(self.left.getValue(), left_type, comp_type)
+            b = change_constant_type(self.right.getValue(), right_type, comp_type)
+
+            result = a > b
+            node = BoolConstantExpr(str(result))
+            node.resolveExpressionType(node.getSymbolTable())
+            return node, constants
         return self, constants
 
 
@@ -1795,6 +1831,18 @@ class CompLess(Expression):
         """
         self.left, constants = self.left.constantFolding(constants)
         self.right, constants = self.right.constantFolding(constants)
+
+        if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
+            left_type = get_constant_type(self.left)
+            right_type = get_constant_type(self.right)
+            comp_type = get_strongest_type(left_type, right_type)
+            a = change_constant_type(self.left.getValue(), left_type, comp_type)
+            b = change_constant_type(self.right.getValue(), right_type, comp_type)
+
+            result = a < b
+            node = BoolConstantExpr(str(result))
+            node.resolveExpressionType(node.getSymbolTable())
+            return node, constants
         return self, constants
 
 
@@ -1852,6 +1900,18 @@ class CompGreaterEqual(Expression):
         """
         self.left, constants = self.left.constantFolding(constants)
         self.right, constants = self.right.constantFolding(constants)
+
+        if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
+            left_type = get_constant_type(self.left)
+            right_type = get_constant_type(self.right)
+            comp_type = get_strongest_type(left_type, right_type)
+            a = change_constant_type(self.left.getValue(), left_type, comp_type)
+            b = change_constant_type(self.right.getValue(), right_type, comp_type)
+
+            result = a >= b
+            node = BoolConstantExpr(str(result))
+            node.resolveExpressionType(node.getSymbolTable())
+            return node, constants
         return self, constants
 
 
@@ -1909,6 +1969,18 @@ class CompLessEqual(Expression):
         """
         self.left, constants = self.left.constantFolding(constants)
         self.right, constants = self.right.constantFolding(constants)
+
+        if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
+            left_type = get_constant_type(self.left)
+            right_type = get_constant_type(self.right)
+            comp_type = get_strongest_type(left_type, right_type)
+            a = change_constant_type(self.left.getValue(), left_type, comp_type)
+            b = change_constant_type(self.right.getValue(), right_type, comp_type)
+
+            result = a <= b
+            node = BoolConstantExpr(str(result))
+            node.resolveExpressionType(node.getSymbolTable())
+            return node, constants
         return self, constants
 
 
@@ -3247,10 +3319,10 @@ def change_constant_type(value, old_type, new_type):
 
     # character
     elif old_type == 'char' and new_type == "float":
-        return float(ord(value))
+        return float(value)
 
     elif old_type == "char" and new_type == "int":
-        return ord(value)
+        return value
 
     # integer
     elif old_type == "int" and new_type == "float":
