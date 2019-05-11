@@ -946,8 +946,8 @@ class StatementContainer:
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        for child in self.child_list:
-            child, constants = child.constantFolding(constants)
+        for i in range(0, len(self.child_list)):
+            self.child_list[i], constants = self.child_list[i].constantFolding(constants)
         return self, constants
 
 
@@ -974,6 +974,7 @@ class Body(ASTNode, StatementContainer):
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
+
         return StatementContainer.constantFolding(self, constants)
 
 
@@ -1056,7 +1057,6 @@ class CompoundStmt(Statement, StatementContainer):
             Returns updated node (when possible) and dict with constant values
         """
         return StatementContainer.constantFolding(self, constants)
-
 
 
 class WhileStmt(Statement):
@@ -1202,7 +1202,12 @@ class BranchStmt(Statement):
         self.if_body, constants = self.if_body.constantFolding(constants)
         self.else_body, constants = self.else_body.constantFolding(constants)
 
-        
+        # Prune if or else body when dealing with constant expression
+        if isinstance(self.cond_expr, ConstantExpr):
+            if change_constant_type(self.cond_expr.getValue(), get_constant_type(self.cond_expr), "bool"):
+                return self.if_body, constants
+            else:
+                return self.else_body, constants
 
         return self, constants
 
@@ -3303,6 +3308,8 @@ def change_constant_type(value, old_type, new_type):
     elif old_type == "char":
         value = value[1:-1]
         value = ord(value)
+    elif old_type == "bool":
+        value = value == "True"
 
     if old_type == "int" and new_type != old_type:
         value = int(value)
