@@ -620,6 +620,11 @@ class StatementContainer:
     def isEmpty(self):
         return len(self.child_list) == 0
 
+    def setSymbolTable(self, symbol_table):
+        for child in self.child_list:
+            child.setSymbolTable(symbol_table)
+
+
     def addScopeToSymbolTable(self, parent_table, as_child):
         """
             Add the symbols declared in this statement container to the specified symbol table.
@@ -627,7 +632,6 @@ class StatementContainer:
                 'parent_table': The table that is the parent of this scope, or the statements in this scope.
                 'as_child': Whether or not the symbols should be added as a child table.
         """
-
         if as_child:
             symbol_table = parent_table.allocate()
         else:
@@ -643,7 +647,6 @@ class StatementContainer:
             #   while: own scope
             #   compound statements
             # each declaration introduces a symbol.
-
             if isinstance(child, SymbolDecl):  # a symbol can simply be added
                 # note: this also sets the symbol table for the declaration
                 child.addToSymbolTable(symbol_table)
@@ -802,6 +805,9 @@ class StatementContainer:
                 child.setExprTreeSymbolTable(symbol_table)
                 child.resolveExpressionType(symbol_table)
             # ENDIF
+            elif isinstance(child, Expression):
+                child.setExprTreeSymbolTable(symbol_table)
+                child.resolveExpressionType(symbol_table)
 
         return symbol_table
 

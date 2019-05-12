@@ -371,6 +371,7 @@ class LLVMGenerator:
         for child in node.getChildren():
             new_code, reg = self.astNodeToLLVM(child)
             code += new_code
+
         return code, -1
 
     def funcParam(self, node):
@@ -422,20 +423,6 @@ class LLVMGenerator:
         self.cur_reg += 1
         new_code, reg = self.astNodeToLLVM(node.getBody())
         code += new_code
-        # replace by if return_type == "void" at some point when == issue is fixed
-
-        # # search algorithm: warning, this can be naive and does not take into account compound, if, else, while, for etc.
-        # return_found = False
-        # for child in node.getBody().getChildren():
-        #     if isinstance(child, ReturnStatement):
-        #         return_found = True
-        #         break
-
-        # print("'{}'".format(return_type))
-
-        # if return_type == "void" and not return_found:
-        #     print("ok")
-        #     code += "ret void\n"
 
         # check if last statement is a return
 
@@ -502,6 +489,7 @@ class LLVMGenerator:
 
             # vararg functions do not take floats, all floats are converted to double
             if function_id == "printf" and arg_type == "float":
+
                 convert, arg_reg = self.convertToType(arg_reg, arg_type, "double")
                 arg_type = "double"
                 arg_code += convert

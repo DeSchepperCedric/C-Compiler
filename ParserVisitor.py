@@ -246,8 +246,6 @@ class ParserVisitor(CVisitor):
 
         init_list, cond_expr, iter_list = self.manuallyVisitChild(ctx.getChild(2))
 
-
-
         # returns list of statements
         body_statements = self.manuallyVisitChild(ctx.getChild(4))
 
@@ -263,13 +261,11 @@ class ParserVisitor(CVisitor):
 
         # extend with iter expr
         body_statements.extend(iter_list)
-
         while_body = Body(body_statements).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         while_stat = WhileStmt(cond_expr, while_body).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         statements.extend(init_list)
         statements.append(while_stat)
-        print(statements)
         return [CompoundStmt(statements).setLineNr(ctx.start.line).setColNr(ctx.start.column)]
 
     # Visit a parse tree produced by CParser#forCondWithDecl.
@@ -283,8 +279,6 @@ class ParserVisitor(CVisitor):
         init_list = []
         cond_expr = BoolConstantExpr("true").setLineNr(ctx.start.line).setColNr(ctx.start.column) # empty condition is "true"
         iter_list = []
-
-
 
         for i in range(0, ctx.getChildCount()):
             if ctx.getChild(i).getText() == ";":
