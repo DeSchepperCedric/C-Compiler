@@ -13,6 +13,12 @@ class MipsGenerator:
         self.reg_to_string = dict()
         self.array_sizes = dict()
 
+        self.temporaries = [i for i in range(7, -1, -1)]
+        self.saved = [i for i in range(7, -1, -1)]
+        self.floats = [i for i in range(31, -1, -1)]
+        self.stack_ptr = 0
+
+
     def astNodeToLLVM(self, node):
         """
         Returns LLVM code string + register number
