@@ -261,7 +261,6 @@ class LLVMGenerator:
         is_global = node.getSymbolTable().isGlobal(var_id)
 
         if is_global and isinstance(node.getInitExpr(), ConstantExpr):
-            # node.getInitExpr() should return a ConstantExpr
             value = self.convertConstant(var_type, expr_type, node.getInitExpr().getValue())
             code += "@{} = global {} {}".format(var_id, var_type, value)
 

@@ -8,7 +8,7 @@ class MipsGenerator:
         self.cur_reg = 0
         self.variable_reg = dict()
         self.reg_stack = list()
-        self.global_scope_string = ""
+        self.data_string = ".data: \n"
         self.string_counter = 0
         self.reg_to_string = dict()
         self.array_sizes = dict()
@@ -175,11 +175,59 @@ class MipsGenerator:
     def allocate(self, register, llvm_type, is_global):
         pass
 
+    def getCType(self, type_node):
+        """ Converts a symbolType to an LLVM type"""
+        if type_node.isFunction():
+            return type_node.getReturnTypeAsString()
+
+        elif type_node.isVar():
+            return type_node.toString()
+
+        elif type_node.isArray():
+            return type_node.getEntryTypeAsString()
+
+        else:
+            raise Exception("Incorrect type node")
+
+    def getMipsType(self, type_node):
+        """ Converts a symbolType to an LLVM type"""
+        if type_node.isFunction():
+            type_string = type_node.getReturnTypeAsString()
+
+        elif type_node.isVar():
+            type_string = type_node.toString()
+
+        elif type_node.isArray():
+            type_string = type_node.getEntryTypeAsString()
+
+        else:
+            raise Exception("Incorrect type node")
+        type_string = type_string.replace("int", "word")
+        type_string = type_string.replace("bool", "byte")
+        type_string = type_string.replace("char", "character")
+        return type_string
+
+
     def varDeclDefault(self, node):
         pass
 
     def varDeclWithInit(self, node):
-        pass
+        expr_type = self.getMipsType(node.getInitExpr().getExpressionType())
+        var_id = node.getID()
+        var_type, table = node.getSymbolTable().lookup(var_id)
+        var_type = self.getMipsType(var_type)
+        code = ""
+        is_global = node.getSymbolTable().isGlobal(var_id)
+
+        if is_global and isinstance(node.getInitExpr(), ConstantExpr):
+            value = self.convertConstant(var_type, expr_type, node.getInitExpr().getValue())
+            self.data_string += "{}: .{} {}".format(var_id, var_type, value)
+
+        elif is_global and isinstance(node.getInitExpr(), AddressExpr):
+            pass
+
+        else:
+            pass
 
     def branchStatement(self, node):
         pass
@@ -216,9 +264,9 @@ class MipsGenerator:
         pass
 
     def getStrongestType(self, a, b):
-        INTREP = ["int", "i32"]
-        CHARREP = ["char", "i8"]
-        BOOLREP = ["bool", "i1"]
+        INTREP = ["int", "word"]
+        CHARREP = ["char", "character"]
+        BOOLREP = ["bool", "byte"]
 
         if a == "float" or b == "float":
             return "float"
@@ -250,7 +298,57 @@ class MipsGenerator:
         pass
 
     def convertConstant(self, new_type, old_type, value):
-        pass
+        if old_type == "character":
+            value = value[1:-1]
+            value = ord(value)
+
+        elif old_type == "word" and new_type != old_type:
+            value = int(value)
+
+        elif old_type == "float" and new_type != old_type:
+            value = float(value)
+
+        if old_type == "byte" and new_type != old_type:
+            value = False if value == "false" else value
+            value = True if value == "true" else value
+
+        if new_type == old_type:
+            return value
+
+        elif new_type == "byte":
+            return bool(value)
+
+        # character
+        elif old_type == "character" and new_type == "float":
+            return float(ord(value))
+
+        elif old_type == "character" and new_type == "word":
+            return ord(value)
+
+        # integer
+        elif old_type == "word" and new_type == "float":
+            return float(int(value))
+
+        elif old_type == "word" and new_type == "character":
+            return chr(int(value))
+
+        # bool
+        elif old_type == "bool" and new_type == "character":
+            return chr(int(value))
+
+        elif old_type == "byte" and new_type == "word":
+            return int(bool(value))
+
+        elif old_type == "byte" and new_type == "float":
+            return float(bool(value))
+
+        elif old_type == "float" and new_type == "word":
+            return int(round(value))
+
+        elif old_type == "float":
+            return self.convertConstant(new_type, "word", int(round(value)))
+        else:
+            return value
 
     def returnStatement(self):
         pass
