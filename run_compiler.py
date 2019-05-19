@@ -30,7 +30,10 @@ def run_compiler(source_file_path, output_name):
     visitor = ParserVisitor()
     ast_tree = visitor.visitProgram(parse_tree) # create AST
     ast_tree.pruneDeadCode()                    # prune after continue, return and break
+
     ast_tree.genSymbolTable()                   # annotate AST with types and symbol table
+    ast_tree.constantFolding(dict())
+
     symbol_table = ast_tree.getSymbolTable()
 
     # constant folding
@@ -63,8 +66,8 @@ def main(argv):
         run_compiler(source_file_path = argv[1], output_name=output_name)
     except CompilerException as e:
         Logger.error("Compiler was terminated due to errors in the specified C source file.")
-    except Exception as e:
-        Logger.error("Unexpected error of type '{}': {}".format(type(e), str(e)))
+    #except Exception as e:
+     #   Logger.error("Unexpected error of type '{}': {}".format(type(e), str(e)))
 
 if __name__ == "__main__":
     main(sys.argv)
