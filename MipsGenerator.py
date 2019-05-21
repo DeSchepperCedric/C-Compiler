@@ -18,7 +18,6 @@ class MipsGenerator:
         self.floats = [i for i in range(31, -1, -1)]
         self.stack_ptr = 0
 
-
     def astNodeToLLVM(self, node):
         """
         Returns LLVM code string + register number

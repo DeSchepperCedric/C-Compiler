@@ -1,5 +1,18 @@
 #include <stdio.h>
 
 
-int q = 10;
-int* b = &q;
+int main(){
+int q = 5;
+if (q > 2){
+return 255;
+}
+else{
+q = 20;
+}
+
+q = 100000;
+return q;
+
+
+
+}

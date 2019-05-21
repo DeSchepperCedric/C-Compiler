@@ -1211,9 +1211,9 @@ class BranchStmt(Statement):
         # Prune if or else body when dealing with constant expression
         if isinstance(self.cond_expr, ConstantExpr):
             if change_constant_type(self.cond_expr.getValue(), get_constant_type(self.cond_expr), "bool"):
-                return self.if_body, constants
+                return CompoundStmt(self.if_body.child_list), constants
             else:
-                return self.else_body, constants
+                return CompoundStmt(self.else_body.child_list), constants
 
         return self, constants
 
