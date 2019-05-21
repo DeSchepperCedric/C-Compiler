@@ -952,8 +952,10 @@ class StatementContainer:
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
+
         for i in range(0, len(self.child_list)):
             self.child_list[i], constants = self.child_list[i].constantFolding(constants)
+
         return self, constants
 
 
@@ -1053,6 +1055,13 @@ class CompoundStmt(Statement, StatementContainer):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def setSymbolTable(self, symbol_table):
+        print("here")
+        self.symbol_table = symbol_table
+        for child in self.child_list:
+            child.setSymbolTable(symbol_table)
+
 
     def constantFolding(self, constants):
         """
@@ -1209,12 +1218,19 @@ class BranchStmt(Statement):
         self.else_body, constants = self.else_body.constantFolding(constants)
 
         # Prune if or else body when dealing with constant expression
+        """
         if isinstance(self.cond_expr, ConstantExpr):
             if change_constant_type(self.cond_expr.getValue(), get_constant_type(self.cond_expr), "bool"):
-                return CompoundStmt(self.if_body.child_list), constants
-            else:
-                return CompoundStmt(self.else_body.child_list), constants
+                temp = CompoundStmt(self.if_body.child_list)
+                temp.symbol_table = self.if_body.symbol_table
 
+                return temp, constants
+            else:
+                temp = CompoundStmt(self.else_body.child_list)
+                temp.symbol_table = self.else_body.symbol_table
+
+                return temp, constants
+        """
         return self, constants
 
 

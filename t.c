@@ -4,10 +4,13 @@
 int main(){
 int q = 5;
 if (q > 2){
-return 255;
+    int a = 25;
+    q = a;
+    return q;
 }
 else{
-q = 20;
+    int b = 35;
+    q = 20;
 }
 
 q = 100000;
