@@ -2958,6 +2958,10 @@ class FuncCallExpr(Expression):
         return self.identifier
 
     def getArguments(self):
+        """
+            Retrieve a list of arguments that were passed to the function.
+            Each element of the list is an Expression.
+        """
         return self.argument_list
 
     def setExprTreeSymbolTable(self, symbol_table):

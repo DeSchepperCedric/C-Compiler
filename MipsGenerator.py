@@ -171,6 +171,7 @@ class MipsGenerator:
         pass
 
     def stringConstantExpr(self, expr):
+        # add to data segment
         pass
 
     ################################### AST NODES ###################################
@@ -280,9 +281,12 @@ class MipsGenerator:
         return code, -1
 
     def statementContainer(self, node):
+        # iterate over statements and process
+        # if a return with expression is encountered, use that expression's register as return register for this function call
         pass
 
     def funcParam(self, node):
+        # ignore
         pass
 
     def funcDecl(self, node):
@@ -313,25 +317,39 @@ class MipsGenerator:
         return code, "$2"
 
     def funcCallExpr(self, node):
+        code = ""
 
         # save t0-t3 registers to stack
+        for reg in ["$8", "$9", "$10", "$11"]:
+            # TODO check if correct
+            # TODO store reg on the stack
+            # increment stack pointer?
+            code += self.storeRegister(reg, "$sp", 0)
 
-        # foreach argument
-        #   resolve argument expression
-        #   save to stack
+        # resolve each argument expression
+        for arg in node.getArguments():
+            arg_code, arg_reg = self.astNodeToMIPS(arg)
 
-
+            # TODO store reg on the stack
+            # increment stack pointer?
+            code += arg_code
+            code += self.storeRegister(arg_reg, "$sp", 0)
 
         # jump and link
         code += "jal {}\n".format(node.getFunctionID().getIdentifierName())
 
-        # place
-
         # restore registers from stack
+        for reg in ["$8", "$9", "$10", "$11"]:
+            # TODO decrement stackptr?
+            # TODO check
+            code += self.loadRegister(reg, "$sp", 0)
 
-        pass
+        # TODO do something with return value, return register?
+
+        return code, ret_reg
 
     def identifierExpr(self, node):
+        # ignore?
         pass
 
     def arithmeticExpr(self, node, operation):
@@ -342,9 +360,12 @@ class MipsGenerator:
         pass
 
     def returnStatement(self):
+        # ignore
         pass
 
     def returnWithExprStatement(self, node):
+        # resolve expression
+        # return register
         pass
 
     def comparisonExpr(self, node, int_op):
