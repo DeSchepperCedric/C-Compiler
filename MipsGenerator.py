@@ -143,24 +143,31 @@ class MipsGenerator:
         """
         Return a constant bool with its type and the register it's stored in
         """
+
+        # add to data segment
+
         pass
 
     def floatConstantExpr(self, expr):
         """
         Return a constant float with its type and the register it's stored in
         """
+
+        # add to data segment
         pass
 
     def integerConstantExpr(self, expr):
         """
         Return a constant integer with its type and the register it's stored in
         """
+        # add to data segment
         pass
 
     def charConstantExpr(self, expr):
         """
         Return a constant integer with its type and the register it's stored in
         """
+        # add to data segment
         pass
 
     def stringConstantExpr(self, expr):
@@ -169,17 +176,20 @@ class MipsGenerator:
     ################################### AST NODES ###################################
 
     def programNode(self, node):
+        """
+            Process a program node. This will return the full .text segment.
+        """
 
-        # .data section
+        code = ".text\n"
 
-        # .text section
+        # discover functions
 
         # main function first!
 
         # other functions
 
 
-        pass
+        return code, -1
 
     def varDeclDefault(self, node):
         pass
@@ -281,23 +291,43 @@ class MipsGenerator:
 
     def funcDef(self, node):
 
+        code = ""
+        return_reg = ""
+
         # function label
+        function_name = node.getFuncID()
+
+        code += "{}:\n".format(function_name)
+
+
+        # load params from stack
+
 
         # function body
 
+        func_body, reg = self.astNodeToMIPS(node.getBody())
+        code += func_body
+
         # return value
 
-        pass
+        return code, "$2"
 
     def funcCallExpr(self, node):
 
-        # save registers
+        # save t0-t3 registers to stack
+
+        # foreach argument
+        #   resolve argument expression
+        #   save to stack
+
+
 
         # jump and link
+        code += "jal {}\n".format(node.getFunctionID().getIdentifierName())
 
         # place
 
-        # 
+        # restore registers from stack
 
         pass
 
@@ -353,6 +383,30 @@ class MipsGenerator:
 
     def postfixArithmetics(self, node, operation):
         pass
+
+
+    def storeRegister(self, source_reg, addr_reg, offset):
+        """
+            Store the specified register in memory at the specified address.
+
+            Params:
+                'source_reg': the register that contains the value that will be stored.
+                'addr_reg': the register that contains the address where the value will be stored.
+                'offset': the offset that will be added to the address stored in 'addr_reg'. Specify as integer.
+        """
+
+        return "sw {}, {}({})\n".format(source_reg, offset, addr_reg)
+
+    def loadRegister(self, target_reg, addr_reg, offset):
+        """
+            Load the value stored in the memory at the specified address into the specified register.
+
+            Params:
+                'target_reg': The register that will contain the value.
+                'addr_reg': The register that contains the address at which the value is stored.
+                'offset': the offset that will be added to the address stored in 'addr_reg'. Specify as integer.
+        """
+        return "lw {}, {}({})\n".format(target_reg, offset, addr_reg)
 
     ############################################# TYPE METHODS #############################################
 
