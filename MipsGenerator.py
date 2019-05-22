@@ -18,10 +18,22 @@ class MipsGenerator:
         self.floats = [i for i in range(31, -1, -1)]
         self.stack_ptr = 0
 
-    def astNodeToLLVM(self, node):
+        self.label_counter = 0
+
+    def getUniqueLabelId(self):
         """
-        Returns LLVM code string + register number
-        Only function to call outside the class
+            Retrieve a unique id to create labels with. This
+            function also increments the internal label counter.
+        """
+
+        self.label_counter += 1
+
+        return self.label_counter
+
+    def astNodeToMIPS(self, node):
+        """
+            Returns a tuple (code, reg) with code being the MIPS code and reg 
+            being the register that contains the result.
         """
         if isinstance(node, IncludeNode):
             pass
@@ -235,12 +247,83 @@ class MipsGenerator:
             pass
 
     def branchStatement(self, node):
-        pass
+        """
+            Convert an BranchStmt to MIPS code.
+        """
+
+        ## process children ##
+        # retrieve condition code
+        cond_code, cond_reg = self.astNodeToMIPS(node.getCondExpr())
+
+        if_code,   reg = self.astNodeToMIPS(node.getIfBody())
+        else_code, reg = self.astNodeToMIPS(node.getElseBody())
+
+        cond_label_id = self.getUniqueLabelId()
+        if_label_id = self.getUniqueLabelId()
+        else_label_id = self.getUniqueLabelId()
+        endif_label_id = self.getUniqueLabelId()
+
+        code = "cond_{}:\n".format(cond_label_id)
+        code += cond_code
+
+        # if the result is false => go to else
+        code += "beq {} $0 else_branch_{}\n".format(cond_reg, else_label_id)
+
+        code += "if_branch_{}:\n".format(if_label_id)
+        code += if_code
+
+        # jump to end
+        code += "j endif_{}\n".format(endif_label_id)
+
+        code += "else_branch_{}:\n".format(else_label_id)
+        code += else_code
+
+        # jump to end
+        code += "j endif_{}:\n".format(endif_label_id)
+
+        # end of branch statement
+        code += "endif_{}:\n".format(endif_label_id)
+
+        return code, -1
 
     def whileStatement(self, node):
-        pass
+        """
+            Convert the while statement to MIPS code.
+        """
+
+        cond_code, cond_reg = self.astNodeToMIPS(node.getCondExpr())
+        body_code, body_reg = self.astNodeToMIPS(node.getIfBody())
+
+        cond_label_id     = self.getUniqueLabelId()
+        loop_label_id     = self.getUniqueLabelId()
+        endwhile_label_id = self.getUniqueLabelId()
+
+        code = "cond_{}:\n".format(cond_label_id)
+        code += cond_code
+
+        # if the result is false => go to endwhile
+        code += "beq {} $0 endwhile_{}:\n".format(cond_reg, endwhile_label_id)
+
+        code += "loop_{}:\n".format(loop_label_id)
+        code += body_code
+
+        code += "j cond_{}:\n".format(cond_label_id)
+
+        code += "endwhile_{}:\n".format(endwhile_label_id)
+
+        return code, -1
 
     def programNode(self, node):
+
+        # .data section
+
+        # .text section
+
+        # main function first!
+
+        # other functions
+
+
         pass
 
     def statementContainer(self, node):
@@ -250,12 +333,27 @@ class MipsGenerator:
         pass
 
     def funcDecl(self, node):
+        # ignore
         pass
 
     def funcDef(self, node):
+
+        # function label
+
+        # function body
+
+        # return value
+
         pass
 
     def funcCallExpr(self, node):
+
+        # save registers
+
+        # jump and link
+
+        # place
+
         pass
 
     def identifierExpr(self, node):
