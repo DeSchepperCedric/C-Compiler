@@ -137,6 +137,8 @@ class MipsGenerator:
 
         raise Exception("Encountered unknown AST node of type '{}'.\n This node has no support yet.".format(type(node)))
 
+    ################################### CONSTANT EXPRESSIONS ###################################
+
     def boolConstantExpr(self, expr):
         """
         Return a constant bool with its type and the register it's stored in
@@ -164,66 +166,20 @@ class MipsGenerator:
     def stringConstantExpr(self, expr):
         pass
 
-    def loadVariable(self, register, var_type, is_global):
-        """
+    ################################### AST NODES ###################################
 
-        :param register: register the variable is saved in
-        :param var_type: variable type
-        :param is_global: is the variable global
-        :return: code, register where it's loaded to
-        """
+    def programNode(self, node):
+
+        # .data section
+
+        # .text section
+
+        # main function first!
+
+        # other functions
+
+
         pass
-
-    def loadGlobalVariable(self, var_id, var_type):
-        """
-        Load a global variable into a scoped register
-        """
-        pass
-
-    def loadLocalVariable(self, var_id, var_type):
-        """
-        Load a local variable into a scoped register
-        """
-        pass
-
-    def storeVariable(self, store_to, store_from, var_type, is_global):
-        pass
-
-    def allocate(self, register, llvm_type, is_global):
-        pass
-
-    def getCType(self, type_node):
-        """ Converts a symbolType to an LLVM type"""
-        if type_node.isFunction():
-            return type_node.getReturnTypeAsString()
-
-        elif type_node.isVar():
-            return type_node.toString()
-
-        elif type_node.isArray():
-            return type_node.getEntryTypeAsString()
-
-        else:
-            raise Exception("Incorrect type node")
-
-    def getMipsType(self, type_node):
-        """ Converts a symbolType to an LLVM type"""
-        if type_node.isFunction():
-            type_string = type_node.getReturnTypeAsString()
-
-        elif type_node.isVar():
-            type_string = type_node.toString()
-
-        elif type_node.isArray():
-            type_string = type_node.getEntryTypeAsString()
-
-        else:
-            raise Exception("Incorrect type node")
-        type_string = type_string.replace("int", "word")
-        type_string = type_string.replace("bool", "byte")
-        type_string = type_string.replace("char", "character")
-        return type_string
-
 
     def varDeclDefault(self, node):
         pass
@@ -313,19 +269,6 @@ class MipsGenerator:
 
         return code, -1
 
-    def programNode(self, node):
-
-        # .data section
-
-        # .text section
-
-        # main function first!
-
-        # other functions
-
-
-        pass
-
     def statementContainer(self, node):
         pass
 
@@ -354,6 +297,8 @@ class MipsGenerator:
 
         # place
 
+        # 
+
         pass
 
     def identifierExpr(self, node):
@@ -364,6 +309,54 @@ class MipsGenerator:
         # op dest, src, src2
         # int -> op
         # float ->  op + ".s"
+        pass
+
+    def returnStatement(self):
+        pass
+
+    def returnWithExprStatement(self, node):
+        pass
+
+    def comparisonExpr(self, node, int_op):
+        # cond = (src1 op src2)
+        # op src, src2
+        # int -> op
+        # float ->  "c." + op + ".s"
+        pass
+
+    def assignmentExpr(self, node):
+        pass
+
+    def expressionStatement(self, node):
+        pass
+
+    def addressExpr(self, node):
+        pass
+
+    def pointerDerefExpr(self, node):
+        pass
+
+    def arrayDecl(self, node):
+        pass
+
+    def arrayElementAssignment(self, node):
+        pass
+
+    def arrayElementAccess(self, node):
+        pass
+
+    def castExpr(self, node):
+        pass
+
+    def prefixArithmetics(self, node, operation):
+        pass
+
+    def postfixArithmetics(self, node, operation):
+        pass
+
+    ############################################# TYPE METHODS #############################################
+
+    def arrayAccessHelperString(self, reg_to, reg_from, element_type, index, is_global):
         pass
 
     def getStrongestType(self, a, b):
@@ -453,54 +446,36 @@ class MipsGenerator:
         else:
             return value
 
-    def returnStatement(self):
-        pass
+    # QUESTION type methods still needed?
+    def getCType(self, type_node):
+        """ Converts a symbolType to an LLVM type"""
+        if type_node.isFunction():
+            return type_node.getReturnTypeAsString()
 
-    def returnWithExprStatement(self, node):
-        pass
+        elif type_node.isVar():
+            return type_node.toString()
 
-    def comparisonExpr(self, node, int_op):
-        # cond = (src1 op src2)
-        # op src, src2
-        # int -> op
-        # float ->  "c." + op + ".s"
-        pass
+        elif type_node.isArray():
+            return type_node.getEntryTypeAsString()
 
-    def assignmentExpr(self, node):
-        pass
+        else:
+            raise Exception("Incorrect type node")
 
-    def expressionStatement(self, node):
-        pass
+    # QUESTION type methods still needed?
+    def getMipsType(self, type_node):
+        """ Converts a symbolType to an LLVM type"""
+        if type_node.isFunction():
+            type_string = type_node.getReturnTypeAsString()
 
-    def addressExpr(self, node):
-        pass
+        elif type_node.isVar():
+            type_string = type_node.toString()
 
-    def pointerDerefExpr(self, node):
-        pass
+        elif type_node.isArray():
+            type_string = type_node.getEntryTypeAsString()
 
-    def addStringToGlobal(self, string):
-        pass
-
-    def storeString(self, string_reg, reg_to):
-        pass
-
-    def arrayDecl(self, node):
-        pass
-
-    def arrayAccessHelperString(self, reg_to, reg_from, element_type, index, is_global):
-        pass
-
-    def arrayElementAssignment(self, node):
-        pass
-
-    def arrayElementAccess(self, node):
-        pass
-
-    def castExpr(self, node):
-        pass
-
-    def prefixArithmetics(self, node, operation):
-        pass
-
-    def postfixArithmetics(self, node, operation):
-        pass
+        else:
+            raise Exception("Incorrect type node")
+        type_string = type_string.replace("int", "word")
+        type_string = type_string.replace("bool", "byte")
+        type_string = type_string.replace("char", "character")
+        return type_string
