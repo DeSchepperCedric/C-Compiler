@@ -38,7 +38,7 @@ class MipsGenerator:
 
     def getFreeReg(self):
     	"""
-			Retrieve the name of a available register.
+			Retrieve the name of an available temp register.
     	"""
     	if len(self.free_regs) == 0:
     		raise Exception("Error when requesting free register: no registers available.")
@@ -47,12 +47,39 @@ class MipsGenerator:
 
     def releaseReg(self, reg):
     	"""
-			Mark the specified register as available.
+			Mark the specified temp register as available.
     	"""
     	if reg in self.free_regs:
     		raise Exception("Error when releasing reg '{}': register is already free.".format(reg))
 
+   		if not reg.startswith("$t"):
+   			raise Exception("Specified register '{}' is not a temp register.".format(reg))
+
     	self.free_regs.append(reg)
+
+   	def getFreeFloatReg(self):
+   		"""
+			Retrieve the name an available float register.
+   		"""
+
+   		if len(self.free_float_regs) == 0:
+   			raise Exception("Error when requesting free float register: no float register availble.")
+
+   		return self.free_float_regs.pop()
+
+   	def releaseFloatReg(self, reg):
+   		"""
+			Mark the specified float register as available.
+   		"""
+
+   		if reg in self.free_float_regs:
+   			raise Exception("Error when releasing float reg '{}': float register is already free.".format(reg))
+
+   		if not reg.startswith("$f"):
+   			raise Exception("Specified register '{}' is not a float register.".format(reg))
+
+   		self.free_float_regs.append(reg)
+
 
     def getFpOffset(self):
     	"""
@@ -69,6 +96,16 @@ class MipsGenerator:
 
     	return self.fp_offset
 
+    def decrementFpOffset(self, amount):
+    	"""
+			Decrease the fp offset by the specified amount of bytes.
+			This will return the new fp offset.
+    	"""
+
+    	self.fp_offset -= amount
+
+    	return self.fp_offset
+
     def resetFpOffset(self):
     	"""
 			Reset the fp offset to 0.
@@ -76,6 +113,45 @@ class MipsGenerator:
     	
     	self.fp_offset = 0
 
+    def storeRegister(self, source_reg, addr_reg, offset, is_float = False):
+        """
+            Store the specified register in memory at the specified address.
+
+            Params:
+                'source_reg': the register that contains the value that will be stored.
+                'addr_reg': the register that contains the address where the value will be stored.
+                'offset': the offset that will be added to the address stored in 'addr_reg'. Specify as integer.
+        """
+
+        if is_float not and source_reg.startswith("$f"):
+        	raise Exception("Error when trying to store non-float register {} as float.".format(source_reg))
+
+        if not is_float and source_reg.startswith("$f"):
+        	raise Exception("Error when trying to store float register {} as non-float.".format(source_reg))
+
+		command = "sw" if not is_float else "swc1"
+
+        return "{} {}, {}({})\n".format(command, source_reg, offset, addr_reg)
+
+    def loadRegister(self, target_reg, addr_reg, offset, is_float = False):
+        """
+            Load the value stored in the memory at the specified address into the specified register.
+
+            Params:
+                'target_reg': The register that will contain the value.
+                'addr_reg': The register that contains the address at which the value is stored.
+                'offset': the offset that will be added to the address stored in 'addr_reg'. Specify as integer.
+        """
+
+        if is_float not and target_reg.startswith("$f"):
+        	raise Exception("Error when trying to load float into non-float register {}.".format(source_reg))
+
+        if not is_float and target_reg.startswith("$f"):
+        	raise Exception("Error when trying to load non-float into float register {}.".format(source_reg))
+
+        command = "lw" if not is_float else "lwc1"
+
+        return "{} {}, {}({})\n".format(command, target_reg, offset, addr_reg)
 
     def astNodeToMIPS(self, node):
         """
@@ -459,30 +535,6 @@ class MipsGenerator:
 
     def postfixArithmetics(self, node, operation):
         pass
-
-
-    def storeRegister(self, source_reg, addr_reg, offset):
-        """
-            Store the specified register in memory at the specified address.
-
-            Params:
-                'source_reg': the register that contains the value that will be stored.
-                'addr_reg': the register that contains the address where the value will be stored.
-                'offset': the offset that will be added to the address stored in 'addr_reg'. Specify as integer.
-        """
-
-        return "sw {}, {}({})\n".format(source_reg, offset, addr_reg)
-
-    def loadRegister(self, target_reg, addr_reg, offset):
-        """
-            Load the value stored in the memory at the specified address into the specified register.
-
-            Params:
-                'target_reg': The register that will contain the value.
-                'addr_reg': The register that contains the address at which the value is stored.
-                'offset': the offset that will be added to the address stored in 'addr_reg'. Specify as integer.
-        """
-        return "lw {}, {}({})\n".format(target_reg, offset, addr_reg)
 
     ############################################# TYPE METHODS #############################################
 
