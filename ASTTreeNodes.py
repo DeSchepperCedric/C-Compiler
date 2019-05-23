@@ -36,7 +36,7 @@ class ASTNode:
 
         return self.node_name + symbol_table_flag + expr_type
 
-    def getSymbolTable(self):
+    def getSymbolTable(self) -> SymbolTable:
         """
             Retrieve the symbol table that node is part of. This can be used
             to check whether or not the node is valid w.r.t. the symbol table.
@@ -1368,7 +1368,7 @@ class Expression(ASTNode):
         Base class for all expression nodes.
     """
 
-    def __init__(self, expression_type):
+    def __init__(self, expression_type: str):
         super().__init__(node_name=expression_type)
         self.expression_type = None
 
@@ -1388,7 +1388,7 @@ class Expression(ASTNode):
         """
         pass
 
-    def getExpressionType(self):
+    def getExpressionType(self) -> str:
         """
             Retrieve the type of the expression.
             Returns a string with the name of the type
@@ -3066,7 +3066,10 @@ class IdentifierExpr(Expression):
         super().__init__(expression_type="IdentifierExpr\\n'" + identifier + "'")
         self.identifier = identifier
 
-    def getIdentifierName(self):
+    def getIdentifierName(self) -> str:
+        """
+            :return: Python string that contains the name of the identifier.
+        """
         return self.identifier
 
     def setExprTreeSymbolTable(self, symbol_table):
