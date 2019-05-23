@@ -18,7 +18,13 @@ class MipsGenerator:
         self.floats = [i for i in range(31, -1, -1)]
         self.stack_ptr = 0
 
+        # maps scope_name.var_name to an offset relative to the frame pointer
+        self.var_offset_dict = dict()
+
+        self.fp_offset = 0 # offset to current frame pointer
+
         self.label_counter = 0
+        self.free_regs = ["$t0", "$t1", "$t2", "$t3"]
 
     def getUniqueLabelId(self):
         """
@@ -29,6 +35,47 @@ class MipsGenerator:
         self.label_counter += 1
 
         return self.label_counter
+
+    def getFreeReg(self):
+    	"""
+			Retrieve the name of a available register.
+    	"""
+    	if len(self.free_regs) == 0:
+    		raise Exception("Error when requesting free register: no registers available.")
+
+    	return self.free_regs.pop()
+
+    def releaseReg(self, reg):
+    	"""
+			Mark the specified register as available.
+    	"""
+    	if reg in self.free_regs:
+    		raise Exception("Error when releasing reg '{}': register is already free.".format(reg))
+
+    	self.free_regs.append(reg)
+
+    def getFpOffset(self):
+    	"""
+			Retrieve the current fp offset.
+    	"""
+    	return self.fp_offset
+
+    def incrementFpOffset(self, amount):
+    	"""
+			Increase the fp offset by the specified amount of bytes.
+			This will return the new fp offset.
+    	"""
+    	self.fp_offset += amount
+
+    	return self.fp_offset
+
+    def resetFpOffset(self):
+    	"""
+			Reset the fp offset to 0.
+    	"""
+    	
+    	self.fp_offset = 0
+
 
     def astNodeToMIPS(self, node):
         """
@@ -294,6 +341,7 @@ class MipsGenerator:
         pass
 
     def funcDef(self, node):
+    	fp_offset = 0
 
         code = ""
         return_reg = ""
@@ -306,21 +354,23 @@ class MipsGenerator:
 
         # load params from stack
 
-
+        # TODO params need to be loaded from stack
         # function body
-
         func_body, reg = self.astNodeToMIPS(node.getBody())
         code += func_body
 
-        # return value
+        # return
+        code += "jr $ra\n"
 
-        return code, "$2"
+        # we don't return a register since a function definition
+        # does not return anything
+        return code, -1
 
     def funcCallExpr(self, node):
         code = ""
 
         # save t0-t3 registers to stack
-        for reg in ["$8", "$9", "$10", "$11"]:
+        for reg in ["$t0", "$t1", "$t2", "$t3"]:
             # TODO check if correct
             # TODO store reg on the stack
             # increment stack pointer?
@@ -335,11 +385,16 @@ class MipsGenerator:
             code += arg_code
             code += self.storeRegister(arg_reg, "$sp", 0)
 
+        # save return value on stack
+        code += self.storeRegister("$ra", "$sp", 0)
+
         # jump and link
         code += "jal {}\n".format(node.getFunctionID().getIdentifierName())
 
+        code += self.loadRegister("$ra", "$sp", 0)
+
         # restore registers from stack
-        for reg in ["$8", "$9", "$10", "$11"]:
+        for reg in ["$t0", "$t1", "$t2", "$t3"]:
             # TODO decrement stackptr?
             # TODO check
             code += self.loadRegister(reg, "$sp", 0)
