@@ -16,6 +16,9 @@ class MipsGenerator:
         # maps scope_name.var_name to an offset relative to the frame pointer
         self.var_offset_dict = dict()
 
+        # dict that maps function names to FuncDef objects
+        self.function_defs = dict()
+
         self.fp_offset = 0  # offset to current frame pointer
 
         self.label_counter = 0
@@ -415,9 +418,12 @@ class MipsGenerator:
 
         # discover functions
 
-        # main function first!
+        # sort so that main() is first!
 
-        # other functions
+        # add each FuncDef object to self.function_defs
+
+        # iterate over functions
+        #   process and add to program code
 
         return code, -1
 
@@ -548,10 +554,16 @@ class MipsGenerator:
         # ignore
         pass
 
-    def funcDef(self, node):
-        # TODO increment fp offset by the number of parameters * 4, since these are already loaded on the stack!!
-
+    def funcDef(self, node: FuncDef):
         code = ""
+
+        # we start processing a new function, to the function offset is zero.
+        self.resetFpOffset()
+
+        # we increment the fp offset by 4 bytes for each parameter since each parameter is stored on the stack
+        for param in node.getParamList():
+            self.pushFpOffset()
+
 
         # function label
         function_name = node.getFuncID()
