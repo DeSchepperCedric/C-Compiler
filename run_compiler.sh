@@ -1,1 +1,1 @@
-python3 run_compiler.py "$1"
+python3 run_compiler.py "$1" "$2"

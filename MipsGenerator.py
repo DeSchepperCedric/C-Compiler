@@ -157,16 +157,16 @@ class MipsGenerator:
 
         return "{} {}, {}({})\n".format(command, target_reg, offset, addr_reg)
 
-    def storeVariable(self, source_reg, id_node : IdentifierExpr):
-
-        # get varname
-        varname = id_node.getIdentifierName()
+    def storeVariable(self, source_reg, id_node : IdentifierExpr) -> str:
 
         # determine if the variable is a float
         if id_node.getExpressionType() == "float":
             is_float = True
         else:
             is_float = False
+
+        # get varname
+        varname = id_node.getIdentifierName()
 
         # determine whether the variable is a global:
         is_global = id_node.getSymbolTable().isGlobal(varname)
@@ -215,11 +215,50 @@ class MipsGenerator:
 
                 return code
 
-    def loadVariable(self, id_node):
+    def loadVariable(self, id_node) -> (str, str):
 
-        # get offset
+        target_reg = self.getFreeReg()
 
-        pass
+        # determine if the variable is a float
+        if id_node.getExpressionType() == "float":
+            is_float = True
+        else:
+            is_float = False
+
+        # get varname
+        varname = id_node.getIdentifierName()
+
+        # determine whether the variable is a global:
+        if id_node.getSymbolTable().isGlobal(varname):
+
+            # aquire register
+            temp_addr_reg = self.getFreeReg()
+
+            code = "la {}, {}\n".format(temp_addr_reg, varname)
+            code += self.loadRegister(target_reg, temp_addr_reg, 0, is_float)
+
+            # release register
+            self.releaseReg(temp_addr_reg)
+
+            # retrieve from data segment and store
+            return code, target_reg
+
+        else:
+            # get scopename
+            type, scopename = id_node.getSymbolTable().lookup(varname, False)
+
+            # get full var id
+            full_id = scopename + "." + varname
+
+            # determine if the variable already is stored on the stack
+            if full_id in self.var_offset_dict:
+                # retrieve offset and store
+
+                offset = self.var_offset_dict[full_id]
+
+                code = self.loadRegister(target_reg, "$fp", offset)
+
+                return code, target_reg
 
     def astNodeToMIPS(self, node):
         """
