@@ -88,22 +88,25 @@ class MipsGenerator:
         """
         return self.fp_offset
 
-    def incrementFpOffset(self, amount):
+    def pushFpOffset(self):
         """
-            Increase the fp offset by the specified amount of bytes.
-            This will return the new fp offset.
+            Adjust the fp offset to accomodate one more variable on the stack.
+
+            :return: The new value of the fp offset.
         """
-        self.fp_offset += amount
+
+        # 4 bytes
+        self.fp_offset -= 4;
 
         return self.fp_offset
 
-    def decrementFpOffset(self, amount):
+    def popFpOffset(self):
         """
-            Decrease the fp offset by the specified amount of bytes.
-            This will return the new fp offset.
+            Adjust the fp offset to remove one variable from the stack.
+            :return: The new value of the fp offset.
         """
 
-        self.fp_offset -= amount
+        self.fp_offset += 4;
 
         return self.fp_offset
 
@@ -114,7 +117,7 @@ class MipsGenerator:
         
         self.fp_offset = 0
 
-    def storeRegister(self, source_reg, addr_reg, offset, is_float = False):
+    def storeRegister(self, source_reg:str, addr_reg:str, offset, is_float=False) -> str:
         """
             Store the specified register in memory at the specified address.
 
@@ -134,7 +137,7 @@ class MipsGenerator:
 
         return "{} {}, {}({})\n".format(command, source_reg, offset, addr_reg)
 
-    def loadRegister(self, target_reg, addr_reg, offset, is_float = False):
+    def loadRegister(self, target_reg: str, addr_reg:str, offset, is_float = False) -> str:
         """
             Load the value stored in the memory at the specified address into the specified register.
 
@@ -153,6 +156,70 @@ class MipsGenerator:
         command = "lw" if not is_float else "lwc1"
 
         return "{} {}, {}({})\n".format(command, target_reg, offset, addr_reg)
+
+    def storeVariable(self, source_reg, id_node : IdentifierExpr):
+
+        # get varname
+        varname = id_node.getIdentifierName()
+
+        # determine if the variable is a float
+        if id_node.getExpressionType() == "float":
+            is_float = True
+        else:
+            is_float = False
+
+        # determine whether the variable is a global:
+        is_global = id_node.getSymbolTable().isGlobal(varname)
+
+        if is_global:
+
+            # aquire register
+            temp_addr_reg = self.getFreeReg()
+
+            code = "la {}, {}\n".format(temp_addr_reg, varname)
+            code += self.storeRegister(source_reg, temp_addr_reg, 0, is_float)
+
+            # release register
+            self.releaseReg(temp_addr_reg)
+
+            # retrieve from data segment and store
+            return code
+
+        else:
+            # there is a 100% guarantee that the variable exists in the table
+
+            # get scopename
+            type, scopename = id_node.getSymbolTable().lookup(varname, False)
+
+            # get full var id
+            full_id = scopename + "." + varname
+
+            # determine if the variable already is stored on the stack
+            if full_id in self.var_offset_dict:
+                # retrieve offset and store
+
+                offset = self.var_offset_dict[full_id]
+
+                code = self.storeRegister(source_reg, "$fp", offset, is_float)
+
+                return code
+            else:
+                # push new variable to the stack
+
+                cur_offset = self.getFpOffset()
+
+                code = self.storeRegister(source_reg, "$fp", cur_offset, is_float)
+
+                # adjust fp offset for new variable
+                new_offset = self.pushFpOffset()
+
+                return code
+
+    def loadVariable(self, id_node):
+
+        # get offset
+
+        pass
 
     def astNodeToMIPS(self, node):
         """
