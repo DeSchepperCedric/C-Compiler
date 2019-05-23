@@ -13,150 +13,18 @@ class MipsGenerator:
         self.reg_to_string = dict()
         self.array_sizes = dict()
 
-        self.temporaries = [i for i in range(7, -1, -1)]
-        self.saved = [i for i in range(7, -1, -1)]
-        self.floats = [i for i in range(31, -1, -1)]
-        self.stack_ptr = 0
-
         # maps scope_name.var_name to an offset relative to the frame pointer
         self.var_offset_dict = dict()
 
-        self.fp_offset = 0 # offset to current frame pointer
+        self.fp_offset = 0  # offset to current frame pointer
 
         self.label_counter = 0
         self.free_regs = ["$t0", "$t1", "$t2", "$t3"]
         self.free_float_regs = ["$f0", "$f1", "$f2", "$f3"]
 
-    def getUniqueLabelId(self):
-        """
-            Retrieve a unique id to create labels with. This
-            function also increments the internal label counter.
-        """
-
-        self.label_counter += 1
-
-        return self.label_counter
-
-    def getFreeReg(self):
-        """
-            Retrieve the name of an available temp register.
-        """
-        if len(self.free_regs) == 0:
-            raise Exception("Error when requesting free register: no registers available.")
-
-        return self.free_regs.pop()
-
-    def releaseReg(self, reg):
-        """
-            Mark the specified temp register as available.
-        """
-        if reg in self.free_regs:
-            raise Exception("Error when releasing reg '{}': register is already free.".format(reg))
-
-        if not reg.startswith("$t"):
-            raise Exception("Specified register '{}' is not a temp register.".format(reg))
-
-        self.free_regs.append(reg)
-
-    def getFreeFloatReg(self):
-        """
-            Retrieve the name an available float register.
-        """
-
-        if len(self.free_float_regs) == 0:
-            raise Exception("Error when requesting free float register: no float register availble.")
-
-        return self.free_float_regs.pop()
-
-    def releaseFloatReg(self, reg):
-        """
-            Mark the specified float register as available.
-        """
-
-        if reg in self.free_float_regs:
-            raise Exception("Error when releasing float reg '{}': float register is already free.".format(reg))
-
-        if not reg.startswith("$f"):
-            raise Exception("Specified register '{}' is not a float register.".format(reg))
-
-        self.free_float_regs.append(reg)
-
-
-    def getFpOffset(self):
-        """
-            Retrieve the current fp offset.
-        """
-        return self.fp_offset
-
-    def incrementFpOffset(self, amount):
-        """
-            Increase the fp offset by the specified amount of bytes.
-            This will return the new fp offset.
-        """
-        self.fp_offset += amount
-
-        return self.fp_offset
-
-    def decrementFpOffset(self, amount):
-        """
-            Decrease the fp offset by the specified amount of bytes.
-            This will return the new fp offset.
-        """
-
-        self.fp_offset -= amount
-
-        return self.fp_offset
-
-    def resetFpOffset(self):
-        """
-            Reset the fp offset to 0.
-        """
-        
-        self.fp_offset = 0
-
-    def storeRegister(self, source_reg, addr_reg, offset, is_float = False):
-        """
-            Store the specified register in memory at the specified address.
-
-            Params:
-                'source_reg': the register that contains the value that will be stored.
-                'addr_reg': the register that contains the address where the value will be stored.
-                'offset': the offset that will be added to the address stored in 'addr_reg'. Specify as integer.
-        """
-
-        if is_float and not source_reg.startswith("$f"):
-            raise Exception("Error when trying to store non-float register {} as float.".format(source_reg))
-
-        if not is_float and source_reg.startswith("$f"):
-            raise Exception("Error when trying to store float register {} as non-float.".format(source_reg))
-
-        command = "sw" if not is_float else "swc1"
-
-        return "{} {}, {}({})\n".format(command, source_reg, offset, addr_reg)
-
-    def loadRegister(self, target_reg, addr_reg, offset, is_float = False):
-        """
-            Load the value stored in the memory at the specified address into the specified register.
-
-            Params:
-                'target_reg': The register that will contain the value.
-                'addr_reg': The register that contains the address at which the value is stored.
-                'offset': the offset that will be added to the address stored in 'addr_reg'. Specify as integer.
-        """
-
-        if is_float and not target_reg.startswith("$f"):
-            raise Exception("Error when trying to load float into non-float register {}.".format(target_reg))
-
-        if not is_float and target_reg.startswith("$f"):
-            raise Exception("Error when trying to load non-float into float register {}.".format(target_reg))
-
-        command = "lw" if not is_float else "lwc1"
-
-        return "{} {}, {}({})\n".format(command, target_reg, offset, addr_reg)
-
     def astNodeToMIPS(self, node):
         """
-            Returns a tuple (code, reg) with code being the MIPS code and reg 
+            Returns a tuple (code, reg) with code being the MIPS code and reg
             being the register that contains the result.
         """
         if isinstance(node, IncludeNode):
@@ -176,7 +44,7 @@ class MipsGenerator:
             return self.stringConstantExpr(node)
 
         elif isinstance(node, VarDeclDefault):
-            return self.varDeclDefault(node)
+            return "", -1
         elif isinstance(node, VarDeclWithInit):
             return self.varDeclWithInit(node)
         elif isinstance(node, ArrayDecl):
@@ -261,6 +129,146 @@ class MipsGenerator:
 
         raise Exception("Encountered unknown AST node of type '{}'.\n This node has no support yet.".format(type(node)))
 
+    def getUniqueLabelId(self):
+        """
+            Retrieve a unique id to create labels with. This
+            function also increments the internal label counter.
+        """
+
+        self.label_counter += 1
+
+        return self.label_counter
+
+    def getFreeReg(self):
+        """
+            Retrieve the name of an available temp register.
+        """
+        if len(self.free_regs) == 0:
+            raise Exception("Error when requesting free register: no registers available.")
+
+        return self.free_regs.pop()
+
+    def releaseReg(self, reg):
+        """
+            Mark the specified temp register as available.
+        """
+
+        if reg.startswith("$t"):
+            if reg in self.free_regs:
+                raise Exception("Error when releasing reg '{}': register is already free.".format(reg))
+            else:
+                self.free_regs.append(reg)
+        elif reg.startswith("$f"):
+            if reg in self.free_float_regs:
+                raise Exception("Error when releasing reg '{}': register is already free.".format(reg))
+            else:
+                self.free_float_regs.append(reg)
+        else:
+            raise Exception("Specified register '{}' is not a temporary or float register.".format(reg))
+
+
+
+    def getFreeFloatReg(self):
+        """
+            Retrieve the name an available float register.
+        """
+
+        if len(self.free_float_regs) == 0:
+            raise Exception("Error when requesting free float register: no float register availble.")
+
+        return self.free_float_regs.pop()
+
+    def releaseFloatReg(self, reg):
+        """
+            Mark the specified float register as available.
+        """
+
+        if reg in self.free_float_regs:
+            raise Exception("Error when releasing float reg '{}': float register is already free.".format(reg))
+
+        if not reg.startswith("$f"):
+            raise Exception("Specified register '{}' is not a float register.".format(reg))
+
+        self.free_float_regs.append(reg)
+
+    def getFpOffset(self):
+        """
+            Retrieve the current fp offset.
+        """
+        return self.fp_offset
+
+    def incrementFpOffset(self, amount):
+        """
+            Increase the fp offset by the specified amount of bytes.
+            This will return the new fp offset.
+        """
+        self.fp_offset += amount
+
+        return self.fp_offset
+
+    def decrementFpOffset(self, amount):
+        """
+            Decrease the fp offset by the specified amount of bytes.
+            This will return the new fp offset.
+        """
+
+        self.fp_offset -= amount
+
+        return self.fp_offset
+
+    def resetFpOffset(self):
+        """
+            Reset the fp offset to 0.
+        """
+
+        self.fp_offset = 0
+
+    def storeRegister(self, source_reg, addr_reg, offset, is_float=False):
+        """
+            Store the specified register in memory at the specified address.
+
+            Params:
+                'source_reg': the register that contains the value that will be stored.
+                'addr_reg': the register that contains the address where the value will be stored.
+                'offset': the offset that will be added to the address stored in 'addr_reg'. Specify as integer.
+        """
+
+        if is_float and not source_reg.startswith("$f"):
+            raise Exception("Error when trying to store non-float register {} as float.".format(source_reg))
+
+        if not is_float and source_reg.startswith("$f"):
+            raise Exception("Error when trying to store float register {} as non-float.".format(source_reg))
+
+        command = "sw" if not is_float else "swc1"
+
+        return "{} {}, {}({})\n".format(command, source_reg, offset, addr_reg)
+
+    def loadRegister(self, target_reg, addr_reg, offset, is_float=False):
+        """
+            Load the value stored in the memory at the specified address into the specified register.
+
+            Params:
+                'target_reg': The register that will contain the value.
+                'addr_reg': The register that contains the address at which the value is stored.
+                'offset': the offset that will be added to the address stored in 'addr_reg'. Specify as integer.
+        """
+
+        if is_float and not target_reg.startswith("$f"):
+            raise Exception("Error when trying to load float into non-float register {}.".format(target_reg))
+
+        if not is_float and target_reg.startswith("$f"):
+            raise Exception("Error when trying to load non-float into float register {}.".format(target_reg))
+
+        command = "lw" if not is_float else "lwc1"
+
+        return "{} {}, {}({})\n".format(command, target_reg, offset, addr_reg)
+
+    def storeVariable(self, source_reg, id_node):
+        return ""
+
+    def loadVariable(self, id_node):
+        return "", -1
+
     ################################### CONSTANT EXPRESSIONS ###################################
 
     def boolConstantExpr(self, expr):
@@ -268,15 +276,16 @@ class MipsGenerator:
         Return a constant bool with its type and the register it's stored in
         """
 
-        # add to data segment
-
-        pass
+        value = 1 if expr.getBoolValue() is True else 0
+        reg = self.getFreeReg()
+        code = "li {}, {}".format(reg, value)
+        return code, reg
 
     def floatConstantExpr(self, expr):
         """
         Return a constant float with its type and the register it's stored in
         """
-
+        # TODO handle floats
         # add to data segment
         pass
 
@@ -284,18 +293,20 @@ class MipsGenerator:
         """
         Return a constant integer with its type and the register it's stored in
         """
-        # add to data segment
-        pass
+        reg = self.getFreeReg()
+        code = "li {}, {}".format(reg, expr.getIntValue())
+        return code, reg
 
     def charConstantExpr(self, expr):
         """
-        Return a constant integer with its type and the register it's stored in
+        Return a constant char with its type and the register it's stored in
         """
-        # add to data segment
-        pass
+        reg = self.getFreeReg()
+        code = "li {}, {}".format(reg, ord(expr.getCharValue()))
+        return code, reg
 
     def stringConstantExpr(self, expr):
-        # add to data segment
+        # TODO handle strings
         pass
 
     ################################### AST NODES ###################################
@@ -313,11 +324,7 @@ class MipsGenerator:
 
         # other functions
 
-
         return code, -1
-
-    def varDeclDefault(self, node):
-        pass
 
     def varDeclWithInit(self, node):
         expr_type = self.getMipsType(node.getInitExpr().getExpressionType())
@@ -332,10 +339,21 @@ class MipsGenerator:
             self.data_string += "{}: .{} {}".format(var_id, var_type, value)
 
         elif is_global and isinstance(node.getInitExpr(), AddressExpr):
+            # TODO handle AddressExpr
             pass
 
         else:
-            pass
+            new_code, register = self.astNodeToMIPS(node.getInitExpr())
+            code += new_code
+
+            if var_type != expr_type and isinstance(node.getInitExpr(), IdentifierExpr):
+                convert, register = self.convertToType(register, expr_type, var_type)
+                code += convert
+
+            code += self.storeVariable(register, node.getInitExpr())
+            self.releaseReg(register)
+            
+        return code, -1
 
     def branchStatement(self, node):
         """
@@ -346,7 +364,7 @@ class MipsGenerator:
         # retrieve condition code
         cond_code, cond_reg = self.astNodeToMIPS(node.getCondExpr())
 
-        if_code,   reg = self.astNodeToMIPS(node.getIfBody())
+        if_code, reg = self.astNodeToMIPS(node.getIfBody())
         else_code, reg = self.astNodeToMIPS(node.getElseBody())
 
         cond_label_id = self.getUniqueLabelId()
@@ -385,8 +403,8 @@ class MipsGenerator:
         cond_code, cond_reg = self.astNodeToMIPS(node.getCondExpr())
         body_code, body_reg = self.astNodeToMIPS(node.getIfBody())
 
-        cond_label_id     = self.getUniqueLabelId()
-        loop_label_id     = self.getUniqueLabelId()
+        cond_label_id = self.getUniqueLabelId()
+        loop_label_id = self.getUniqueLabelId()
         endwhile_label_id = self.getUniqueLabelId()
 
         code = "cond_{}:\n".format(cond_label_id)
@@ -427,7 +445,6 @@ class MipsGenerator:
         function_name = node.getFuncID()
 
         code += "{}:\n".format(function_name)
-
 
         # load params from stack
 
@@ -477,7 +494,7 @@ class MipsGenerator:
             code += self.loadRegister(reg, "$sp", 0)
 
         # TODO do something with return value, return register?
-
+        ret_reg = ""
         return code, ret_reg
 
     def identifierExpr(self, node):
@@ -489,7 +506,40 @@ class MipsGenerator:
         # op dest, src, src2
         # int -> op
         # float ->  op + ".s"
-        pass
+        code = ""
+
+        type_left = self.getMipsType(node.getLeft().getExpressionType())
+        type_right = self.getMipsType(node.getRight().getExpressionType())
+
+        code_left, reg_left = self.astNodeToMIPS(node.getLeft())
+        code_right, reg_right = self.astNodeToMIPS(node.getRight())
+
+        code += code_left
+        code += code_right
+
+        llvm_type = ""
+        if type_left == "float" or type_right == "float":
+            if type_left != "float":
+                convert, reg_left = self.convertIntegerToFloat(reg_left)
+                code += convert
+            else:
+                convert, reg_right = self.convertIntegerToFloat(reg_right)
+                code += convert
+
+            if not reg_left.startswith("$f"):
+                raise Exception("Specified register {} is not a float register".format(reg_left))
+
+            if not reg_right.startswith("$f"):
+                raise Exception("Specified register {} is not a float register".format(reg_right))
+
+            operation += ".s"
+
+        # re-use reg_left as destination register
+        code += "{} {}, {}, {}".format(operation, reg_left, reg_left, reg_right)
+
+        self.releaseReg(reg_right)
+        return code, reg_left
+
 
     def returnStatement(self):
         # ignore
@@ -508,10 +558,26 @@ class MipsGenerator:
         pass
 
     def assignmentExpr(self, node):
-        pass
+        # array[element] = value has to be done differently
+        if isinstance(node.getLeft(), ArrayAccessExpr):
+            # TODO handle arrays
+            # return self.arrayElementAssignment(node)
+            return "", -1
+
+        code, register = self.astNodeToMIPS(node.getRight())
+        right_type = self.getMipsType(node.getRight().getExpressionType())
+        left_type = self.getMipsType(node.getLeft().getExpressionType())
+
+        # type conversion
+        if right_type != left_type:
+            convert, register = self.convertToType(register, right_type, left_type)
+            code += convert
+
+        code += self.storeVariable(register, node.getLeft())
+        return code, -1
 
     def expressionStatement(self, node):
-        pass
+        return self.astNodeToMIPS(node.getExpression())
 
     def addressExpr(self, node):
         pass
@@ -558,23 +624,35 @@ class MipsGenerator:
         else:
             raise Exception("Invalid call to getStrongestType for '{}' and '{}'".format(a, b))
 
-    def convertToFloat(self, reg, type):
-        pass
+    def convertIntegerToFloat(self, int_reg):
+        # mtc1 $t0, $f0 : copy $t0 to $f0
+        # cvt.s.w FRdest, FRsrc : Convert Integer to Single
+        float_reg = self.getFreeFloatReg()
+        code = "mtc1 {}, {}".format(int_reg, float_reg)
+        code += "cvt.s.w {}, {}".format(float_reg, float_reg)
 
-    def convertToInt(self, reg, type):
-        pass
+        # int_reg isn't necessary anymore
+        self.releaseReg(int_reg)
+        return code, float_reg
 
-    def convertToDouble(self, reg, from_type):
-        pass
+    def convertFloatToInteger(self, float_reg):
+        # mfc1 $t0, $f0 : copy $f0 to $t0
+        # cvt.w.s FRdest, FRsrcConvert Single to Integer
+        int_reg = self.getFreeReg()
+        code = "mfc1 {}, {}".format(int_reg, float_reg)
+        code += "cvt.w.s {}, {}".format(int_reg, int_reg)
 
-    def convertToChar(self, reg, from_type):
-        pass
-
-    def convertToBool(self, reg, from_type):
-        pass
+        # float_reg isn't necessary anymore
+        self.releaseReg(float_reg)
+        return code, int_reg
 
     def convertToType(self, reg, old_type, new_type):
-        pass
+        if "float" in new_type and "float" not in old_type:
+            return self.convertIntegerToFloat(reg)
+        elif "float" in old_type and "float" not in new_type:
+            return self.convertFloatToInteger(reg)
+        else:
+            return "", reg
 
     def convertConstant(self, new_type, old_type, value):
         if old_type == "character":
@@ -646,7 +724,7 @@ class MipsGenerator:
 
     # QUESTION type methods still needed?
     def getMipsType(self, type_node):
-        """ Converts a symbolType to an LLVM type"""
+        """ Converts a symbolType to a Mips type"""
         if type_node.isFunction():
             type_string = type_node.getReturnTypeAsString()
 

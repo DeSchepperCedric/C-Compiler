@@ -927,9 +927,7 @@ class LLVMGenerator:
             code += load
 
         # type conversion
-        if right_type == left_type:
-            pass
-        else:
+        if right_type != left_type:
             convert, register = self.convertToType(register, right_type, left_type)
             code += convert
 
