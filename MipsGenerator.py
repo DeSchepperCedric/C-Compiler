@@ -27,6 +27,9 @@ class MipsGenerator:
         self.free_regs = ["$t0", "$t1", "$t2", "$t3"]
         self.free_float_regs = ["$f0", "$f1", "$f2", "$f3"]
 
+        self.float_return_reg = "$f31"
+        self.return_reg = "$v0"
+
     def getUniqueLabelId(self):
         """
             Retrieve a unique id to create labels with. This
@@ -46,7 +49,7 @@ class MipsGenerator:
 
         return self.free_regs.pop()
 
-    def releaseReg(self, reg):
+    def releaseReg(self, reg: str):
         """
             Mark the specified temp register as available.
         """
@@ -160,10 +163,7 @@ class MipsGenerator:
     def storeVariable(self, source_reg, id_node : IdentifierExpr) -> str:
 
         # determine if the variable is a float
-        if id_node.getExpressionType() == "float":
-            is_float = True
-        else:
-            is_float = False
+        is_float = id_node.getExpressionType().toString() == "float"
 
         # get varname
         varname = id_node.getIdentifierName()
@@ -215,15 +215,12 @@ class MipsGenerator:
 
                 return code
 
-    def loadVariable(self, id_node) -> (str, str):
+    def loadVariable(self, id_node: IdentifierExpr) -> (str, str):
 
         target_reg = self.getFreeReg()
 
         # determine if the variable is a float
-        if id_node.getExpressionType() == "float":
-            is_float = True
-        else:
-            is_float = False
+        is_float = id_node.getExpressionType().toString() == "float"
 
         # get varname
         varname = id_node.getIdentifierName()
@@ -443,7 +440,7 @@ class MipsGenerator:
         else:
             pass
 
-    def branchStatement(self, node):
+    def branchStatement(self, node : BranchStmt):
         """
             Convert an BranchStmt to MIPS code.
         """
@@ -451,6 +448,9 @@ class MipsGenerator:
         ## process children ##
         # retrieve condition code
         cond_code, cond_reg = self.astNodeToMIPS(node.getCondExpr())
+
+        # check of the condition expression is float
+        is_float = node.getCondExpr().getExpressionType().toString() == "float"
 
         if_code,   reg = self.astNodeToMIPS(node.getIfBody())
         else_code, reg = self.astNodeToMIPS(node.getElseBody())
@@ -463,8 +463,16 @@ class MipsGenerator:
         code = "cond_{}:\n".format(cond_label_id)
         code += cond_code
 
-        # if the result is false => go to else
-        code += "beq {} $0 else_branch_{}\n".format(cond_reg, else_label_id)
+        if is_float:
+            # float must first be evaluated, then the bit must be checked
+
+            raise Exception("If statements with float are not yet implement.")
+
+            code += "bc1f else_branch_{}\n".format(else_label_id)
+        else:
+            # non-float, simple branch statement is enough
+            # if the result is false => go to else
+            code += "beqz {}, else_branch_{}\n".format(cond_reg, else_label_id)
 
         code += "if_branch_{}:\n".format(if_label_id)
         code += if_code
@@ -483,12 +491,16 @@ class MipsGenerator:
 
         return code, -1
 
-    def whileStatement(self, node):
+    def whileStatement(self, node: WhileStmt):
         """
             Convert the while statement to MIPS code.
         """
 
         cond_code, cond_reg = self.astNodeToMIPS(node.getCondExpr())
+
+        # check of the condition expression is float
+        is_float = node.getCondExpr().getExpressionType().toString() == "float"
+
         body_code, body_reg = self.astNodeToMIPS(node.getIfBody())
 
         cond_label_id     = self.getUniqueLabelId()
@@ -498,8 +510,11 @@ class MipsGenerator:
         code = "cond_{}:\n".format(cond_label_id)
         code += cond_code
 
-        # if the result is false => go to endwhile
-        code += "beq {} $0 endwhile_{}:\n".format(cond_reg, endwhile_label_id)
+        if is_float:
+            raise Exception("While statements with float are not yet implement.")
+        else:
+            # if the result is false => go to endwhile
+            code += "beq {} $0 endwhile_{}:\n".format(cond_reg, endwhile_label_id)
 
         code += "loop_{}:\n".format(loop_label_id)
         code += body_code
@@ -549,40 +564,66 @@ class MipsGenerator:
         # does not return anything
         return code, -1
 
-    def funcCallExpr(self, node):
+    def funcCallExpr(self, node: FuncCallExpr):
         code = ""
 
         # save t0-t3 registers to stack
         for reg in ["$t0", "$t1", "$t2", "$t3"]:
-            # TODO check if correct
-            # TODO store reg on the stack
-            # increment stack pointer?
-            code += self.storeRegister(reg, "$sp", 0)
+            code += self.storeRegister(reg, "$fp", self.getFpOffset())
+            self.pushFpOffset()
+
+
+        # save return address on stack
+        code += self.storeRegister("$ra", "$fp", self.getFpOffset())
+        self.pushFpOffset()
+
+        # store old frame pointer
+        code += self.storeRegister("$fp", "$fp", self.getFpOffset())
+        self.pushFpOffset()
+
+        # determine the next framepointer and store it into $s0
+        code += "addi $s0, $fp, {}\n".format(self.getFpOffset())
 
         # resolve each argument expression
+        temp_new_fp_offset = 0 # offset relative to the new fp, used for storing function arguments.
         for arg in node.getArguments():
             arg_code, arg_reg = self.astNodeToMIPS(arg)
 
-            # TODO store reg on the stack
-            # increment stack pointer?
             code += arg_code
-            code += self.storeRegister(arg_reg, "$sp", 0)
-
-        # save return value on stack
-        code += self.storeRegister("$ra", "$sp", 0)
+            code += self.storeRegister(arg_reg, "$s0", temp_new_fp_offset)
+            temp_new_fp_offset += 4
 
         # jump and link
         code += "jal {}\n".format(node.getFunctionID().getIdentifierName())
 
-        code += self.loadRegister("$ra", "$sp", 0)
+        # load the original frame ptr, this is stored right below the frame pointer of the called function
+        # before this instruction $fp is the callee's fp, after this instruction it is our own fp
+        code += self.loadRegister("$fp", "$fp", 4)
+
+        self.popFpOffset()
+        code += self.loadRegister("$ra", "$fp", self.getFpOffset())
 
         # restore registers from stack
-        for reg in ["$t0", "$t1", "$t2", "$t3"]:
-            # TODO decrement stackptr?
-            # TODO check
-            code += self.loadRegister(reg, "$sp", 0)
+        for reg in ["$t3", "$t2", "$t1", "$t0"]:
 
-        # TODO do something with return value, return register?
+            # the $fp points to the top of the stack i.e. the beginning of the next variable
+            # since we need the current variable we first pop the stack
+            self.popFpOffset()
+
+            # load register at top of stack
+            code += self.loadRegister(reg, "$fp", self.getFpOffset())
+
+        retval_type = node.getExpressionType()
+
+        if retval_type.toString() == "float":
+            ret_reg = self.getFreeFloatReg()
+            # copy $f31 into ret_reg
+            code += "mov.s {}, {}\n".format(ret_reg, self.float_return_reg)
+
+        else:
+            ret_reg = self.getFreeReg()
+            # copy $v0 into ret_reg
+            code += "mov {}, {}, 0\n".format(ret_reg, self.return_reg)
 
         return code, ret_reg
 

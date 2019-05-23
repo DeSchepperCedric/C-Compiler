@@ -1388,7 +1388,7 @@ class Expression(ASTNode):
         """
         pass
 
-    def getExpressionType(self) -> str:
+    def getExpressionType(self) -> SymbolType:
         """
             Retrieve the type of the expression.
             Returns a string with the name of the type
