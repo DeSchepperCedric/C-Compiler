@@ -557,6 +557,10 @@ class FuncDef(TopLevelNode):
         return self.ptr_count
 
     def getParamList(self):
+        """
+            Retrieve a list of parameters
+        :return: list of FuncParam
+        """
         return self.param_list
 
     def getBody(self):

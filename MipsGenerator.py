@@ -549,6 +549,8 @@ class MipsGenerator:
         pass
 
     def funcDef(self, node):
+        # TODO increment fp offset by the number of parameters * 4, since these are already loaded on the stack!!
+
         code = ""
 
         # function label
@@ -556,10 +558,8 @@ class MipsGenerator:
 
         code += "{}:\n".format(function_name)
 
-        # load params from stack
-
-        # TODO params need to be loaded from stack
         # function body
+        # return value is placed into $v0 or $f31 by a return expression
         func_body, reg = self.astNodeToMIPS(node.getBody())
         code += func_body
 
@@ -578,7 +578,6 @@ class MipsGenerator:
             code += self.storeRegister(reg, "$fp", self.getFpOffset())
             self.pushFpOffset()
 
-
         # save return address on stack
         code += self.storeRegister("$ra", "$fp", self.getFpOffset())
         self.pushFpOffset()
@@ -592,11 +591,25 @@ class MipsGenerator:
 
         # resolve each argument expression
         temp_new_fp_offset = 0 # offset relative to the new fp, used for storing function arguments.
-        for arg in node.getArguments():
-            arg_code, arg_reg = self.astNodeToMIPS(arg)
 
+        for i in range(0, len(node.getArguments())):
+
+            # resolve arg
+            arg = node.getArguments()[i]
+            arg_code, arg_reg = self.astNodeToMIPS(arg)
             code += arg_code
+
+            # store argument on callee's stackframe
             code += self.storeRegister(arg_reg, "$s0", temp_new_fp_offset)
+
+            # get full unique id of parameter
+            funcdef_node: FuncDef = self.function_defs[node.getFunctionID()]
+            param_name = funcdef_node.getParamList()[i].getParamID()
+            function_scopename = funcdef_node.getSymbolTable().getName()
+
+            # add argument to var dict
+            self.var_offset_dict[function_scopename + "." + param_name] = temp_new_fp_offset
+
             temp_new_fp_offset += 4
 
         # jump and link

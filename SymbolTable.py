@@ -123,6 +123,12 @@ class SymbolTable:
         self.children = list()
         self.symbols = dict()
 
+    def getName(self):
+        """
+            Retrieve the name of the symbol table.
+        """
+        return self.name
+
     def lookup(self, symbol: str, own_scope_only=False) -> (SymbolType, str):
         """
         Lookup a symbol in the symbol table
