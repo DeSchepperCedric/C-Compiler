@@ -690,13 +690,26 @@ class MipsGenerator:
         return code, reg_left
 
     def returnStatement(self):
-        # ignore
-        pass
+        # ignore since this does nothing in mips
+        return "", -1
 
-    def returnWithExprStatement(self, node):
+    def returnWithExprStatement(self, node: ReturnWithExprStatement):
+        code = ""
+
         # resolve expression
-        # return register
-        pass
+        expr_code, expr_reg = self.astNodeToMIPS(node.getExpression())
+
+        code += expr_code
+
+        if node.getExpression().getExpressionType().toString() == "float":
+            code += "mov.s $f31, {}\n".format(expr_reg)
+        else:
+            code += "mov $v0, {}\n".format(expr_reg)
+
+        self.releaseReg(expr_reg)
+
+        # this expression has a register, but it is a technical register that should not be used further
+        return code, -1
 
     def comparisonExpr(self, node, int_op):
         # cond = (src1 op src2)
