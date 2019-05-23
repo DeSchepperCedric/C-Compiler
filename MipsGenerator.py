@@ -37,81 +37,81 @@ class MipsGenerator:
         return self.label_counter
 
     def getFreeReg(self):
-    	"""
-			Retrieve the name of an available temp register.
-    	"""
-    	if len(self.free_regs) == 0:
-    		raise Exception("Error when requesting free register: no registers available.")
+        """
+            Retrieve the name of an available temp register.
+        """
+        if len(self.free_regs) == 0:
+            raise Exception("Error when requesting free register: no registers available.")
 
-    	return self.free_regs.pop()
+        return self.free_regs.pop()
 
     def releaseReg(self, reg):
-    	"""
-			Mark the specified temp register as available.
-    	"""
-    	if reg in self.free_regs:
-    		raise Exception("Error when releasing reg '{}': register is already free.".format(reg))
+        """
+            Mark the specified temp register as available.
+        """
+        if reg in self.free_regs:
+            raise Exception("Error when releasing reg '{}': register is already free.".format(reg))
 
-   		if not reg.startswith("$t"):
-   			raise Exception("Specified register '{}' is not a temp register.".format(reg))
+        if not reg.startswith("$t"):
+            raise Exception("Specified register '{}' is not a temp register.".format(reg))
 
-    	self.free_regs.append(reg)
+        self.free_regs.append(reg)
 
-   	def getFreeFloatReg(self):
-   		"""
-			Retrieve the name an available float register.
-   		"""
+    def getFreeFloatReg(self):
+        """
+            Retrieve the name an available float register.
+        """
 
-   		if len(self.free_float_regs) == 0:
-   			raise Exception("Error when requesting free float register: no float register availble.")
+        if len(self.free_float_regs) == 0:
+            raise Exception("Error when requesting free float register: no float register availble.")
 
-   		return self.free_float_regs.pop()
+        return self.free_float_regs.pop()
 
-   	def releaseFloatReg(self, reg):
-   		"""
-			Mark the specified float register as available.
-   		"""
+    def releaseFloatReg(self, reg):
+        """
+            Mark the specified float register as available.
+        """
 
-   		if reg in self.free_float_regs:
-   			raise Exception("Error when releasing float reg '{}': float register is already free.".format(reg))
+        if reg in self.free_float_regs:
+            raise Exception("Error when releasing float reg '{}': float register is already free.".format(reg))
 
-   		if not reg.startswith("$f"):
-   			raise Exception("Specified register '{}' is not a float register.".format(reg))
+        if not reg.startswith("$f"):
+            raise Exception("Specified register '{}' is not a float register.".format(reg))
 
-   		self.free_float_regs.append(reg)
+        self.free_float_regs.append(reg)
 
 
     def getFpOffset(self):
-    	"""
-			Retrieve the current fp offset.
-    	"""
-    	return self.fp_offset
+        """
+            Retrieve the current fp offset.
+        """
+        return self.fp_offset
 
     def incrementFpOffset(self, amount):
-    	"""
-			Increase the fp offset by the specified amount of bytes.
-			This will return the new fp offset.
-    	"""
-    	self.fp_offset += amount
+        """
+            Increase the fp offset by the specified amount of bytes.
+            This will return the new fp offset.
+        """
+        self.fp_offset += amount
 
-    	return self.fp_offset
+        return self.fp_offset
 
     def decrementFpOffset(self, amount):
-    	"""
-			Decrease the fp offset by the specified amount of bytes.
-			This will return the new fp offset.
-    	"""
+        """
+            Decrease the fp offset by the specified amount of bytes.
+            This will return the new fp offset.
+        """
 
-    	self.fp_offset -= amount
+        self.fp_offset -= amount
 
-    	return self.fp_offset
+        return self.fp_offset
 
     def resetFpOffset(self):
-    	"""
-			Reset the fp offset to 0.
-    	"""
-    	
-    	self.fp_offset = 0
+        """
+            Reset the fp offset to 0.
+        """
+        
+        self.fp_offset = 0
 
     def storeRegister(self, source_reg, addr_reg, offset, is_float = False):
         """
@@ -123,13 +123,13 @@ class MipsGenerator:
                 'offset': the offset that will be added to the address stored in 'addr_reg'. Specify as integer.
         """
 
-        if is_float not and source_reg.startswith("$f"):
-        	raise Exception("Error when trying to store non-float register {} as float.".format(source_reg))
+        if is_float and not source_reg.startswith("$f"):
+            raise Exception("Error when trying to store non-float register {} as float.".format(source_reg))
 
         if not is_float and source_reg.startswith("$f"):
-        	raise Exception("Error when trying to store float register {} as non-float.".format(source_reg))
+            raise Exception("Error when trying to store float register {} as non-float.".format(source_reg))
 
-		command = "sw" if not is_float else "swc1"
+        command = "sw" if not is_float else "swc1"
 
         return "{} {}, {}({})\n".format(command, source_reg, offset, addr_reg)
 
@@ -143,11 +143,11 @@ class MipsGenerator:
                 'offset': the offset that will be added to the address stored in 'addr_reg'. Specify as integer.
         """
 
-        if is_float not and target_reg.startswith("$f"):
-        	raise Exception("Error when trying to load float into non-float register {}.".format(source_reg))
+        if is_float and not target_reg.startswith("$f"):
+            raise Exception("Error when trying to load float into non-float register {}.".format(source_reg))
 
         if not is_float and target_reg.startswith("$f"):
-        	raise Exception("Error when trying to load non-float into float register {}.".format(source_reg))
+            raise Exception("Error when trying to load non-float into float register {}.".format(source_reg))
 
         command = "lw" if not is_float else "lwc1"
 
@@ -417,7 +417,7 @@ class MipsGenerator:
         pass
 
     def funcDef(self, node):
-    	fp_offset = 0
+        fp_offset = 0
 
         code = ""
         return_reg = ""
