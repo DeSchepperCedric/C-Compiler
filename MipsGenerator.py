@@ -25,6 +25,7 @@ class MipsGenerator:
 
         self.label_counter = 0
         self.free_regs = ["$t0", "$t1", "$t2", "$t3"]
+        self.free_float_regs = ["$f0", "$f1", "$f2", "$f3"]
 
     def getUniqueLabelId(self):
         """
@@ -144,10 +145,10 @@ class MipsGenerator:
         """
 
         if is_float and not target_reg.startswith("$f"):
-            raise Exception("Error when trying to load float into non-float register {}.".format(source_reg))
+            raise Exception("Error when trying to load float into non-float register {}.".format(target_reg))
 
         if not is_float and target_reg.startswith("$f"):
-            raise Exception("Error when trying to load non-float into float register {}.".format(source_reg))
+            raise Exception("Error when trying to load non-float into float register {}.".format(target_reg))
 
         command = "lw" if not is_float else "lwc1"
 
