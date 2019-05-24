@@ -409,21 +409,28 @@ class MipsGenerator:
 
     ################################### AST NODES ###################################
 
-    def programNode(self, node):
+    def programNode(self, node: ProgramNode):
         """
             Process a program node. This will return the full .text segment.
         """
 
         code = ".text\n"
 
-        # discover functions
+        code += "jal main\n" # jump to main function
 
-        # sort so that main() is first!
+        # discover function nodes
+        for node in node.getChildren():
+            if isinstance(node, FuncDef):
+                # add function decl node to list of functions
+                self.function_defs[node.getFuncID()] = node
 
-        # add each FuncDef object to self.function_defs
+        # TODO add jump to main
 
-        # iterate over functions
-        #   process and add to program code
+        # process top level nodes
+        for node in node.getChildren():
+            node_code, node_reg = self.astNodeToMIPS(node)
+            code += node_code
+            # ignore register
 
         return code, -1
 
@@ -482,7 +489,7 @@ class MipsGenerator:
         if is_float:
             # float must first be evaluated, then the bit must be checked
 
-            raise Exception("If statements with float are not yet implement.")
+            raise Exception("If statements with float are not yet implemented.")
 
             code += "bc1f else_branch_{}\n".format(else_label_id)
         else:
@@ -527,7 +534,7 @@ class MipsGenerator:
         code += cond_code
 
         if is_float:
-            raise Exception("While statements with float are not yet implement.")
+            raise Exception("While statements with float are not yet implemented.")
         else:
             # if the result is false => go to endwhile
             code += "beq {} $0 endwhile_{}:\n".format(cond_reg, endwhile_label_id)
@@ -543,16 +550,15 @@ class MipsGenerator:
 
     def statementContainer(self, node):
         # iterate over statements and process
-        # if a return with expression is encountered, use that expression's register as return register for this function call
         pass
 
     def funcParam(self, node):
         # ignore
-        pass
+        return "", -1
 
     def funcDecl(self, node):
         # ignore
-        pass
+        return "", -1
 
     def funcDef(self, node: FuncDef):
         code = ""
