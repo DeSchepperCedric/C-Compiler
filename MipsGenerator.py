@@ -7,6 +7,7 @@ class MipsGenerator:
     def __init__(self):
         self.data_string = ".data: \n"
         self.string_counter = 0
+        self.float_counter = 0
         self.reg_to_string = dict()
         self.array_sizes = dict()
 
@@ -68,9 +69,9 @@ class MipsGenerator:
             return self.castExpr(node)
 
         elif isinstance(node, FuncParam):
-            return self.funcParam(node)
+            return "", -1
         elif isinstance(node, FuncDecl):
-            return self.funcDecl(node)
+            return "", -1
         elif isinstance(node, FuncDef):
             return self.funcDef(node)
         elif isinstance(node, FuncCallExpr):
@@ -114,7 +115,7 @@ class MipsGenerator:
             return self.comparisonExpr(node, "le")
 
         elif isinstance(node, ReturnStatement):
-            return self.returnStatement()
+            return "", -1
         elif isinstance(node, ReturnWithExprStatement):
             return self.returnWithExprStatement(node)
 
@@ -247,25 +248,23 @@ class MipsGenerator:
 
         return "{} {}, {}({})\n".format(command, source_reg, offset, addr_reg)
 
-    def loadRegister(self, target_reg: str, addr_reg: str, offset, is_float=False) -> str:
+    def loadRegister(self, addr_reg: str, offset, is_float=False, target_reg=None):
         """
             Load the value stored in the memory at the specified address into the specified register.
 
             Params:
-                'target_reg': The register that will contain the value.
                 'addr_reg': The register that contains the address at which the value is stored.
                 'offset': the offset that will be added to the address stored in 'addr_reg'. Specify as integer.
+                'target_reg': Specific register to place value in
         """
 
-        if is_float and not target_reg.startswith("$f"):
-            raise Exception("Error when trying to load float into non-float register {}.".format(target_reg))
-
-        if not is_float and target_reg.startswith("$f"):
-            raise Exception("Error when trying to load non-float into float register {}.".format(target_reg))
-
         command = "lw" if not is_float else "lwc1"
+        if target_reg is None:
+            target_reg = self.getFreeReg() if not is_float else self.getFreeFloatReg()
+            return "{} {}, {}({})\n".format(command, target_reg, offset, addr_reg), target_reg
 
-        return "{} {}, {}({})\n".format(command, target_reg, offset, addr_reg)
+        else:
+            return "{} {}, {}({})\n".format(command, target_reg, offset, addr_reg)
 
     def storeVariable(self, source_reg, id_node: IdentifierExpr) -> str:
 
@@ -323,9 +322,6 @@ class MipsGenerator:
                 return code
 
     def loadVariable(self, id_node: IdentifierExpr) -> (str, str):
-
-        target_reg = self.getFreeReg()
-
         # determine if the variable is a float
         is_float = id_node.getExpressionType().toString() == "float"
 
@@ -339,8 +335,8 @@ class MipsGenerator:
             temp_addr_reg = self.getFreeReg()
 
             code = "la {}, {}\n".format(temp_addr_reg, varname)
-            code += self.loadRegister(target_reg, temp_addr_reg, 0, is_float)
-
+            load, target_reg = self.loadRegister(temp_addr_reg, 0, is_float)
+            code += load
             # release register
             self.releaseReg(temp_addr_reg)
 
@@ -360,9 +356,9 @@ class MipsGenerator:
 
                 offset = self.var_offset_dict[full_id]
 
-                code = self.loadRegister(target_reg, "$fp", offset)
-
-                return code, target_reg
+                return self.loadRegister("$fp", offset, is_float)
+            else:
+                raise Exception("variable {} must already by stored on the stack".format(varname))
 
     ################################### CONSTANT EXPRESSIONS ###################################
 
@@ -380,8 +376,26 @@ class MipsGenerator:
         """
         Return a constant float with its type and the register it's stored in
         """
+
         # TODO handle floats
         # add to data segment
+        float_id = "float." + str(self.float_counter)
+        self.float_counter += 1
+        self.data_string += "{}: .{} {}".format(float_id, "float", expr.getFloatValue())
+        code = ""
+
+        # aquire register
+        temp_addr_reg = self.getFreeReg()
+
+        code = "la {}, {}\n".format(temp_addr_reg, float_id)
+        load, float_reg = self.loadRegister(temp_addr_reg, 0, True)
+        code += load
+        # release register
+        self.releaseReg(temp_addr_reg)
+
+        # retrieve from data segment and store
+        return code, float_reg
+
         pass
 
     def integerConstantExpr(self, expr):
@@ -547,15 +561,12 @@ class MipsGenerator:
 
     def statementContainer(self, node):
         # iterate over statements and process
-        pass
+        code = ""
+        for child in node.getChildren():
+            new_code, reg = self.astNodeToMIPS(child)
+            code += new_code
 
-    def funcParam(self, node):
-        # ignore
-        return "", -1
-
-    def funcDecl(self, node):
-        # ignore
-        return "", -1
+        return code, -1
 
     def funcDef(self, node: FuncDef):
         code = ""
@@ -580,8 +591,7 @@ class MipsGenerator:
         # return
         code += "jr $ra\n"
 
-        # we don't return a register since a function definition
-        # does not return anything
+        # we don't return a register since a function definition does not return anything
         return code, -1
 
     def funcCallExpr(self, node: FuncCallExpr):
@@ -630,10 +640,10 @@ class MipsGenerator:
 
         # load the original frame ptr, this is stored right below the frame pointer of the called function
         # before this instruction $fp is the callee's fp, after this instruction it is our own fp
-        code += self.loadRegister("$fp", "$fp", 4)
+        code += self.loadRegister("$fp", 4, False, "$fp")
 
         self.popFpOffset()
-        code += self.loadRegister("$ra", "$fp", self.getFpOffset())
+        code += self.loadRegister("$fp", self.getFpOffset(), False, "$ra")
 
         # restore registers from stack
         for reg in ["$t3", "$t2", "$t1", "$t0"]:
@@ -642,7 +652,7 @@ class MipsGenerator:
             self.popFpOffset()
 
             # load register at top of stack
-            code += self.loadRegister(reg, "$fp", self.getFpOffset())
+            code += self.loadRegister("$fp", self.getFpOffset(), False, reg)
 
         retval_type = node.getExpressionType()
 
@@ -701,9 +711,6 @@ class MipsGenerator:
         self.releaseReg(reg_right)
         return code, reg_left
 
-    def returnStatement(self):
-        # ignore since this does nothing in mips
-        return "", -1
 
     def returnWithExprStatement(self, node: ReturnWithExprStatement):
         code = ""

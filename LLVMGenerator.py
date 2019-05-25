@@ -373,6 +373,7 @@ class LLVMGenerator:
         return code
 
     def statementContainer(self, node):
+        # iterate over statements and process
         code = ""
         for child in node.getChildren():
             new_code, reg = self.astNodeToLLVM(child)
