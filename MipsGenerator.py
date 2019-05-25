@@ -5,9 +5,6 @@ from itertools import zip_longest
 
 class MipsGenerator:
     def __init__(self):
-        self.cur_reg = 0
-        self.variable_reg = dict()
-        self.reg_stack = list()
         self.data_string = ".data: \n"
         self.string_counter = 0
         self.reg_to_string = dict()
@@ -209,7 +206,7 @@ class MipsGenerator:
         """
 
         # 4 bytes
-        self.fp_offset -= 4;
+        self.fp_offset -= 4
 
         return self.fp_offset
 
@@ -219,7 +216,7 @@ class MipsGenerator:
             :return: The new value of the fp offset.
         """
 
-        self.fp_offset += 4;
+        self.fp_offset += 4
 
         return self.fp_offset
 
@@ -416,7 +413,7 @@ class MipsGenerator:
 
         code = ".text\n"
 
-        code += "jal main\n" # jump to main function
+        code += "jal main\n"  # jump to main function
 
         # discover function nodes
         for node in node.getChildren():
@@ -463,7 +460,7 @@ class MipsGenerator:
 
         return code, -1
 
-    def branchStatement(self, node : BranchStmt):
+    def branchStatement(self, node: BranchStmt):
         """
             Convert an BranchStmt to MIPS code.
         """
@@ -524,7 +521,7 @@ class MipsGenerator:
         # check of the condition expression is float
         is_float = node.getCondExpr().getExpressionType().toString() == "float"
 
-        body_code, body_reg = self.astNodeToMIPS(node.getIfBody())
+        body_code, body_reg = self.astNodeToMIPS(node.getBody())
 
         cond_label_id = self.getUniqueLabelId()
         loop_label_id = self.getUniqueLabelId()
@@ -570,7 +567,6 @@ class MipsGenerator:
         for param in node.getParamList():
             self.pushFpOffset()
 
-
         # function label
         function_name = node.getFuncID()
 
@@ -608,10 +604,9 @@ class MipsGenerator:
         code += "addi $s0, $fp, {}\n".format(self.getFpOffset())
 
         # resolve each argument expression
-        temp_new_fp_offset = 0 # offset relative to the new fp, used for storing function arguments.
+        temp_new_fp_offset = 0  # offset relative to the new fp, used for storing function arguments.
 
         for i in range(0, len(node.getArguments())):
-
             # resolve arg
             arg = node.getArguments()[i]
             arg_code, arg_reg = self.astNodeToMIPS(arg)
@@ -642,7 +637,6 @@ class MipsGenerator:
 
         # restore registers from stack
         for reg in ["$t3", "$t2", "$t1", "$t0"]:
-
             # the $fp points to the top of the stack i.e. the beginning of the next variable
             # since we need the current variable we first pop the stack
             self.popFpOffset()
@@ -729,19 +723,39 @@ class MipsGenerator:
         # this expression has a register, but it is a technical register that should not be used further
         return code, -1
 
-    def comparisonExpr(self, node, int_op):
+    def comparisonExpr(self, node, op):
         # cond = (src1 op src2)
         # op src, src2
         # int -> op
         # float ->  "c." + op + ".s"
-        pass
+
+        code = ""
+
+        type_left = node.getLeft().getExpressionType().toString()
+        type_right = node.getRight().getExpressionType().toString()
+
+        code_left, reg_left = self.astNodeToMIPS(node.getLeft())
+        code_right, reg_right = self.astNodeToMIPS(node.getRight())
+
+        code += code_left
+        code += code_right
+
+        if type_left == "float" or type_right == "float":
+            op = "c." + op + ".s"
+            code_left, reg_left = self.convertToType(reg_left, type_left, "float")
+            code_right, reg_right = self.convertToType(reg_right, type_right, "float")
+
+            code += code_left
+            code += code_right
+
+        code += "{} {}, {}\n".format(op, reg_left, reg_right)
+        return code, - 1
 
     def assignmentExpr(self, node):
         # array[element] = value has to be done differently
         if isinstance(node.getLeft(), ArrayAccessExpr):
             # TODO handle arrays
-            # return self.arrayElementAssignment(node)
-            return "", -1
+            return self.arrayElementAssignment(node)
 
         code, register = self.astNodeToMIPS(node.getRight())
         right_type = self.getMipsType(node.getRight().getExpressionType())

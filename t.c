@@ -2,6 +2,9 @@
 
 
 int main(){
+float sfds = 5.25;
+char ces = 'c';
+int ae = (int) ces;
 int q = 5;
 if (q > 2){
     int a = 25;

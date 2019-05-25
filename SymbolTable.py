@@ -11,6 +11,9 @@ class SymbolType:
     def isVar(self):
         return False
 
+    def toString(self):
+        pass
+
 
 class FunctionType(SymbolType):
     def __init__(self, return_type: str, param_types: list, is_defined=False):
