@@ -56,8 +56,8 @@ def run_compiler(source_file_path, output_name, target_language):
             llvm_code = LLVMGenerator().astNodeToLLVM(ast_tree)
             llvm_file.write(llvm_code)
     elif target_language == "mips":
-        with open("./output/" + output_name + ".ll", 'w') as mips_file:
-            mips_code = MipsGenerator().astNodeToLLVM(ast_tree)
+        with open("./output/" + output_name + ".asm", 'w') as mips_file:
+            mips_code = MipsGenerator().astNodeToMIPS(ast_tree)
             mips_file.write(mips_code)
 
 

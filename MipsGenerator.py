@@ -266,16 +266,17 @@ class MipsGenerator:
         else:
             return "{} {}, {}({})\n".format(command, target_reg, offset, addr_reg)
 
-    def storeVariable(self, source_reg, id_node: IdentifierExpr) -> str:
-
+    def storeVariable(self, source_reg, node) -> str:
+        # node can be IdentifierExpr or VarDeclWithInit
+        var_type = node.getExpressionType().toString() if isinstance(node, IdentifierExpr) else node.getType()
         # determine if the variable is a float
-        is_float = id_node.getExpressionType().toString() == "float"
+        is_float = var_type == "float"
 
         # get varname
-        varname = id_node.getIdentifierName()
+        varname = node.getIdentifierName() if isinstance(node, IdentifierExpr) else node.getID()
 
         # determine whether the variable is a global:
-        is_global = id_node.getSymbolTable().isGlobal(varname)
+        is_global = node.getSymbolTable().isGlobal(varname)
 
         if is_global:
 
@@ -295,7 +296,7 @@ class MipsGenerator:
             # there is a 100% guarantee that the variable exists in the table
 
             # get scopename
-            type, scopename = id_node.getSymbolTable().lookup(varname, False)
+            type, scopename = node.getSymbolTable().lookup(varname, False)
 
             # get full var id
             full_id = scopename + "." + varname
@@ -313,11 +314,13 @@ class MipsGenerator:
                 # push new variable to the stack
 
                 cur_offset = self.getFpOffset()
+                # fp must start at -4
+                cur_offset = self.pushFpOffset() if cur_offset == 0 else cur_offset
 
                 code = self.storeRegister(source_reg, "$fp", cur_offset, is_float)
 
                 # adjust fp offset for new variable
-                new_offset = self.pushFpOffset()
+                self.pushFpOffset()
 
                 return code
 
@@ -369,7 +372,7 @@ class MipsGenerator:
 
         value = 1 if expr.getBoolValue() is True else 0
         reg = self.getFreeReg()
-        code = "li {}, {}".format(reg, value)
+        code = "li {}, {}\n".format(reg, value)
         return code, reg
 
     def floatConstantExpr(self, expr):
@@ -403,7 +406,7 @@ class MipsGenerator:
         Return a constant integer with its type and the register it's stored in
         """
         reg = self.getFreeReg()
-        code = "li {}, {}".format(reg, expr.getIntValue())
+        code = "li {}, {}\n".format(reg, expr.getIntValue())
         return code, reg
 
     def charConstantExpr(self, expr):
@@ -411,7 +414,7 @@ class MipsGenerator:
         Return a constant char with its type and the register it's stored in
         """
         reg = self.getFreeReg()
-        code = "li {}, {}".format(reg, ord(expr.getCharValue()))
+        code = "li {}, {}\n".format(reg, ord(expr.getCharValue()))
         return code, reg
 
     def stringConstantExpr(self, expr):
@@ -430,20 +433,21 @@ class MipsGenerator:
         code += "jal main\n"  # jump to main function
 
         # discover function nodes
-        for node in node.getChildren():
-            if isinstance(node, FuncDef):
+        for child in node.getChildren():
+            if isinstance(child, FuncDef):
                 # add function decl node to list of functions
-                self.function_defs[node.getFuncID()] = node
+                self.function_defs[child.getFuncID()] = child
 
         # TODO add jump to main
 
         # process top level nodes
-        for node in node.getChildren():
-            node_code, node_reg = self.astNodeToMIPS(node)
-            code += node_code
+        for child in node.getChildren():
+            child_code, child_reg = self.astNodeToMIPS(child)
+            code += child_code
             # ignore register
 
-        return code, -1
+        code = self.data_string + code
+        return code
 
     def varDeclWithInit(self, node):
         expr_type = self.getMipsType(node.getInitExpr().getExpressionType())
@@ -455,8 +459,7 @@ class MipsGenerator:
 
         if is_global and isinstance(node.getInitExpr(), ConstantExpr):
             value = self.convertConstant(var_type, expr_type, node.getInitExpr().getValue())
-            self.data_string += "{}: .{} {}".format(var_id, var_type, value)
-
+            self.data_string += "{}: .{} {}\n".format(var_id, var_type, value)
         elif is_global and isinstance(node.getInitExpr(), AddressExpr):
             # TODO handle AddressExpr
             pass
@@ -469,7 +472,7 @@ class MipsGenerator:
                 convert, register = self.convertToType(register, expr_type, var_type)
                 code += convert
 
-            code += self.storeVariable(register, node.getInitExpr())
+            code += self.storeVariable(register, node)
             self.releaseReg(register)
 
         return code, -1
