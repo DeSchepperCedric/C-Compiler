@@ -637,12 +637,11 @@ class MipsGenerator:
         for child in node.getChildren():
             new_code, reg = self.astNodeToMIPS(child)
             code += new_code
+            code += "\n"
 
         return code, -1
 
     def funcDef(self, node: FuncDef):
-        code = ""
-
         # set the frame pointer offset to zero
         self.resetSpOffset()
         # $sp+0 now points to the top of the former stackframe
@@ -678,28 +677,25 @@ class MipsGenerator:
             ---------- <- new $sp
         """
 
-        # TODO make parameters accesible after $sp is adjusted
-        # TODO make offsets into pairs (reg, offset)
-
+        function_doc = "\n### {} ###\n".format(node.getFuncID())
 
         # function label
-        function_name = node.getFuncID()
-
-        code += "{}:\n".format(function_name)
+        func_label = "{}:\n".format(node.getFuncID())
 
         # function body
         # return value is placed into $v0 or $f31 by a return expression
         func_body, reg = self.astNodeToMIPS(node.getBody())
-        code += func_body
 
         # return
         if node.getFuncID() == "main":
-            code += "j end_program\n"
+            func_return = "j end_program\n"
         else:
-            code += "jr $ra\n"
+            func_return = "jr $ra\n"
 
         # adjust $sp at the beginning
-        code = "addi $sp, $sp, {}\n".format(self.getSpOffset()) + code
+        sp_adjust = "addi $sp, $sp, {}\n".format(self.getSpOffset())
+
+        code = function_doc + func_label + sp_adjust + func_body + func_return
 
         # we don't return a register since a function definition does not return anything
         return code, -1
@@ -707,9 +703,7 @@ class MipsGenerator:
     def funcCallExpr(self, node: FuncCallExpr):
         code = ""
 
-        # TODO add function call code.
-
-        # store $sp:
+        code += "# call {}\n".format(node.getFunctionID().getIdentifierName())
 
         """
             local_vars
@@ -774,6 +768,11 @@ class MipsGenerator:
 
         # save params on the stack relative to the $fp
         for i in range(0, len(node.getArguments())):
+            funcdef_node = self.function_defs[node.getFunctionID().getIdentifierName()]
+            param_name = funcdef_node.getParamList()[i].getParamID()
+            function_scopename = funcdef_node.getSymbolTable().getName()
+
+            code += "# process param {}\n".format(param_name)
             arg = node.getArguments()[i]
             arg_code, arg_reg = self.astNodeToMIPS(arg)
             code += arg_code
@@ -783,12 +782,11 @@ class MipsGenerator:
 
             fp_arg_offset += 4 # do this after since the $fp points to the a free stack place
 
-            funcdef_node = self.function_defs[node.getFunctionID().getIdentifierName()]
-            param_name = funcdef_node.getParamList()[i].getParamID()
-            function_scopename = funcdef_node.getSymbolTable().getName()
+
 
             self.var_offset_dict[function_scopename + "." + param_name] = ("$fp", fp_arg_offset)
 
+        # note do this AFTER param evaluation, since the param eval still needs a working $sp!
         code += "addi $sp, $fp, 0\n"
         # $fp and $sp point now to the first parameter
         # the callee will adjust $sp to the end of the stackframe.
@@ -807,9 +805,9 @@ class MipsGenerator:
 
         # load t0-t3
         code += "lw $t3, {}($sp)\n".format(-4)
-        code += "lw $t3, {}($sp)\n".format(-8)
-        code += "lw $t3, {}($sp)\n".format(-12)
-        code += "lw $t3, {}($sp)\n".format(-16)
+        code += "lw $t2, {}($sp)\n".format(-8)
+        code += "lw $t1, {}($sp)\n".format(-12)
+        code += "lw $t0, {}($sp)\n".format(-16)
 
         retval_type = node.getExpressionType()
 
@@ -871,12 +869,34 @@ class MipsGenerator:
 
         code += expr_code
 
-        if node.getExpression().getExpressionType().toString() == "float":
-            code += "mov.s $f31, {}\n".format(expr_reg)
-        else:
-            code += "mov $v0, {}\n".format(expr_reg)
+        # required return type
+        func_rettype_name = node.getFunctionType().getReturnTypeAsString()
 
-        self.releaseReg(expr_reg)
+        # expression type
+        retval_typename = node.getExpression().getExpressionType().toString()
+
+        if func_rettype_name == "float" and retval_typename != "float":
+            # conversion
+
+            conv_code, return_reg = self.convertFloatToInteger(expr_reg)
+
+            code += conv_code
+            code += "mov.s {}, {}\n".format(self.float_return_reg, expr_reg)
+
+        elif func_rettype_name != "float" and retval_typename == "float":
+            # conversion
+            conv_code, return_reg = self.convertFloatToInteger(expr_reg)
+
+            code += conv_code
+            code += "mov {}, {}\n".format(self.return_reg, return_reg)
+
+        else: # types are equal
+            if retval_typename == "float":
+                code += "mov.s {}, {}\n".format(self.float_return_reg, expr_reg)
+            else:
+                code += "mov {}, {}\n".format(self.return_reg, expr_reg)
+
+            self.releaseReg(expr_reg)
 
         # this expression has a register, but it is a technical register that should not be used further
         return code, -1
@@ -1001,7 +1021,13 @@ class MipsGenerator:
     def arrayAccessHelperString(self, reg_to, reg_from, element_type, index, is_global):
         pass
 
-    def convertIntegerToFloat(self, int_reg):
+    def convertIntegerToFloat(self, int_reg) -> (str, str):
+        """
+            Convert the specified integer register into an float value.
+            Note: this will free the "int_reg" register.
+        :param int_reg: The register that contains the integer value.
+        :return: A tuple (code, reg) with "code" being the conversion code and "reg" the register with the float-value.
+        """
         # mtc1 $t0, $f0 : copy $t0 to $f0
         # cvt.s.w FRdest, FRsrc : Convert Integer to Single
         float_reg = self.getFreeFloatReg()
@@ -1012,7 +1038,13 @@ class MipsGenerator:
         self.releaseReg(int_reg)
         return code, float_reg
 
-    def convertFloatToInteger(self, float_reg):
+    def convertFloatToInteger(self, float_reg) -> (str, str):
+        """
+            Convert the specified float register into an integer value.
+            Note: this will free the "float_reg" register.
+        :param float_reg: The register that contains the float value.
+        :return: A tuple (code, reg) with "code" being the conversion code and "reg" the register with the integer-value.
+        """
         # mfc1 $t0, $f0 : copy $f0 to $t0
         # cvt.w.s FRdest, FRsrcConvert Single to Integer
         int_reg = self.getFreeReg()

@@ -1258,7 +1258,11 @@ class ReturnStatement(JumpStatement):
     def setFunctionType(self, func_type):
         self.function_type = func_type
 
-    def getFunctionType(self):
+    def getFunctionType(self) -> FunctionType:
+        """
+            Retrieve the type of the function that the return
+            statement applies to.
+        """
         return self.function_type
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
@@ -1281,7 +1285,11 @@ class ReturnWithExprStatement(JumpStatement):
     def setFunctionType(self, func_type):
         self.function_type = func_type
 
-    def getFunctionType(self):
+    def getFunctionType(self) -> FunctionType:
+        """
+            Retrieve the type of the function that the return
+            statement applies to.
+        """
         return self.function_type
 
     def getExpression(self):
