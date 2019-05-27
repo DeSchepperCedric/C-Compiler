@@ -31,6 +31,7 @@ class MipsGenerator:
             Returns a tuple (code, reg) with code being the MIPS code and reg
             being the register that contains the result.
         """
+        print(type(node))
         if isinstance(node, IncludeNode):
             return "", -1
 
@@ -317,6 +318,8 @@ class MipsGenerator:
                 # fp must start at -4
                 cur_offset = self.pushFpOffset() if cur_offset == 0 else cur_offset
 
+                self.var_offset_dict[full_id] = cur_offset
+
                 code = self.storeRegister(source_reg, "$fp", cur_offset, is_float)
 
                 # adjust fp offset for new variable
@@ -361,7 +364,7 @@ class MipsGenerator:
 
                 return self.loadRegister("$fp", offset, is_float)
             else:
-                raise Exception("variable {} must already by stored on the stack".format(varname))
+                raise Exception("variable {} must already be stored on the stack".format(varname))
 
     ################################### CONSTANT EXPRESSIONS ###################################
 
@@ -384,7 +387,7 @@ class MipsGenerator:
         # add to data segment
         float_id = "float." + str(self.float_counter)
         self.float_counter += 1
-        self.data_string += "{}: .{} {}".format(float_id, "float", expr.getFloatValue())
+        self.data_string += "{}: .{} {}\n".format(float_id, "float", expr.getFloatValue())
         code = ""
 
         # aquire register
@@ -468,7 +471,7 @@ class MipsGenerator:
             new_code, register = self.astNodeToMIPS(node.getInitExpr())
             code += new_code
 
-            if var_type != expr_type and isinstance(node.getInitExpr(), IdentifierExpr):
+            if var_type != expr_type:
                 convert, register = self.convertToType(register, expr_type, var_type)
                 code += convert
 
@@ -672,8 +675,7 @@ class MipsGenerator:
         return code, ret_reg
 
     def identifierExpr(self, node):
-        # ignore?
-        pass
+        return self.loadVariable(node)
 
     def arithmeticExpr(self, node, operation):
         # dest = src1 op src2
@@ -692,24 +694,23 @@ class MipsGenerator:
         code += code_right
 
         llvm_type = ""
+        print(type_left)
+        print(type_right)
         if type_left == "float" or type_right == "float":
-            if type_left != "float":
-                convert, reg_left = self.convertIntegerToFloat(reg_left)
-                code += convert
-            else:
-                convert, reg_right = self.convertIntegerToFloat(reg_right)
-                code += convert
+
+            convert, reg_left = self.convertToType(reg_left, type_left, "float")
+            code += convert
+            convert, reg_right = self.convertToType(reg_right, type_right, "float")
+            code += convert
 
             if not reg_left.startswith("$f"):
                 raise Exception("Specified register {} is not a float register".format(reg_left))
 
-            if not reg_right.startswith("$f"):
-                raise Exception("Specified register {} is not a float register".format(reg_right))
-
             operation += ".s"
 
+
         # re-use reg_left as destination register
-        code += "{} {}, {}, {}".format(operation, reg_left, reg_left, reg_right)
+        code += "{} {}, {}, {}\n".format(operation, reg_left, reg_left, reg_right)
 
         self.releaseReg(reg_right)
         return code, reg_left
@@ -830,9 +831,10 @@ class MipsGenerator:
     def convertIntegerToFloat(self, int_reg):
         # mtc1 $t0, $f0 : copy $t0 to $f0
         # cvt.s.w FRdest, FRsrc : Convert Integer to Single
+        print(int_reg)
         float_reg = self.getFreeFloatReg()
-        code = "mtc1 {}, {}".format(int_reg, float_reg)
-        code += "cvt.s.w {}, {}".format(float_reg, float_reg)
+        code = "mtc1 {}, {}\n".format(int_reg, float_reg)
+        code += "cvt.s.w {}, {}\n".format(float_reg, float_reg)
 
         # int_reg isn't necessary anymore
         self.releaseReg(int_reg)
@@ -842,8 +844,9 @@ class MipsGenerator:
         # mfc1 $t0, $f0 : copy $f0 to $t0
         # cvt.w.s FRdest, FRsrcConvert Single to Integer
         int_reg = self.getFreeReg()
-        code = "mfc1 {}, {}".format(int_reg, float_reg)
-        code += "cvt.w.s {}, {}".format(int_reg, int_reg)
+        code = "cvt.w.s {}, {}\n".format(float_reg, float_reg)
+        code += "mfc1 {}, {}\n".format(int_reg, float_reg)
+
 
         # float_reg isn't necessary anymore
         self.releaseReg(float_reg)
