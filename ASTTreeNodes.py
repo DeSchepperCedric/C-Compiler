@@ -3197,7 +3197,7 @@ class StringConstantExpr(ConstantExpr):
     def __init__(self, str_value):
         super().__init__(constant_expr_type="StrConstant", value=str_value)
 
-    def getStrValue(self):
+    def getStrValue(self) -> str:
         return str(self.getValue())
 
     def resolveExpressionType(self, symbol_table):

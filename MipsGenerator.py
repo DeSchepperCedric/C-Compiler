@@ -2,6 +2,8 @@ from ASTTreeNodes import *
 import struct as struct
 from itertools import zip_longest
 
+import re
+
 
 class MipsGenerator:
     def __init__(self):
@@ -75,7 +77,12 @@ class MipsGenerator:
         elif isinstance(node, FuncDef):
             return self.funcDef(node)
         elif isinstance(node, FuncCallExpr):
-            return self.funcCallExpr(node)
+            # no need for complicated function calling mechanisms
+            # manual printf processing is easier
+            if node.getFunctionID().getIdentifierName() == "printf":
+                return self.printfExpr(node)
+            else:
+                return self.funcCallExpr(node)
 
         elif isinstance(node, AddExpr):
             return self.arithmeticExpr(node, "add")
@@ -784,6 +791,82 @@ class MipsGenerator:
 
         return code, ret_reg
 
+    def printfExpr(self, node: FuncCallExpr):
+        """
+            Process a call to printf()
+        :param node:
+        :return:
+        """
+
+        # get args
+        args = node.getArguments()
+
+        # get string
+        string_expr = args.pop(0)
+
+        if not isinstance(string_expr, StringConstantExpr):
+            raise Exception("First argument to printf must be string constant.")
+
+        formatted_string = string_expr.getStrValue()
+
+        # TODO strip " ?
+
+
+
+        split_string = self.split_formatted_string(formatted_string)
+
+        # annotate formatters with expressions
+        annotated_formatters = self.pair_formatters_values(split_string, args)
+
+        code = ""
+
+        for value in annotated_formatters:
+            if isinstance(value, str):
+                # add string to data segment (label?)
+                # do syscall to print string
+                pass
+
+            else:
+                formatter:str = value[0]
+                argument:Expression = value[1]
+
+                # eval expression
+                # do syscall on register
+
+        return code, -1
+
+    def split_formatted_string(self, string):
+        """
+            Split a formatted string into formatters and normal strings.
+            Note that this does take into account the '%%' escape for '%' characters.
+
+        :param string: The raw string passed to printf or scanf.
+        :return: A list whose elements are either formatters (%f, %d, etc) or normal strings.
+        """
+
+        return re.split(r'((?<!%)%[dfsc])', string)
+
+    def pair_formatters_values(self, split_string, expression_list):
+        """
+
+        :param split_string: A list whose elements are either formatters (%f, %d, etc) or normal strings.
+        :param expression_list: A list of Expression objects, one for each formatter in split_string
+        :return: A list whose elements are substrings, or pairs (formatter, Expression).
+        """
+
+        retval = []
+
+        for substring in split_string:
+            if substring in ["%d", "%f", "%s", "%c"]:
+                if len(expression_list) == 0:
+                    raise Exception("Not enough expressions for printf string! Str: '{}'".format("".join(split_string)))
+
+                # add pair
+                retval.append((substring, expression_list.pop(0)))
+            else:
+                # add string
+                retval.append(substring)
+
     def identifierExpr(self, node):
         return self.loadVariable(node)
 
@@ -1123,3 +1206,4 @@ class MipsGenerator:
         type_string = type_string.replace("bool", "byte")
         type_string = type_string.replace("char", "character")
         return type_string
+
