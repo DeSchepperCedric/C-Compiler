@@ -31,7 +31,6 @@ class MipsGenerator:
             Returns a tuple (code, reg) with code being the MIPS code and reg
             being the register that contains the result.
         """
-        print(type(node))
         if isinstance(node, IncludeNode):
             return "", -1
 
@@ -693,9 +692,6 @@ class MipsGenerator:
         code += code_left
         code += code_right
 
-        llvm_type = ""
-        print(type_left)
-        print(type_right)
         if type_left == "float" or type_right == "float":
 
             convert, reg_left = self.convertToType(reg_left, type_left, "float")
@@ -831,7 +827,6 @@ class MipsGenerator:
     def convertIntegerToFloat(self, int_reg):
         # mtc1 $t0, $f0 : copy $t0 to $f0
         # cvt.s.w FRdest, FRsrc : Convert Integer to Single
-        print(int_reg)
         float_reg = self.getFreeFloatReg()
         code = "mtc1 {}, {}\n".format(int_reg, float_reg)
         code += "cvt.s.w {}, {}\n".format(float_reg, float_reg)
