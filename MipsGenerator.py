@@ -17,8 +17,6 @@ class MipsGenerator:
         # dict that maps function names to FuncDef objects
         self.function_defs = dict()
 
-        self.fp_offset = 0  # offset to current frame pointer
-
         self.sp_offset = 0 # offset to the final stack pointer
 
         self.label_counter = 0
@@ -234,41 +232,6 @@ class MipsGenerator:
         self.sp_offset = 0
         return self.sp_offset
 
-    def getFpOffset(self):
-        """
-            Retrieve the current fp offset.
-        """
-        return self.fp_offset
-
-    def pushFpOffset(self, change=4):
-        """
-            Adjust the fp offset to accomodate 4 % change variable(s) on the stack.
-
-            :return: The new value of the fp offset.
-        """
-
-        # 4 bytes
-        self.fp_offset -= change
-
-        return self.fp_offset
-
-    def popFpOffset(self, change=4):
-        """
-            Adjust the fp offset to remove 4 % change variable(s) from the stack.
-            :return: The new value of the fp offset.
-        """
-
-        self.fp_offset += change
-
-        return self.fp_offset
-
-    def resetFpOffset(self):
-        """
-            Reset the fp offset to 0.
-        """
-
-        self.fp_offset = 0
-
     def storeRegister(self, source_reg: str, addr_reg: str, offset, is_float=False) -> str:
         """
             Store the specified register in memory at the specified address.
@@ -458,8 +421,6 @@ class MipsGenerator:
 
         # retrieve from data segment and store
         return code, float_reg
-
-        pass
 
     def integerConstantExpr(self, expr):
         """
@@ -881,7 +842,10 @@ class MipsGenerator:
             conv_code, return_reg = self.convertFloatToInteger(expr_reg)
 
             code += conv_code
-            code += "mov.s {}, {}\n".format(self.float_return_reg, expr_reg)
+            code += "mov.s {}, {}\n".format(self.float_return_reg, return_reg)
+
+            # no longer needed
+            self.releaseReg(return_reg)
 
         elif func_rettype_name != "float" and retval_typename == "float":
             # conversion
@@ -889,6 +853,9 @@ class MipsGenerator:
 
             code += conv_code
             code += "mov {}, {}\n".format(self.return_reg, return_reg)
+
+            # no longer needed
+            self.releaseReg(return_reg)
 
         else: # types are equal
             if retval_typename == "float":
@@ -926,6 +893,8 @@ class MipsGenerator:
             code += code_left
             code += code_right
 
+        # TODO release registers?
+
         code += "{} {}, {}\n".format(op, reg_left, reg_right)
         return code, - 1
 
@@ -943,6 +912,8 @@ class MipsGenerator:
         if right_type != left_type:
             convert, register = self.convertToType(register, right_type, left_type)
             code += convert
+
+        # TODO release register?
 
         code += self.storeVariable(register, node.getLeft())
         return code, -1
@@ -1006,6 +977,8 @@ class MipsGenerator:
         target_type = self.getMipsType(node.getTargetType())  # get target type
 
         convert, convert_reg = self.convertToType(expr_reg, source_type, target_type)  # perform conversion
+
+        # TODO release expr_reg?
 
         code += convert
         return code, convert_reg  # return code, and the location of the conversion
