@@ -19,6 +19,8 @@ class MipsGenerator:
 
         self.fp_offset = 0  # offset to current frame pointer
 
+        self.sp_offset = 0 # offset to the final stack pointer
+
         self.label_counter = 0
         self.free_regs = ["$t0", "$t1", "$t2", "$t3"]
         self.free_float_regs = ["$f0", "$f1", "$f2", "$f3"]
@@ -193,6 +195,45 @@ class MipsGenerator:
 
         self.free_float_regs.append(reg)
 
+    def getSpOffset(self):
+        """
+            Retrieve the current $sp offset. The offset
+            is so that $sp+offset points to the bottom of the stackframe:
+
+            -------- <- $sp + offset
+            stackframe
+            -------- <- $sp
+
+            If a new value needs to be stored, use "sw $val offset($sp)" and increment
+            offset by 4.
+
+        :return: An integer that represents the offset.
+        """
+
+        return self.sp_offset
+
+    def incrementSpOffset(self, amount=4):
+        """
+            Increment the $sp offset by the specified amount (in bytes). Use positive values!
+            The default amount is 4.
+        :param amount: The amount of bytes that the $sp should be offset by.
+        :return: The new $sp offset;
+        """
+
+        self.sp_offset += amount
+
+        return self.sp_offset
+
+    def resetSpOffset(self):
+        """
+            Reset the $sp offset to its default value. This will set the
+            stackframe size to 0.
+        :return: The new $sp offset.
+        """
+
+        self.sp_offset = 0
+        return self.sp_offset
+
     def getFpOffset(self):
         """
             Retrieve the current fp offset.
@@ -238,10 +279,11 @@ class MipsGenerator:
                 'offset': the offset that will be added to the address stored in 'addr_reg'. Specify as integer.
         """
 
-        if is_float and not source_reg.startswith("$f"):
+        # added extra check for $fp
+        if is_float and (not source_reg.startswith("$f") or source_reg == "$fp"):
             raise Exception("Error when trying to store non-float register {} as float.".format(source_reg))
 
-        if not is_float and source_reg.startswith("$f"):
+        if not is_float and source_reg.startswith("$f") and source_reg != "$fp":
             raise Exception("Error when trying to store float register {} as non-float.".format(source_reg))
 
         command = "sw" if not is_float else "swc1"
@@ -267,6 +309,15 @@ class MipsGenerator:
             return "{} {}, {}({})\n".format(command, target_reg, offset, addr_reg)
 
     def storeVariable(self, source_reg, node) -> str:
+        """
+            Store a variable on the stack. If the variable is not yet present on the stack the
+            stackframe will be expanded to accomodate the variable. If the variable already exists,
+            the existing value will be adjusted.
+
+        :param source_reg: The register that contains the new value.
+        :param node: The node that contains information about the variable. This can be IdentifierExpr or VarDeclWithInit
+        :return:
+        """
         # node can be IdentifierExpr or VarDeclWithInit
         var_type = node.getExpressionType().toString() if isinstance(node, IdentifierExpr) else node.getType()
         # determine if the variable is a float
@@ -305,28 +356,35 @@ class MipsGenerator:
             if full_id in self.var_offset_dict:
                 # retrieve offset and store
 
-                offset = self.var_offset_dict[full_id]
+                reg, offset = self.var_offset_dict[full_id]
 
-                code = self.storeRegister(source_reg, "$fp", offset, is_float)
+                # store in "offset(source_reg)"
+                code = self.storeRegister(source_reg, reg, offset, is_float)
 
                 return code
             else:
                 # push new variable to the stack
 
-                cur_offset = self.getFpOffset()
-                # fp must start at -4
-                cur_offset = self.pushFpOffset() if cur_offset == 0 else cur_offset
+                # make place for the value
+                # this needs to happen before store since the $sp points at
+                # the most recently stored entry.
+                offset = self.incrementSpOffset()
+                code = self.storeRegister(source_reg, "$sp", offset, is_float)
 
-                self.var_offset_dict[full_id] = cur_offset
-
-                code = self.storeRegister(source_reg, "$fp", cur_offset, is_float)
-
-                # adjust fp offset for new variable
-                self.pushFpOffset()
+                # note here we place a value on the stack and assume that it is
+                # relative to the stack pointer. The only times a store needs to
+                # be relative to the $fp, is when placing function args on the stack.
+                self.var_offset_dict[full_id] = ("$sp", offset)
 
                 return code
 
     def loadVariable(self, id_node: IdentifierExpr) -> (str, str):
+        """
+            Load the specified variable into a temp register.
+
+        :param id_node: An IdentifierExpr that contains information about the variable.
+        :return: A pair of strings. The first string specifies the code, the second specifies the register.
+        """
         # determine if the variable is a float
         is_float = id_node.getExpressionType().toString() == "float"
 
@@ -359,11 +417,11 @@ class MipsGenerator:
             if full_id in self.var_offset_dict:
                 # retrieve offset and store
 
-                offset = self.var_offset_dict[full_id]
+                reg, offset = self.var_offset_dict[full_id]
 
-                return self.loadRegister("$fp", offset, is_float)
+                return self.loadRegister(reg, offset, is_float)
             else:
-                raise Exception("variable {} must already be stored on the stack".format(varname))
+                raise Exception("Error when loading variable '{}': variable is not yet stored on the stack".format(varname))
 
     ################################### CONSTANT EXPRESSIONS ###################################
 
@@ -416,7 +474,15 @@ class MipsGenerator:
         Return a constant char with its type and the register it's stored in
         """
         reg = self.getFreeReg()
-        code = "li {}, {}\n".format(reg, ord(expr.getCharValue()))
+
+        char_val = expr.getCharValue()[1:-1] # strip '
+        char_val = char_val.replace("\\\\", "\\")
+        char_val = char_val.replace("\\t", "\t")
+        char_val = char_val.replace("\\n","\n")
+        char_val = char_val.replace("\\0", "\0")
+        char_val = char_val.replace("\\'", "'")
+
+        code = "li {}, {}\n".format(reg, ord(char_val))
         return code, reg
 
     def stringConstantExpr(self, expr):
@@ -577,12 +643,44 @@ class MipsGenerator:
     def funcDef(self, node: FuncDef):
         code = ""
 
-        # we start processing a new function, to the function offset is zero.
-        self.resetFpOffset()
+        # set the frame pointer offset to zero
+        self.resetSpOffset()
+        # $sp+0 now points to the top of the former stackframe
 
-        # we increment the fp offset by 4 bytes for each parameter since each parameter is stored on the stack
-        for param in node.getParamList():
-            self.pushFpOffset()
+        # the stack structure at this moment
+        """
+            ----------
+            old $sp
+            ----------
+            old $ra
+            ----------
+            old t3
+            ----------
+            old t2
+            ----------
+            old t1
+            ----------
+            old t0
+            ----------
+            param_n-1
+            ----------
+            ...
+            ----------
+            param_0
+            ---------- <- $sp, $fp
+        """
+        # the stack structure will evolve after the $sp is adjusted
+        """
+            ----------
+            param_0
+            ---------- <- old $sp, $fp
+            local_vars
+            ---------- <- new $sp
+        """
+
+        # TODO make parameters accesible after $sp is adjusted
+        # TODO make offsets into pairs (reg, offset)
+
 
         # function label
         function_name = node.getFuncID()
@@ -600,68 +698,118 @@ class MipsGenerator:
         else:
             code += "jr $ra\n"
 
+        # adjust $sp at the beginning
+        code = "addi $sp, $sp, {}\n".format(self.getSpOffset()) + code
+
         # we don't return a register since a function definition does not return anything
         return code, -1
 
     def funcCallExpr(self, node: FuncCallExpr):
         code = ""
 
-        # save t0-t3 registers to stack
-        for reg in ["$t0", "$t1", "$t2", "$t3"]:
-            code += self.storeRegister(reg, "$fp", self.getFpOffset())
-            self.pushFpOffset()
+        # TODO add function call code.
 
-        # save return address on stack
-        code += self.storeRegister("$ra", "$fp", self.getFpOffset())
-        self.pushFpOffset()
+        # store $sp:
 
-        # store old frame pointer
-        code += self.storeRegister("$fp", "$fp", self.getFpOffset())
-        self.pushFpOffset()
+        """
+            local_vars
+            ---------- <- old $sp
+            old t3
+            ---------- <- old $sp-4
+            old t2
+            ---------- <- old $sp-8
+            old t1
+            ---------- <- old $sp-12
+            old t0
+            ---------- <- old $sp-16
+            old return addr
+            ----------
+            old frame_ptr
+            ----------
+            old stack_ptr
+            ---------- <- $fp + len(args)*4
+            param_n-1
+            ---------- <- $fp + (len(args)-1)*4
+            ...
+            ---------- <- $fp+4
+            param_0
+            ---------- <- $sp, $fp+0
+        """
 
-        # determine the next framepointer and store it into $s0
-        code += "addi $s0, $fp, {}\n".format(self.getFpOffset())
+        # here we create a bit of space in between two proper stackframes
+        # this space will be used to store $sp, $fp, $ra, $t0-$t3, and parameters
 
-        # resolve each argument expression
-        temp_new_fp_offset = 0  # offset relative to the new fp, used for storing function arguments.
+        temp_offset = 0
 
+        # save t0-t3, t0 last
+        temp_offset -= 4
+        code += self.storeRegister("$t3", "$sp", temp_offset)
+
+        temp_offset -= 4
+        code += self.storeRegister("$t2", "$sp", temp_offset)
+
+        temp_offset -= 4
+        code += self.storeRegister("$t1", "$sp", temp_offset)
+
+        temp_offset -= 4
+        code += self.storeRegister("$t0", "$sp", temp_offset)
+
+        # save old $ra
+        temp_offset -= 4
+        code += self.storeRegister("$ra", "$sp", temp_offset)
+
+        # save old $fp
+        temp_offset -= 4
+        code += self.storeRegister("$fp", "$sp", temp_offset)
+
+        # save old sp
+        temp_offset -= 4
+        code += self.storeRegister("$sp", "$sp", temp_offset)
+
+        # count params
+        # adjust $fp: $fp = $sp + temp_offset(neg) - len(args) * 4
+        code += "addi $fp, $sp, {}\n".format(temp_offset - len(node.getArguments()) * 4)
+
+        fp_arg_offset = 0
+
+        # save params on the stack relative to the $fp
         for i in range(0, len(node.getArguments())):
-            # resolve arg
             arg = node.getArguments()[i]
             arg_code, arg_reg = self.astNodeToMIPS(arg)
             code += arg_code
 
-            # store argument on callee's stackframe
-            code += self.storeRegister(arg_reg, "$s0", temp_new_fp_offset)
+            is_arg_float = arg.getExpressionType().toString() == "float"
+            code += self.storeRegister(arg_reg, "$fp", fp_arg_offset, is_float=is_arg_float)
 
-            # get full unique id of parameter
-            funcdef_node: FuncDef = self.function_defs[node.getFunctionID()]
+            fp_arg_offset += 4 # do this after since the $fp points to the a free stack place
+
+            funcdef_node = self.function_defs[node.getFunctionID().getIdentifierName()]
             param_name = funcdef_node.getParamList()[i].getParamID()
             function_scopename = funcdef_node.getSymbolTable().getName()
 
-            # add argument to var dict
-            self.var_offset_dict[function_scopename + "." + param_name] = temp_new_fp_offset
+            self.var_offset_dict[function_scopename + "." + param_name] = ("$fp", fp_arg_offset)
 
-            temp_new_fp_offset += 4
+        code += "addi $sp, $fp, 0\n"
+        # $fp and $sp point now to the first parameter
+        # the callee will adjust $sp to the end of the stackframe.
 
-        # jump and link
+        # call function
         code += "jal {}\n".format(node.getFunctionID().getIdentifierName())
 
-        # load the original frame ptr, this is stored right below the frame pointer of the called function
-        # before this instruction $fp is the callee's fp, after this instruction it is our own fp
-        code += self.loadRegister("$fp", 4, False, "$fp")
+        sp_location_rel_to_fp = len(node.getArguments()) * 4
 
-        self.popFpOffset()
-        code += self.loadRegister("$fp", self.getFpOffset(), False, "$ra")
+        # load $sp, this is just below the parameters relative to the current $fp
+        code += "lw $sp, {}($fp)\n".format(sp_location_rel_to_fp)
 
-        # restore registers from stack
-        for reg in ["$t3", "$t2", "$t1", "$t0"]:
-            # the $fp points to the top of the stack i.e. the beginning of the next variable
-            # since we need the current variable we first pop the stack
-            self.popFpOffset()
+        # load $fp
+        code += "lw $fp, {}($fp)\n".format(sp_location_rel_to_fp + 4)
 
-            # load register at top of stack
-            code += self.loadRegister("$fp", self.getFpOffset(), False, reg)
+
+        # load t0-t3
+        code += "lw $t3, {}($sp)\n".format(-4)
+        code += "lw $t3, {}($sp)\n".format(-8)
+        code += "lw $t3, {}($sp)\n".format(-12)
+        code += "lw $t3, {}($sp)\n".format(-16)
 
         retval_type = node.getExpressionType()
 
