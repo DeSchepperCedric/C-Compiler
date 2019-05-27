@@ -1047,7 +1047,6 @@ class LLVMGenerator:
         if is_global:
             code = "@{} = global {} zeroinitializer\n".format(array_id, array_code)
 
-
         else:
             array_id = table + "." + array_id
             code = self.allocate(array_id, array_code, False)
