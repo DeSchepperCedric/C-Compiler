@@ -240,25 +240,25 @@ class MipsGenerator:
         """
         return self.fp_offset
 
-    def pushFpOffset(self):
+    def pushFpOffset(self, change=4):
         """
-            Adjust the fp offset to accomodate one more variable on the stack.
+            Adjust the fp offset to accomodate 4 % change variable(s) on the stack.
 
             :return: The new value of the fp offset.
         """
 
         # 4 bytes
-        self.fp_offset -= 4
+        self.fp_offset -= change
 
         return self.fp_offset
 
-    def popFpOffset(self):
+    def popFpOffset(self, change=4):
         """
-            Adjust the fp offset to remove one variable from the stack.
+            Adjust the fp offset to remove 4 % change variable(s) from the stack.
             :return: The new value of the fp offset.
         """
 
-        self.fp_offset += 4
+        self.fp_offset += change
 
         return self.fp_offset
 
@@ -937,16 +937,58 @@ class MipsGenerator:
         pass
 
     def arrayDecl(self, node):
-        pass
+        # array size expression must be of a IntegerConstantExpression
+        array_size = node.getSizeExpr().getIntValue()
+
+        array_id = node.getID()
+        array_type, table = node.getSymbolTable().lookup(array_id)
+        array_type = self.getMipsType(array_type)
+        code = ""
+        is_global = node.getSymbolTable().isGlobal(array_id)
+        print(array_type)
+        if is_global:
+            array_string = "{}: .{}".format(array_id, array_type)
+            for i in range(0, array_size):
+                array_string += " 0,"
+
+            self.data_string += array_string[:-1] + "\n"
+
+        else:
+            # push new array to the stack using size
+            # get full var id
+            full_id = table + "." + array_id
+
+            # TODO make room on stack (and fill with zeros?)
+
+        return code, -1
 
     def arrayElementAssignment(self, node):
+        # TODO
+        # get start of array
+        # adjust offset with index
+        # store new value
         pass
 
     def arrayElementAccess(self, node):
+        # TODO
+        # get start of array
+        # adjust offset with index
+        # load value into reg
         pass
 
     def castExpr(self, node):
-        pass
+        """
+            Generate code to perform a cast to the specified type.
+        """
+        code, expr_reg = self.astNodeToMIPS(node.getExpr())  # convert expression to MIPS code
+
+        source_type = self.getMipsType(node.getExpr().getExpressionType())  # get type of expression
+        target_type = self.getMipsType(node.getTargetType())  # get target type
+
+        convert, convert_reg = self.convertToType(expr_reg, source_type, target_type)  # perform conversion
+
+        code += convert
+        return code, convert_reg  # return code, and the location of the conversion
 
     def prefixArithmetics(self, node, operation):
         pass
@@ -958,22 +1000,6 @@ class MipsGenerator:
 
     def arrayAccessHelperString(self, reg_to, reg_from, element_type, index, is_global):
         pass
-
-    def getStrongestType(self, a, b):
-        INTREP = ["int", "word"]
-        CHARREP = ["char", "character"]
-        BOOLREP = ["bool", "byte"]
-
-        if a == "float" or b == "float":
-            return "float"
-        elif a in INTREP or b in INTREP:
-            return "int"
-        elif a in CHARREP or b in CHARREP:
-            return "char"
-        elif a in BOOLREP or b in BOOLREP:
-            return "bool"
-        else:
-            raise Exception("Invalid call to getStrongestType for '{}' and '{}'".format(a, b))
 
     def convertIntegerToFloat(self, int_reg):
         # mtc1 $t0, $f0 : copy $t0 to $f0
