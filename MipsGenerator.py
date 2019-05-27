@@ -432,7 +432,7 @@ class MipsGenerator:
 
         code = ".text\n"
 
-        code += "jal main\n"  # jump to main function
+        code += "j main\n"  # jump to main function
 
         # discover function nodes
         for child in node.getChildren():
@@ -440,13 +440,14 @@ class MipsGenerator:
                 # add function decl node to list of functions
                 self.function_defs[child.getFuncID()] = child
 
-        # TODO add jump to main
-
         # process top level nodes
         for child in node.getChildren():
             child_code, child_reg = self.astNodeToMIPS(child)
             code += child_code
             # ignore register
+
+        # label end program to provide exit for main()
+        code += "program_end:\n"
 
         code = self.data_string + code
         return code
@@ -594,7 +595,10 @@ class MipsGenerator:
         code += func_body
 
         # return
-        code += "jr $ra\n"
+        if node.getFuncID() == "main":
+            code += "j end_program\n"
+        else:
+            code += "jr $ra\n"
 
         # we don't return a register since a function definition does not return anything
         return code, -1
