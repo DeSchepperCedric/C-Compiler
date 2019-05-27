@@ -550,7 +550,7 @@ class FuncDef(TopLevelNode):
     def getReturnType(self):
         return self.return_type
 
-    def getFuncID(self):
+    def getFuncID(self) -> str:
         return self.func_id
 
     def getPointerCount(self):
