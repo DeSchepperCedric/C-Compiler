@@ -484,9 +484,18 @@ class MipsGenerator:
             value = self.convertConstant(var_type, expr_type, node.getInitExpr().getValue())
             self.data_string += "{}: .{} {}\n".format(var_id, var_type, value)
         elif is_global and isinstance(node.getInitExpr(), AddressExpr):
-            # TODO handle AddressExpr
-            pass
+            addr_expr:AddressExpr = node.getInitExpr()
 
+            if not isinstance(addr_expr.getTargetExpr(), IdentifierExpr):
+                raise Exception("During global assignment only the address of variables can be taken.")
+
+            id:IdentifierExpr = addr_expr.getTargetExpr()
+
+            id_name = id.getIdentifierName()
+
+            self.data_string += "{}: .word {}\n".format(var_id, id_name)
+
+            # TODO check if this works?
         else:
             new_code, register = self.astNodeToMIPS(node.getInitExpr())
             code += new_code
@@ -1114,13 +1123,88 @@ class MipsGenerator:
         return code, -1
 
     def expressionStatement(self, node):
+        # TODO check of dit werkt, expressions hebben soms
+        # TODO return registers, dus de code gaat mss ook niet kloppen?
         return self.astNodeToMIPS(node.getExpression())
 
-    def addressExpr(self, node):
-        pass
+    def addressExpr(self, node: AddressExpr):
 
-    def pointerDerefExpr(self, node):
-        pass
+        identifier = node.getTargetArray().getIdentifierName()
+        array_type, scopename = node.getSymbolTable().lookup(identifier)
+
+        target = node.getTargetExpr()
+
+        if isinstance(target, IdentifierExpr):
+            # variable
+            # get variable from offset dict
+
+            # retrieve information about the variable
+            varname = target.getIdentifierName()
+            vartype, varscope = node.getSymbolTable().lookup(identifier)
+            full_id = varscope + "." + varname
+
+            if not full_id in self.var_offset_dict:
+                raise Exception("Variable with name '{}' is not present in offset list.".format(varname))
+
+            # take register and offset, and add together to obtain
+            # address
+            reg, offset = self.var_offset_dict[full_id]
+            addr_reg = self.getFreeReg()
+            code = "addi {}, {}, {}\n".format(addr_reg, reg, offset)
+
+            return code, addr_reg
+
+        elif isinstance(target, ArrayAccessExpr):
+            # array element
+            # get array name
+            #   -> get from offset dict
+            # process index
+
+            element_addr_code, element_addr_reg = self.arrayElementAddress(target)
+
+            return element_addr_code, element_addr_reg
+
+        else:
+            raise Exception("Cannot take address of node with type '{}'".format(str(type(target))))
+
+    def pointerDerefExpr(self, node: PointerDerefExpr):
+
+        # *x means, take the address contained in x and perform lw on it.
+
+        target = node.getTargetPtr()
+        is_float = (target.getExpressionType().toString() == "float")
+
+        if isinstance(target, IdentifierExpr):
+            code = ""
+
+            # get value stored at the identifier
+            id_code, id_reg = self.astNodeToMIPS(target)
+            code += id_code
+
+            deref_code, deref_reg = self.loadRegister(id_reg, 0, is_float)
+            code += deref_code
+
+            self.releaseReg(id_reg)
+
+            return code, deref_reg
+
+        elif isinstance(target, ArrayAccessExpr):
+            # get value stored in array entry
+
+            code = ""
+
+            arr_acc_code, arr_acc_reg = self.arrayElementAccess(target)
+            code += arr_acc_code
+
+            deref_code, deref_reg = self.loadRegister(arr_acc_reg, 0, is_float)
+            code += deref_code
+
+            self.releaseReg(arr_acc_reg)
+
+            return code, deref_reg
+
+        else:
+            raise Exception("Only variables and array entries can be dereferenced.")
 
     def arrayDecl(self, node):
         # array size expression must be of a IntegerConstantExpression
@@ -1148,7 +1232,7 @@ class MipsGenerator:
 
         return code, -1
 
-    def arrayElementAddress(self, node):
+    def arrayElementAddress(self, node: ArrayAccessExpr):
         """
         Example for global array:
         la $t3, array         # put address of array into $t3
