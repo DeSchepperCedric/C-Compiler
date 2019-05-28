@@ -404,7 +404,7 @@ class MipsGenerator:
         # add to data segment
         float_id = "float." + str(self.float_counter)
         self.float_counter += 1
-        self.data_string += "{}: .{} {}\n".format(float_id, "float", expr.getFloatValue())
+        self.data_string += "{}: .float {}\n".format(float_id, expr.getFloatValue())
         code = ""
 
         # aquire register
@@ -421,7 +421,7 @@ class MipsGenerator:
 
     def integerConstantExpr(self, expr):
         """
-        Return a constant integer with its type and the register it's stored in
+        Return a constant integer and the register it's stored in
         """
         reg = self.getFreeReg()
         code = "li {}, {}\n".format(reg, expr.getIntValue())
@@ -429,23 +429,35 @@ class MipsGenerator:
 
     def charConstantExpr(self, expr):
         """
-        Return a constant char with its type and the register it's stored in
+        Return a constant char and the register it's stored in
         """
         reg = self.getFreeReg()
 
         char_val = expr.getCharValue()[1:-1]  # strip '
-        char_val = char_val.replace("\\\\", "\\")
-        char_val = char_val.replace("\\t", "\t")
-        char_val = char_val.replace("\\n", "\n")
-        char_val = char_val.replace("\\0", "\0")
-        char_val = char_val.replace("\\'", "'")
+        char_val = self.handleSpecialCharacters(char_val)
 
         code = "li {}, {}\n".format(reg, ord(char_val))
         return code, reg
 
     def stringConstantExpr(self, expr):
-        # TODO handle strings
-        pass
+        """
+            Return a a constant string and the register it's stored in
+        """
+        string = "\"" + self.handleSpecialCharacters(expr.getStrValue()) + "\""
+        string_id = "string." + str(self.string_counter)
+        self.string_counter += 1
+        self.data_string += "{}: .asciiz {}\n".format(string_id, string)
+
+        register = self.getFreeReg()
+        return "la {}, {}\n".format(register, string_id), register
+
+    def handleSpecialCharacters(self, string):
+        string = string.replace("\\\\", "\\")
+        string = string.replace("\\t", "\t")
+        string = string.replace("\\n", "\n")
+        string = string.replace("\\0", "\0")
+        string = string.replace("\\'", "'")
+        return string
 
     ################################### AST NODES ###################################
 
@@ -817,7 +829,6 @@ class MipsGenerator:
 
         # get string
         string_expr = args.pop(0)
-
         if not isinstance(string_expr, StringConstantExpr):
             raise Exception("First argument to printf must be string constant.")
 

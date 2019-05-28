@@ -449,8 +449,6 @@ class ParserVisitor(CVisitor):
         if ctx.getChildCount() == 1:
             return self.manuallyVisitChild(ctx.getChild(0))
 
-        # TODO check constant
-
         # get left: child #0
         left = self.manuallyVisitChild(ctx.getChild(0))
         # child #1: "||" or "or"
@@ -464,8 +462,6 @@ class ParserVisitor(CVisitor):
         # equality expression
         if ctx.getChildCount() == 1:
             return self.manuallyVisitChild(ctx.getChild(0))
-
-        # TODO check constant
 
         # get left: child #0
         left = self.manuallyVisitChild(ctx.getChild(0))
@@ -486,10 +482,8 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == "==":
-            # TODO check constant
             return EqualityExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "!=":
-            # TODO check constant
             return InequalityExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for equality expr: {}".format(operator))
@@ -505,16 +499,12 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == ">":
-            # TODO check constant
             return CompGreater(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "<":
-            # TODO check constant
             return CompLess(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == ">=":
-            # TODO check constant
             return CompGreaterEqual(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "<=":
-            # TODO check constant
             return CompLessEqual(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for comparison expr: {}".format(operator))
@@ -530,10 +520,8 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == "+":
-            # TODO check constant
             return AddExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "-":
-            # TODO check constant
             return SubExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for additive expr: {}".format(operator))
@@ -549,13 +537,10 @@ class ParserVisitor(CVisitor):
         right = self.manuallyVisitChild(ctx.getChild(2))
 
         if operator == "*":
-            # TODO check constant
             return MulExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "/":
-            # TODO check constant
             return DivExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         elif operator == "%":
-            # TODO check constant
             return ModExpr(left, right).setLineNr(ctx.start.line).setColNr(ctx.start.column)
         else:
             raise Exception("Invalid operator for multiplicative expr: {}".format(operator))
@@ -598,7 +583,6 @@ class ParserVisitor(CVisitor):
             return SubExpr(IntegerConstantExpr(0), expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "not" or operator == '!':
-            # TODO check constant
             return LogicNotExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "*":
