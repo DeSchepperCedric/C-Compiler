@@ -323,6 +323,7 @@ class MipsGenerator:
 
                 return code
             else:
+
                 # push new variable to the stack
 
                 # make place for the value
@@ -330,7 +331,6 @@ class MipsGenerator:
                 # the most recently stored entry.
                 offset = self.incrementSpOffset()
                 code = self.storeRegister(source_reg, "$sp", offset, is_float)
-
                 # note here we place a value on the stack and assume that it is
                 # relative to the stack pointer. The only times a store needs to
                 # be relative to the $fp, is when placing function args on the stack.
@@ -381,7 +381,8 @@ class MipsGenerator:
 
                 return self.loadRegister(reg, offset, is_float)
             else:
-                raise Exception("Error when loading variable '{}': variable is not yet stored on the stack".format(varname))
+                raise Exception(
+                    "Error when loading variable '{}': variable is not yet stored on the stack".format(varname))
 
     ################################### CONSTANT EXPRESSIONS ###################################
 
@@ -496,7 +497,7 @@ class MipsGenerator:
             value = self.convertConstant(var_type, expr_type, node.getInitExpr().getValue())
             self.data_string += "{}: .{} {}\n".format(var_id, var_type, value)
         elif is_global and isinstance(node.getInitExpr(), AddressExpr):
-            addr_expr:AddressExpr = node.getInitExpr()
+            addr_expr: AddressExpr = node.getInitExpr()
 
             if not isinstance(addr_expr.getTargetExpr(), IdentifierExpr):
                 raise Exception("During global assignment only the address of variables can be taken.")
@@ -505,7 +506,6 @@ class MipsGenerator:
 
             self.data_string += "{}: .word {}\n".format(var_id, id_name)
 
-            # TODO check if this works?
         else:
             new_code, register = self.astNodeToMIPS(node.getInitExpr())
             code += new_code
@@ -820,8 +820,8 @@ class MipsGenerator:
         code += "lw $fp, {}($fp)\n".format(sp_location_rel_to_fp + 4)
 
         # load t0-t3
-        code += self.loadRegister("$sp", offset=-4,  is_float=False, target_reg="$t3")
-        code += self.loadRegister("$sp", offset=-8,  is_float=False, target_reg="$t2")
+        code += self.loadRegister("$sp", offset=-4, is_float=False, target_reg="$t3")
+        code += self.loadRegister("$sp", offset=-8, is_float=False, target_reg="$t2")
         code += self.loadRegister("$sp", offset=-12, is_float=False, target_reg="$t1")
         code += self.loadRegister("$sp", offset=-16, is_float=False, target_reg="$t0")
 
@@ -872,7 +872,6 @@ class MipsGenerator:
         substring_counter = 0
 
         for value in annotated_formatters:
-
 
             if isinstance(value, str):
                 # add string to data segment (label?)
@@ -1147,18 +1146,13 @@ class MipsGenerator:
 
     def addressExpr(self, node: AddressExpr):
 
-        identifier = node.getTargetArray().getIdentifierName()
-        array_type, scopename = node.getSymbolTable().lookup(identifier)
-
         target = node.getTargetExpr()
-
         if isinstance(target, IdentifierExpr):
             # variable
             # get variable from offset dict
-
             # retrieve information about the variable
             varname = target.getIdentifierName()
-            vartype, varscope = node.getSymbolTable().lookup(identifier)
+            vartype, varscope = node.getSymbolTable().lookup(varname)
             full_id = varscope + "." + varname
 
             if not full_id in self.var_offset_dict:
@@ -1191,7 +1185,6 @@ class MipsGenerator:
 
         target = node.getTargetPtr()
         is_float = (target.getExpressionType().toString() == "float")
-
         if isinstance(target, IdentifierExpr):
             code = ""
 
@@ -1222,7 +1215,10 @@ class MipsGenerator:
             return code, deref_reg
 
         else:
-            raise Exception("Only variables and array entries can be dereferenced.")
+            code, target_reg = self.astNodeToMIPS(target)
+            load, register = self.loadRegister(target_reg, 0, is_float)
+            code += load
+            return code, register
 
     def arrayDecl(self, node):
         # array size expression must be of a IntegerConstantExpression
@@ -1244,7 +1240,9 @@ class MipsGenerator:
             # push new array to the stack using size
             # get full var id
             full_id = table + "." + array_id
-            offset = self.incrementSpOffset(array_size * 4)
+
+            offset = self.getSpOffset()
+            self.incrementSpOffset(array_size * 4)
             self.var_offset_dict[full_id] = ("$sp", offset)
 
         return code, -1
@@ -1399,8 +1397,6 @@ class MipsGenerator:
 
     ############################################# TYPE METHODS #############################################
 
-
-
     def convertIntegerToFloat(self, int_reg) -> (str, str):
         """
             Convert the specified integer register into an float value.
@@ -1513,4 +1509,3 @@ class MipsGenerator:
         type_string = type_string.replace("bool", "byte")
         type_string = type_string.replace("char", "character")
         return type_string
-

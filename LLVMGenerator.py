@@ -14,6 +14,7 @@ class LLVMGenerator:
         self.array_sizes = dict()
 
     def astNodeToLLVM(self, node):
+        print(type(node))
         """
         Returns LLVM code string + register number
         Only function to call outside the class
