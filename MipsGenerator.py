@@ -86,7 +86,7 @@ class MipsGenerator:
             elif node.getFunctionID().getIdentifierName() == "scanf":
                 return self.scanfExpr(node)
             else:
-                return self.funcCallExpr(node)
+                return self.funcCallExprLooped(node)
 
         elif isinstance(node, AddExpr):
             return self.arithmeticExpr(node, "add")
@@ -832,6 +832,138 @@ class MipsGenerator:
         code += self.loadRegister("$sp", offset=-24, is_float=True, target_reg="$f3")
         code += self.loadRegister("$sp", offset=-28, is_float=True, target_reg="$f2")
         code += self.loadRegister("$sp", offset=-32, is_float=True, target_reg="$f1")
+
+        retval_type = node.getExpressionType()
+
+        if retval_type.toString() == "float":
+            ret_reg = self.getFreeFloatReg()
+            # copy $f31 into ret_reg
+            code += "mov.s {}, {}\n".format(ret_reg, self.float_return_reg)
+
+        else:
+            ret_reg = self.getFreeReg()
+            # copy $v0 into ret_reg
+            code += "move {}, {}\n".format(ret_reg, self.return_reg)
+
+        return code, ret_reg
+
+    def funcCallExprLooped(self, node: FuncCallExpr):
+        code = ""
+
+        code += "# call {}\n".format(node.getFunctionID().getIdentifierName())
+
+        """
+            local_vars
+            ---------- <- old $sp
+            old t3
+            ---------- <- old $sp-4
+            old t2
+            ---------- <- old $sp-8
+            old t1
+            ---------- <- old $sp-12
+            old t0
+            ---------- <- old $sp-16
+            old f4
+            ---------- <- old $sp-20
+            old f3
+            ---------- <- old $sp-24
+            old f2
+            ---------- <- old $sp-28
+            old f1
+            ---------- <- old $sp-32
+            old return addr
+            ----------
+            old frame_ptr
+            ----------
+            old stack_ptr
+            ---------- <- $fp + len(args)*4
+            param_n-1
+            ---------- <- $fp + (len(args)-1)*4
+            ...
+            ---------- <- $fp+4
+            param_0
+            ---------- <- $sp, $fp+0
+        """
+
+        # here we create a bit of space in between two proper stackframes
+        # this space will be used to store $sp, $fp, $ra, $t0-$t3, and parameters
+
+        temp_offset = 0
+
+        all_temp_regs = ["$t0", "$t1", "$t2", "$t3"]
+        all_float_regs = ["$f1", "$f2", "$f3", "$f4"]
+
+        used_temp_regs = list(set(self.free_regs).difference(all_temp_regs))
+        used_float_regs = list(set(self.free_float_regs).difference(all_float_regs))
+
+        for used_reg in used_temp_regs:
+            temp_offset -= 4
+            code += self.storeRegister(used_reg, "$sp", temp_offset, is_float=False)
+
+        for used_reg in used_float_regs:
+            temp_offset -= 4
+            code += self.storeRegister(used_reg, "$sp", temp_offset, is_float=True)
+
+        # save old $ra
+        temp_offset -= 4
+        code += self.storeRegister("$ra", "$sp", temp_offset)
+
+        # save old $fp
+        temp_offset -= 4
+        code += self.storeRegister("$fp", "$sp", temp_offset)
+
+        # save old sp
+        temp_offset -= 4
+        code += self.storeRegister("$sp", "$sp", temp_offset)
+
+        # count params
+        # adjust $fp: $fp = $sp + temp_offset(neg) - len(args) * 4
+        code += "addi $fp, $sp, {}\n".format(temp_offset - len(node.getArguments()) * 4)
+
+        fp_arg_offset = 0
+
+        # save params on the stack relative to the $fp
+        for i in range(0, len(node.getArguments())):
+            funcdef_node = self.function_defs[node.getFunctionID().getIdentifierName()]
+            param_name = funcdef_node.getParamList()[i].getParamID()
+
+            code += "# process param {}\n".format(param_name)
+            arg = node.getArguments()[i]
+            arg_code, arg_reg = self.astNodeToMIPS(arg)
+            code += arg_code
+
+            is_arg_float = arg.getExpressionType().toString() == "float"
+            code += self.storeRegister(arg_reg, "$fp", fp_arg_offset, is_float=is_arg_float)
+
+            fp_arg_offset += 4  # do this after since the $fp points to the a free stack place
+
+            # here we don't add variables to the var offset dict, since they are not used within
+            # the current function definition!
+
+        # note do this AFTER param evaluation, since the param eval still needs a working $sp!
+        code += "addi $sp, $fp, 0\n"
+        # $fp and $sp point now to the first parameter
+        # the callee will adjust $sp to the end of the stackframe.
+
+        # call function
+        code += "jal func_{}\n".format(node.getFunctionID().getIdentifierName())
+
+        sp_location_rel_to_fp = len(node.getArguments()) * 4
+
+        # load $sp, this is just below the parameters relative to the current $fp
+        code += "lw $sp, {}($fp)\n".format(sp_location_rel_to_fp)
+
+        # load $fp
+        code += "lw $fp, {}($fp)\n".format(sp_location_rel_to_fp + 4)
+
+        temp_offset = 0
+        for used_reg in used_temp_regs:
+            temp_offset -= 4
+            code += self.loadRegister("$sp", offset=temp_offset, is_float=False, target_reg=used_reg)
+
+        for used_reg in used_float_regs:
+            temp_offset -= 4
+            code += self.loadRegister("$sp", offset=temp_offset, is_float=True, target_reg=used_reg)
 
         retval_type = node.getExpressionType()
 
