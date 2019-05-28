@@ -850,9 +850,12 @@ class MipsGenerator:
     def printfExpr(self, node: FuncCallExpr):
         """
             Process a call to printf()
-        :param node:
-        :return:
+        :param node: The FuncCallExpr object that represents the call to printf()
+        :return: A pair (code, -1) with code being the MIPS code needed for a call to printf().
         """
+
+        # TODO special case with one argument of type char*
+        # simply retrieve the address from the var and doe syscall
 
         # get args
         args = node.getArguments()
@@ -950,6 +953,14 @@ class MipsGenerator:
 
         return code, -1
 
+    def scanfExpr(self, node: FuncCallExpr):
+        """
+            Process a call to scanf().
+        :param node: The FuncCallExpr object that represents the call to scanf()
+        :return: A pair (code, -1) with code
+        """
+        pass
+
     def split_formatted_string(self, string):
         """
             Split a formatted string into formatters and normal strings.
@@ -959,7 +970,11 @@ class MipsGenerator:
         :return: A list whose elements are either formatters (%f, %d, etc) or normal strings.
         """
 
-        return re.split(r'((?<!%)%[dfsc])', string)
+        split = re.split(r'((?<!%)%[dfsc])', string)
+
+        split = list(filter(lambda S: len(S) > 0, split))
+
+        return split
 
     def pair_formatters_values(self, split_string, expression_list):
         """
@@ -1148,9 +1163,6 @@ class MipsGenerator:
         return code, -1
 
     def addressExpr(self, node: AddressExpr):
-
-        identifier = node.getTargetArray().getIdentifierName()
-        array_type, scopename = node.getSymbolTable().lookup(identifier)
 
         target = node.getTargetExpr()
 
