@@ -163,7 +163,7 @@ class MipsGenerator:
 
     def releaseReg(self, reg: str):
         """
-            Mark the specified temp register as available.
+            Mark the specified register as available.
         """
 
         if reg.startswith("$t"):
@@ -213,7 +213,8 @@ class MipsGenerator:
         :param amount: The amount of bytes that the $sp should be offset by.
         :return: The new $sp offset;
         """
-
+        if amount % 4 != 0:
+            raise Exception("Amount of bytes should be multiple of 4.")
         self.sp_offset += amount
 
         return self.sp_offset
@@ -515,12 +516,9 @@ class MipsGenerator:
         if_code, reg = self.astNodeToMIPS(node.getIfBody())
         else_code, reg = self.astNodeToMIPS(node.getElseBody())
 
-        cond_label_id = self.getUniqueLabelId()
-        if_label_id = self.getUniqueLabelId()
-        else_label_id = self.getUniqueLabelId()
-        endif_label_id = self.getUniqueLabelId()
+        label = self.getUniqueLabelId()
 
-        code = "cond_{}:\n".format(cond_label_id)
+        code = "cond_{}:\n".format(label)
         code += cond_code
 
         if is_float:
@@ -528,26 +526,26 @@ class MipsGenerator:
 
             raise Exception("If statements with float are not yet implemented.")
 
-            code += "bc1f else_branch_{}\n".format(else_label_id)
+            code += "bc1f else_branch_{}\n".format(label)
         else:
             # non-float, simple branch statement is enough
             # if the result is false => go to else
-            code += "beqz {}, else_branch_{}\n".format(cond_reg, else_label_id)
+            code += "beqz {}, else_branch_{}\n".format(cond_reg, label)
 
-        code += "if_branch_{}:\n".format(if_label_id)
+        code += "if_branch_{}:\n".format(label)
         code += if_code
 
         # jump to end
-        code += "j endif_{}\n".format(endif_label_id)
+        code += "j endif_{}\n".format(label)
 
-        code += "else_branch_{}:\n".format(else_label_id)
+        code += "else_branch_{}:\n".format(label)
         code += else_code
 
         # jump to end
-        code += "j endif_{}:\n".format(endif_label_id)
+        code += "j endif_{}:\n".format(label)
 
         # end of branch statement
-        code += "endif_{}:\n".format(endif_label_id)
+        code += "endif_{}:\n".format(label)
 
         return code, -1
 
@@ -1053,17 +1051,31 @@ class MipsGenerator:
             code += code_left
             code += code_right
 
+        label = self.getUniqueLabelId()
+        register = self.getFreeReg()
+
         code += "{} {}, {}\n".format(op, reg_left, reg_right)
+        # if comparison is False, go to comp_false
+        code += "bc1f comp_false_{}\n".format(label)
+
+        code += "comp_true_{}:\n".format(label)
+        code += "li {}, 1\n".format(register)
+        code += "j comp_end_{}\n".format(label)
+
+        code += "comp_false_{}\n".format(label)
+        code = "li {}, 0\n".format(register)
+        code += "j comp_end_{}\n".format(label)
+
+        code += "comp_end_{}:\n".format(label)
 
         self.releaseReg(reg_left)
         self.releaseReg(reg_right)
 
-        return code, - 1
+        return code, register
 
     def assignmentExpr(self, node):
         # array[element] = value has to be done differently
         if isinstance(node.getLeft(), ArrayAccessExpr):
-            # TODO handle arrays
             return self.arrayElementAssignment(node)
 
         code, register = self.astNodeToMIPS(node.getRight())
@@ -1110,24 +1122,81 @@ class MipsGenerator:
             # push new array to the stack using size
             # get full var id
             full_id = table + "." + array_id
-
-            # TODO make room on stack (and fill with zeros?)
+            offset = self.incrementSpOffset(array_size * 4)
+            self.var_offset_dict[full_id] = ("sp", offset)
 
         return code, -1
 
+    def arrayElementAddress(self, node):
+        """
+        Example for global array:
+        la $t3, array         # put address of array into $t3
+        li $t2, 6            # put the index into $t2
+        add $t2, $t2, $t2    # double the index
+        add $t2, $t2, $t2    # double the index again (now 4x)
+        add $t1, $t2, $t3    # combine the two components of the address
+        """
+        # get address of array
+        # use add since otherwise extra register to store 4 is needed
+
+        code, index_reg = self.astNodeToMIPS(node.getIndexArray())
+        index_type = self.getMipsType(node.getIndexArray.getExpressionType())
+
+        if index_type == "float":
+            convert, index_reg = self.convertFloatToInteger(index_reg)
+            code += convert
+
+        identifier = node.getTargetArray().getIdentifierName()
+        array_type, scopename = node.getSymbolTable().lookup(identifier)
+        is_global = node.getSymbolTable().isGlobal(identifier)
+
+        address_reg = self.getFreeReg()
+
+        # put address of array into address_reg
+        if is_global:
+            code += "la {}, {}".format(address_reg, identifier)
+        else:
+            identifier = scopename + "." + identifier
+            reg, offset = self.var_offset_dict[identifier]
+            code += "addi {}, {}, {}\n".format(address_reg, reg, offset)
+
+        # double the index twice ( = 4 * index)
+        code += "add {}, {}, {}".format(index_reg, index_reg, index_reg)
+        code += "add {}, {}, {}".format(index_reg, index_reg, index_reg)
+
+        # combine the two components of the address
+        code += "add {}, {}, {}".format(address_reg, address_reg, index_reg)
+
+        self.releaseReg(index_reg)
+        return code, address_reg
+
     def arrayElementAssignment(self, node):
-        # TODO
-        # get start of array
-        # adjust offset with index
-        # store new value
-        pass
+        code = ""
+
+        left_code, address_reg = self.arrayElementAddress(node.getLeft())
+        right_code, value_reg = self.astNodeToMIPS(node.getRight())
+
+        code += left_code
+        code += right_code
+
+        is_float = self.getMipsType(node.getRight().getExpressionType()) == "float"
+
+        code += self.storeRegister(value_reg, address_reg, 0, is_float)
+        self.releaseReg(address_reg)
+        self.releaseReg(value_reg)
+        return code, -1
 
     def arrayElementAccess(self, node):
-        # TODO
-        # get start of array
-        # adjust offset with index
-        # load value into reg
-        pass
+        code, address_reg = self.arrayElementAddress(node)
+
+        element_type = self.getMipsType(node.getExpressionType())
+        is_float = element_type == "float"
+
+        # load array element into register
+        load, target_reg = self.loadRegister(address_reg, 0, is_float)
+        code += load
+        self.releaseReg(address_reg)
+        return code, target_reg
 
     def castExpr(self, node):
         """
@@ -1152,8 +1221,7 @@ class MipsGenerator:
 
     ############################################# TYPE METHODS #############################################
 
-    def arrayAccessHelperString(self, reg_to, reg_from, element_type, index, is_global):
-        pass
+
 
     def convertIntegerToFloat(self, int_reg) -> (str, str):
         """
@@ -1267,3 +1335,4 @@ class MipsGenerator:
         type_string = type_string.replace("bool", "byte")
         type_string = type_string.replace("char", "character")
         return type_string
+
