@@ -83,6 +83,8 @@ class MipsGenerator:
             # manual printf processing is easier
             if node.getFunctionID().getIdentifierName() == "printf":
                 return self.printfExpr(node)
+            elif node.getFunctionID().getIdentifierName() == "scanf":
+                return self.scanfExpr(node)
             else:
                 return self.funcCallExpr(node)
 
@@ -848,9 +850,12 @@ class MipsGenerator:
     def printfExpr(self, node: FuncCallExpr):
         """
             Process a call to printf()
-        :param node:
-        :return:
+        :param node: The FuncCallExpr object that represents the call to printf()
+        :return: A pair (code, -1) with code being the MIPS code needed for a call to printf().
         """
+
+        # TODO special case with one argument of type char*
+        # simply retrieve the address from the var and doe syscall
 
         # get args
         args = node.getArguments()
@@ -947,6 +952,61 @@ class MipsGenerator:
 
         return code, -1
 
+    def scanfExpr(self, node: FuncCallExpr):
+        """
+            Process a call to scanf().
+        :param node: The FuncCallExpr object that represents the call to scanf()
+        :return: A pair (code, -1) with code
+        """
+
+        code = ""
+
+        # get args
+        args = node.getArguments()
+
+        if len(args) != 2:
+            raise Exception("Invalid number of arguments for scanf. Expected 2, got {}.".format(len(args)))
+        
+        formatter_expr = args[0]
+        target_expr    = args[1]
+
+        if not isinstance(formatter_expr, StringConstantExpr):
+            raise Exception("First argument to scanf must be string constant.")
+
+        formatter_str = formatter_expr.getStrValue()
+
+        target_code, target_addr_reg = self.astNodeToMIPS(target_expr)
+        # target_addr_reg contains the address where the value needs to be stored.
+
+        code += target_code
+
+        if formatter_str == "%d":
+            code += "li $v0, 5\n"
+            code += "syscall\n"
+            code += self.storeRegister("$v0", target_addr_reg, 0, is_float=False)
+        elif formatter_str == "%f":
+            code += "li $v0, 6\n"
+            code += "syscall\n"
+            code += self.storeRegister("$f0", target_addr_reg, 0, is_float=True)
+        elif formatter_str == "%s":
+            code += "li $v0, 8\n"
+
+            # $a0 contains the address of the string.
+            code += "move $a0, {}\n".format(target_addr_reg)
+            code += "li $a1, 256\n"
+
+            code += "syscall\n"
+        elif formatter_str == "%c":
+            code += "li $v0, 12\n"
+            code += "syscall\n"
+            code += self.storeRegister("$v0", target_addr_reg, 0, is_float=False)
+        else:
+            raise Exception("Invalid formatter code for scanf: '{}'".format(formatter_str))
+
+        return code, -1
+
+
+
     def split_formatted_string(self, string):
         """
             Split a formatted string into formatters and normal strings.
@@ -956,7 +1016,11 @@ class MipsGenerator:
         :return: A list whose elements are either formatters (%f, %d, etc) or normal strings.
         """
 
-        return re.split(r'((?<!%)%[dfsc])', string)
+        split = re.split(r'((?<!%)%[dfsc])', string)
+
+        split = list(filter(lambda S: len(S) > 0, split))
+
+        return split
 
     def pair_formatters_values(self, split_string, expression_list):
         """
