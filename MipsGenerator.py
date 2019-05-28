@@ -1169,7 +1169,10 @@ class MipsGenerator:
 
         return code, -1
 
-    def arrayElementAddress(self, node):
+    def arrayElementAddress(self, node: ArrayAccessExpr):
+        """
+        Returns the address of an element of the array
+        """
         """
         Example for global array:
         la $t3, array         # put address of array into $t3
