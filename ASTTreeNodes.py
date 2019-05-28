@@ -2748,6 +2748,8 @@ class PlusPrefixExpr(Expression):
             Returns updated node (when possible) and dict with constant values
         """
         self.expression, constants = self.expression.constantFolding(constants, while_body)
+
+
         return self, constants
 
 

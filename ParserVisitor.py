@@ -590,12 +590,12 @@ class ParserVisitor(CVisitor):
         expr = self.manuallyVisitChild(ctx.getChild(1))
 
         if operator == "+":
-            # TODO check constant
-            return PlusPrefixExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+            # handle +x by doing 0 + x
+            return AddExpr(IntegerConstantExpr(0), expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "-":
-            # TODO check constant
-            return MinPrefixExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+            # handle -x by doing 0 - x
+            return SubExpr(IntegerConstantExpr(0), expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "not" or operator == '!':
             # TODO check constant
