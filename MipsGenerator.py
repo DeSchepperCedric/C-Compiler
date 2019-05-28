@@ -381,8 +381,7 @@ class MipsGenerator:
 
                 return self.loadRegister(reg, offset, is_float)
             else:
-                raise Exception(
-                    "Error when loading variable '{}': variable is not yet stored on the stack".format(varname))
+                raise Exception("Error when loading variable '{}': variable is not yet stored on the stack".format(varname))
 
     ################################### CONSTANT EXPRESSIONS ###################################
 
@@ -468,7 +467,7 @@ class MipsGenerator:
 
         code = ".text\n"
 
-        code += "j main\n"  # jump to main function
+        code += "j func_main\n"  # jump to main function
 
         # discover function nodes
         for child in node.getChildren():
@@ -613,10 +612,6 @@ class MipsGenerator:
         # the stack structure at this moment
         """
             ----------
-            old $sp
-            ----------
-            old $ra
-            ----------
             old t3
             ----------
             old t2
@@ -625,6 +620,20 @@ class MipsGenerator:
             ----------
             old t0
             ----------
+            old f4
+            ----------
+            old f3
+            ----------
+            old f2
+            ----------
+            old f1
+            ----------
+            old return addr
+            ----------
+            old frame_ptr
+            ----------
+            old stack_ptr
+            ----------
             param_n-1
             ----------
             ...
@@ -632,11 +641,12 @@ class MipsGenerator:
             param_0
             ---------- <- $sp, $fp
         """
+
         # the stack structure will evolve after the $sp is adjusted
         """
             ----------
             param_0
-            ---------- <- old $sp, $fp
+            ---------- <- $fp
             local_vars
             ---------- <- new $sp
         """
@@ -644,7 +654,18 @@ class MipsGenerator:
         function_doc = "\n### {} ###\n".format(node.getFuncID())
 
         # function label
-        func_label = "{}:\n".format(node.getFuncID())
+        func_label = "func_{}:\n".format(node.getFuncID())
+
+        fp_arg_offset = 0
+
+        # add function params to offset dict
+        for param in node.getParamList():
+            param_name = param.getParamID()
+            function_scopename = node.getSymbolTable().getName()
+
+            self.var_offset_dict[function_scopename + "." + param_name] = ("$fp", fp_arg_offset)
+
+            fp_arg_offset += 4
 
         # function body
         # return value is placed into $v0 or $f31 by a return expression
@@ -761,7 +782,6 @@ class MipsGenerator:
         for i in range(0, len(node.getArguments())):
             funcdef_node = self.function_defs[node.getFunctionID().getIdentifierName()]
             param_name = funcdef_node.getParamList()[i].getParamID()
-            function_scopename = funcdef_node.getSymbolTable().getName()
 
             code += "# process param {}\n".format(param_name)
             arg = node.getArguments()[i]
@@ -773,7 +793,8 @@ class MipsGenerator:
 
             fp_arg_offset += 4  # do this after since the $fp points to the a free stack place
 
-            self.var_offset_dict[function_scopename + "." + param_name] = ("$fp", fp_arg_offset)
+            # here we don't add variables to the var offset dict, since they are not used within
+            # the current function definition!
 
         # note do this AFTER param evaluation, since the param eval still needs a working $sp!
         code += "addi $sp, $fp, 0\n"
@@ -781,7 +802,7 @@ class MipsGenerator:
         # the callee will adjust $sp to the end of the stackframe.
 
         # call function
-        code += "jal {}\n".format(node.getFunctionID().getIdentifierName())
+        code += "jal func_{}\n".format(node.getFunctionID().getIdentifierName())
 
         sp_location_rel_to_fp = len(node.getArguments()) * 4
 
@@ -813,7 +834,7 @@ class MipsGenerator:
         else:
             ret_reg = self.getFreeReg()
             # copy $v0 into ret_reg
-            code += "move {}, {}, 0\n".format(ret_reg, self.return_reg)
+            code += "move {}, {}\n".format(ret_reg, self.return_reg)
 
         return code, ret_reg
 
@@ -883,7 +904,7 @@ class MipsGenerator:
 
                 elif formatter == "%f":
                     # place argument
-                    code += "move $f12, {}\n".format(arg_reg)
+                    code += "mov.s $f12, {}\n".format(arg_reg)
 
                     # place syscall code
                     code += "li $v0, 2\n"
