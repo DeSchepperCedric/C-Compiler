@@ -268,7 +268,7 @@ class MipsGenerator:
         else:
             return "{} {}, {}({})\n".format(command, target_reg, offset, addr_reg)
 
-    def storeVariable(self, source_reg, node) -> str:
+    def storeVariable(self, source_reg, node: [IdentifierExpr, VarDeclWithInit]) -> str:
         """
             Store a variable on the stack. If the variable is not yet present on the stack the
             stackframe will be expanded to accomodate the variable. If the variable already exists,
@@ -1113,8 +1113,6 @@ class MipsGenerator:
             self.releaseReg(reg_right)
             return code, reg_left
 
-
-
     def assignmentExpr(self, node):
         # array[element] = value has to be done differently
         if isinstance(node.getLeft(), ArrayAccessExpr):
@@ -1135,7 +1133,10 @@ class MipsGenerator:
         return code, -1
 
     def expressionStatement(self, node):
-        return self.astNodeToMIPS(node.getExpression())
+        code, register = self.astNodeToMIPS(node.getExpression())
+        if register != -1:
+            self.releaseReg(register)
+        return code, -1
 
     def addressExpr(self, node):
         pass
@@ -1255,10 +1256,63 @@ class MipsGenerator:
         return code, convert_reg  # return code, and the location of the conversion
 
     def prefixArithmetics(self, node, operation):
-        pass
+        target = node.getExpr()
+        expr_type = self.getMipsType(target.getExpressionType())
+        code, register = self.astNodeToMIPS(target)
+
+        operation = "{}.s" if expr_type == "float" else operation
+
+        constant = FloatConstantExpr(1.0) if expr_type == "float" else IntegerConstantExpr(1)
+
+        constant_code, reg = self.astNodeToMIPS(IntegerConstantExpr(1.0))
+        code += constant_code
+        code += "{} {}, {}, {}\n".format(operation, register, register, reg)
+        self.releaseReg(reg)
+
+        if isinstance(target, IdentifierExpr):
+            code += self.storeVariable(register, target)
+            return code, register
+
+        elif isinstance(target, ArrayAccessExpr):
+            array_code, array_reg = self.arrayElementAddress(target)
+            code += array_code
+            code += self.storeRegister(register, array_reg, 0, expr_type == "float")
+            self.releaseReg(register)
+
+            return code, array_reg
+
+        else:
+            raise Exception("Prefix arithmetics aren't supported for type {}".format(type(target)))
 
     def postfixArithmetics(self, node, operation):
-        pass
+        target = node.getExpr()
+        expr_type = self.getMipsType(target.getExpressionType())
+        code, register = self.astNodeToMIPS(target)
+
+        operation = "{}.s" if expr_type == "float" else operation
+
+        constant = FloatConstantExpr(1.0) if expr_type == "float" else IntegerConstantExpr(1)
+        new_register = self.getFreeFloatReg() if expr_type == "float" else self.getFreeReg()
+        constant_code, reg = self.astNodeToMIPS(IntegerConstantExpr(1.0))
+        code += constant_code
+        code += "{} {}, {}, {}\n".format(operation, new_register, register, reg)
+        self.releaseReg(reg)
+
+        if isinstance(target, IdentifierExpr):
+            code += self.storeVariable(new_register, target)
+            self.releaseReg(new_register)
+            return code, register
+
+        elif isinstance(target, ArrayAccessExpr):
+            array_code, array_reg = self.arrayElementAddress(target)
+            code += array_code
+            code += self.storeRegister(new_register, array_reg, 0, expr_type == "float")
+            self.releaseReg(new_register)
+            self.releaseReg(array_reg)
+            return code, register
+
+        else:
+            raise Exception("Prefix arithmetics aren't supported for type {}".format(type(target)))
 
     ############################################# TYPE METHODS #############################################
 

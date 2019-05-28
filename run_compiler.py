@@ -14,6 +14,7 @@ from CompilerException import ParserException
 from LLVMGenerator import LLVMGenerator
 from MipsGenerator import MipsGenerator
 
+
 def run_compiler(source_file_path, output_name, target_language):
     in_stream = FileStream(source_file_path)
     lexer = CLexer(in_stream)
@@ -29,11 +30,11 @@ def run_compiler(source_file_path, output_name, target_language):
         raise ParserException()
 
     visitor = ParserVisitor()
-    ast_tree = visitor.visitProgram(parse_tree) # create AST
+    ast_tree = visitor.visitProgram(parse_tree)  # create AST
 
-    ast_tree.genSymbolTable()                   # annotate AST with types and symbol table
-    ast_tree.constantFolding(dict())            # constant folding and constant propagation
-    ast_tree.pruneDeadCode()                    # prune after continue, return and break
+    ast_tree.genSymbolTable()               # annotate AST with types and symbol table
+    ast_tree.constantFolding(dict())        # constant folding and constant propagation
+    ast_tree.pruneDeadCode()                # prune after continue, return and break
 
     symbol_table = ast_tree.getSymbolTable()
 
@@ -58,8 +59,6 @@ def run_compiler(source_file_path, output_name, target_language):
             mips_file.write(mips_code)
 
 
-
-
 def main(argv):
     target_language = argv[1].lower()
     # the name that will be used to form output files
@@ -70,11 +69,12 @@ def main(argv):
         raise Exception("Invalid target language {}. Must be llvm or mips.".format(target_language))
 
     try:
-        run_compiler(source_file_path = argv[2], output_name=output_name, target_language=target_language)
+        run_compiler(source_file_path=argv[2], output_name=output_name, target_language=target_language)
     except CompilerException as e:
         Logger.error("Compiler was terminated due to errors in the specified C source file.")
-    #except Exception as e:
-     #   Logger.error("Unexpected error of type '{}': {}".format(type(e), str(e)))
+    # except Exception as e:
+    #   Logger.error("Unexpected error of type '{}': {}".format(type(e), str(e)))
+
 
 if __name__ == "__main__":
     main(sys.argv)
