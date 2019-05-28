@@ -111,17 +111,17 @@ class MipsGenerator:
 
         # format here is (node, int-op, float-op)
         elif isinstance(node, EqualityExpr):
-            return self.comparisonExpr(node, "eq")
+            return self.comparisonExpr(node, "seq", "c.eq.s", False)
         elif isinstance(node, InequalityExpr):
-            return self.comparisonExpr(node, "ne")
+            return self.comparisonExpr(node, "sne", 'c.eq.s', True)
         elif isinstance(node, CompGreater):
-            return self.comparisonExpr(node, "gt")
+            return self.comparisonExpr(node, "sgt", "c.le.s", True)
         elif isinstance(node, CompLess):
-            return self.comparisonExpr(node, "lt")
+            return self.comparisonExpr(node, "slt", "c.lt.s", False)
         elif isinstance(node, CompGreaterEqual):
-            return self.comparisonExpr(node, "ge")
+            return self.comparisonExpr(node, "sge", "c.lt.s", True)
         elif isinstance(node, CompLessEqual):
-            return self.comparisonExpr(node, "le")
+            return self.comparisonExpr(node, "sle", "c.le.s", False)
 
         elif isinstance(node, ReturnStatement):
             return "", -1
@@ -534,7 +534,7 @@ class MipsGenerator:
 
         if is_float:
             # float must first be evaluated, then the bit must be checked
-
+            # TODO handle floats
             raise Exception("If statements with float are not yet implemented.")
 
             code += "bc1f else_branch_{}\n".format(label)
@@ -553,7 +553,7 @@ class MipsGenerator:
         code += else_code
 
         # jump to end
-        code += "j endif_{}:\n".format(label)
+        code += "j endif_{}\n".format(label)
 
         # end of branch statement
         code += "endif_{}:\n".format(label)
@@ -1058,12 +1058,11 @@ class MipsGenerator:
         # this expression has a register, but it is a technical register that should not be used further
         return code, -1
 
-    def comparisonExpr(self, node, op):
+    def comparisonExpr(self, node, int_op, float_op, reverse):
         # cond = (src1 op src2)
         # op src, src2
         # int -> op
         # float ->  "c." + op + ".s"
-
         code = ""
 
         type_left = node.getLeft().getExpressionType().toString()
@@ -1076,34 +1075,45 @@ class MipsGenerator:
         code += code_right
 
         if type_left == "float" or type_right == "float":
-            op = "c." + op + ".s"
+            # when dealing with floats, branches are necessary
+            # no set operation for floats like slt
             code_left, reg_left = self.convertToType(reg_left, type_left, "float")
             code_right, reg_right = self.convertToType(reg_right, type_right, "float")
 
             code += code_left
             code += code_right
 
-        label = self.getUniqueLabelId()
-        register = self.getFreeReg()
+            label = self.getUniqueLabelId()
+            register = self.getFreeReg()
 
-        code += "{} {}, {}\n".format(op, reg_left, reg_right)
-        # if comparison is False, go to comp_false
-        code += "bc1f comp_false_{}\n".format(label)
+            code += "{} {}, {}\n".format(float_op, reg_left, reg_right)
 
-        code += "comp_true_{}:\n".format(label)
-        code += "li {}, 1\n".format(register)
-        code += "j comp_end_{}\n".format(label)
+            true_value = 1 if not reverse else 0
+            false_value = 0 if not reverse else 1
 
-        code += "comp_false_{}\n".format(label)
-        code = "li {}, 0\n".format(register)
-        code += "j comp_end_{}\n".format(label)
+            code += "bc1t comp_true_{}\n".format(label)
 
-        code += "comp_end_{}:\n".format(label)
+            code += "comp_false_{}:\n".format(label)  # false
+            code += "li {}, {}\n".format(register, false_value)
+            code += "j comp_end_{}\n".format(label)
 
-        self.releaseReg(reg_left)
-        self.releaseReg(reg_right)
+            code += "comp_true_{}:\n".format(label)  # true
+            code += "li {}, {}\n".format(register, true_value)
+            code += "j comp_end_{}\n".format(label)
 
-        return code, register
+            code += "comp_end_{}:\n".format(label)
+
+            self.releaseReg(reg_left)
+            self.releaseReg(reg_right)
+            return code, register
+        else:
+
+            # re-use reg_left as destination address
+            code += "{} {}, {}, {}\n".format(int_op, reg_left, reg_left, reg_right)
+            self.releaseReg(reg_right)
+            return code, reg_left
+
+
 
     def assignmentExpr(self, node):
         # array[element] = value has to be done differently

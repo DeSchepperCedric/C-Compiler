@@ -32,13 +32,10 @@ def run_compiler(source_file_path, output_name, target_language):
     ast_tree = visitor.visitProgram(parse_tree) # create AST
 
     ast_tree.genSymbolTable()                   # annotate AST with types and symbol table
-    ast_tree.constantFolding(dict())
+    ast_tree.constantFolding(dict())            # constant folding and constant propagation
     ast_tree.pruneDeadCode()                    # prune after continue, return and break
 
     symbol_table = ast_tree.getSymbolTable()
-
-    # constant folding
-    # pruning
 
     # create output dir
     os.makedirs("./output/", exist_ok=True)
