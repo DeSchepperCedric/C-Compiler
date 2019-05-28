@@ -23,10 +23,12 @@ class MipsGenerator:
 
         self.label_counter = 0
         self.free_regs = ["$t0", "$t1", "$t2", "$t3"]
-        self.free_float_regs = ["$f0", "$f1", "$f2", "$f3"]
+        self.free_float_regs = ["$f1", "$f2", "$f3", "$f4"]
+
+        # note: $v0, $f0 and $f12 are reserved.
 
         self.float_return_reg = "$f31"
-        self.return_reg = "$v0"
+        self.return_reg = "$v1"
 
     def astNodeToMIPS(self, node):
         """
@@ -187,19 +189,6 @@ class MipsGenerator:
 
         return self.free_float_regs.pop()
 
-    def releaseFloatReg(self, reg):
-        """
-            Mark the specified float register as available.
-        """
-
-        if reg in self.free_float_regs:
-            raise Exception("Error when releasing float reg '{}': float register is already free.".format(reg))
-
-        if not reg.startswith("$f"):
-            raise Exception("Specified register '{}' is not a float register.".format(reg))
-
-        self.free_float_regs.append(reg)
-
     def getSpOffset(self):
         """
             Retrieve the current $sp offset. The offset
@@ -260,7 +249,7 @@ class MipsGenerator:
 
         return "{} {}, {}({})\n".format(command, source_reg, offset, addr_reg)
 
-    def loadRegister(self, addr_reg: str, offset, is_float=False, target_reg=None):
+    def loadRegister(self, addr_reg: str, offset, is_float=False, target_reg=None) -> str:
         """
             Load the value stored in the memory at the specified address into the specified register.
 
@@ -478,12 +467,9 @@ class MipsGenerator:
         for child in node.getChildren():
             child_code, child_reg = self.astNodeToMIPS(child)
             code += child_code
-            # ignore register
 
-        # label end program to provide exit for main()
-        code += "program_end:\n"
-
-        code = self.data_string + code
+        # newline after data segment for clarity
+        code = self.data_string + "\n" + code
         return code
 
     def varDeclWithInit(self, node):
@@ -656,7 +642,13 @@ class MipsGenerator:
 
         # return
         if node.getFuncID() == "main":
-            func_return = "j end_program\n"
+            # syscall code 17 = exit2 (= exit with value)
+            func_return = "li $v0, 17\n"
+
+            # if there is a "return" statement in "main", its result is stored in $v0
+            # if not, the programmer did something wrong and this is undefined behaviour.
+            func_return += "move $a0, {}\n".format(self.return_reg)
+            func_return += "syscall\n"
         else:
             func_return = "jr $ra\n"
 
@@ -684,6 +676,14 @@ class MipsGenerator:
             ---------- <- old $sp-12
             old t0
             ---------- <- old $sp-16
+            old f4
+            ---------- <- old $sp-20
+            old f3
+            ---------- <- old $sp-24
+            old f2
+            ---------- <- old $sp-28
+            old f1
+            ---------- <- old $sp-32
             old return addr
             ----------
             old frame_ptr
@@ -705,16 +705,29 @@ class MipsGenerator:
 
         # save t0-t3, t0 last
         temp_offset -= 4
-        code += self.storeRegister("$t3", "$sp", temp_offset)
+        code += self.storeRegister("$t3", "$sp", temp_offset, is_float=False)
 
         temp_offset -= 4
-        code += self.storeRegister("$t2", "$sp", temp_offset)
+        code += self.storeRegister("$t2", "$sp", temp_offset, is_float=False)
 
         temp_offset -= 4
-        code += self.storeRegister("$t1", "$sp", temp_offset)
+        code += self.storeRegister("$t1", "$sp", temp_offset, is_float=False)
 
         temp_offset -= 4
-        code += self.storeRegister("$t0", "$sp", temp_offset)
+        code += self.storeRegister("$t0", "$sp", temp_offset, is_float=False)
+
+        # save f1-f4, f1 last
+        temp_offset -= 4
+        code += self.storeRegister("$f4", "$sp", temp_offset, is_float=True)
+
+        temp_offset -= 4
+        code += self.storeRegister("$f3", "$sp", temp_offset, is_float=True)
+
+        temp_offset -= 4
+        code += self.storeRegister("$f2", "$sp", temp_offset, is_float=True)
+
+        temp_offset -= 4
+        code += self.storeRegister("$f1", "$sp", temp_offset, is_float=True)
 
         # save old $ra
         temp_offset -= 4
@@ -769,10 +782,16 @@ class MipsGenerator:
         code += "lw $fp, {}($fp)\n".format(sp_location_rel_to_fp + 4)
 
         # load t0-t3
-        code += "lw $t3, {}($sp)\n".format(-4)
-        code += "lw $t2, {}($sp)\n".format(-8)
-        code += "lw $t1, {}($sp)\n".format(-12)
-        code += "lw $t0, {}($sp)\n".format(-16)
+        code += self.loadRegister("$sp", offset=-4,  is_float=False, target_reg="$t3")
+        code += self.loadRegister("$sp", offset=-8,  is_float=False, target_reg="$t2")
+        code += self.loadRegister("$sp", offset=-12, is_float=False, target_reg="$t1")
+        code += self.loadRegister("$sp", offset=-16, is_float=False, target_reg="$t0")
+
+        # load f1-f4
+        code += self.loadRegister("$sp", offset=-20, is_float=True, target_reg="$f4")
+        code += self.loadRegister("$sp", offset=-24, is_float=True, target_reg="$f3")
+        code += self.loadRegister("$sp", offset=-28, is_float=True, target_reg="$f2")
+        code += self.loadRegister("$sp", offset=-32, is_float=True, target_reg="$f1")
 
         retval_type = node.getExpressionType()
 
@@ -784,7 +803,7 @@ class MipsGenerator:
         else:
             ret_reg = self.getFreeReg()
             # copy $v0 into ret_reg
-            code += "mov {}, {}, 0\n".format(ret_reg, self.return_reg)
+            code += "move {}, {}, 0\n".format(ret_reg, self.return_reg)
 
         return code, ret_reg
 
@@ -806,8 +825,6 @@ class MipsGenerator:
 
         formatted_string = string_expr.getStrValue()
 
-        # TODO strip " ?
-
         split_string = self.split_formatted_string(formatted_string)
 
         # annotate formatters with expressions
@@ -815,18 +832,82 @@ class MipsGenerator:
 
         code = ""
 
+        substring_counter = 0
+
         for value in annotated_formatters:
+
+
             if isinstance(value, str):
                 # add string to data segment (label?)
                 # do syscall to print string
-                pass
+
+                substring_id = "string.{}.{}".format(self.string_counter, substring_counter)
+                substring_counter += 1
+
+                # note manually add "
+                substring_entry = "{}: .{} \"{}\"\n".format(substring_id, "asciiz", value)
+
+                self.data_string += substring_entry
+
+                # place argument
+                code += "la $a0, {}\n".format(substring_id)
+                code += "li $v0, 4\n"
+                code += "syscall\n"
 
             else:
                 formatter: str = value[0]
-                argument: Expression = value[1]
+                argument_expr: Expression = value[1]
 
-                # eval expression
-                # do syscall on register
+                arg_code, arg_reg = self.astNodeToMIPS(argument_expr)
+
+                code += arg_code
+
+                if formatter == "%d":
+                    # place argument
+                    code += "move $a0, {}\n".format(arg_reg)
+
+                    # place syscall code
+                    code += "li $v0, 1\n"
+
+                    # make syscall
+                    code += "syscall\n"
+
+                elif formatter == "%f":
+                    # place argument
+                    code += "move $f12, {}\n".format(arg_reg)
+
+                    # place syscall code
+                    code += "li $v0, 2\n"
+
+                    # make syscall
+                    code += "syscall\n"
+
+                elif formatter == "%s":
+                    # place argument
+                    code += "move $a0, {}\n".format(arg_reg)
+
+                    # place syscall code
+                    code += "li $v0, 4\n"
+
+                    # make syscall
+                    code += "syscall\n"
+
+                elif formatter == "%c":
+                    # place argument
+                    code += "move $a0, {}\n".format(arg_reg)
+
+                    # place syscall code
+                    code += "li $v0, 11\n"
+
+                    # make syscall
+                    code += "syscall\n"
+
+                else:
+                    raise Exception("Unknown formatter code '{}'.".format(formatter))
+
+                self.releaseReg(arg_reg)
+
+        self.string_counter += 1
 
         return code, -1
 
@@ -861,6 +942,8 @@ class MipsGenerator:
             else:
                 # add string
                 retval.append(substring)
+
+        return retval
 
     def identifierExpr(self, node):
         return self.loadVariable(node)
@@ -929,7 +1012,7 @@ class MipsGenerator:
             conv_code, return_reg = self.convertFloatToInteger(expr_reg)
 
             code += conv_code
-            code += "mov {}, {}\n".format(self.return_reg, return_reg)
+            code += "move {}, {}\n".format(self.return_reg, return_reg)
 
             # no longer needed
             self.releaseReg(return_reg)
@@ -938,7 +1021,7 @@ class MipsGenerator:
             if retval_typename == "float":
                 code += "mov.s {}, {}\n".format(self.float_return_reg, expr_reg)
             else:
-                code += "mov {}, {}\n".format(self.return_reg, expr_reg)
+                code += "move {}, {}\n".format(self.return_reg, expr_reg)
 
             self.releaseReg(expr_reg)
 
