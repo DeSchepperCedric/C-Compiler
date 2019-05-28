@@ -970,12 +970,27 @@ class MipsGenerator:
             code += code_left
             code += code_right
 
+        label = self.getUniqueLabelId()
+        register = self.getFreeReg()
+
         code += "{} {}, {}\n".format(op, reg_left, reg_right)
+        # if comparison is False, go to comp_false
+        code += "bc1f comp_false_{}\n".format(label)
+
+        code += "comp_true_{}:\n".format(label)
+        code += "li {}, 1\n".format(register)
+        code += "j comp_end_{}\n".format(label)
+
+        code += "comp_false_{}\n".format(label)
+        code = "li {}, 0\n".format(register)
+        code += "j comp_end_{}\n".format(label)
+
+        code += "comp_end_{}:\n".format(label)
 
         self.releaseReg(reg_left)
         self.releaseReg(reg_right)
 
-        return code, - 1
+        return code, register
 
     def assignmentExpr(self, node):
         # array[element] = value has to be done differently
