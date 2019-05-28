@@ -1121,7 +1121,6 @@ class MipsGenerator:
         array_type = self.getMipsType(array_type)
         code = ""
         is_global = node.getSymbolTable().isGlobal(array_id)
-        print(array_type)
         if is_global:
             array_string = "{}: .{}".format(array_id, array_type)
             for i in range(0, array_size):
@@ -1134,7 +1133,7 @@ class MipsGenerator:
             # get full var id
             full_id = table + "." + array_id
             offset = self.incrementSpOffset(array_size * 4)
-            self.var_offset_dict[full_id] = ("sp", offset)
+            self.var_offset_dict[full_id] = ("$sp", offset)
 
         return code, -1
 
@@ -1151,7 +1150,7 @@ class MipsGenerator:
         # use add since otherwise extra register to store 4 is needed
 
         code, index_reg = self.astNodeToMIPS(node.getIndexArray())
-        index_type = self.getMipsType(node.getIndexArray.getExpressionType())
+        index_type = self.getMipsType(node.getIndexArray().getExpressionType())
 
         if index_type == "float":
             convert, index_reg = self.convertFloatToInteger(index_reg)
@@ -1165,18 +1164,18 @@ class MipsGenerator:
 
         # put address of array into address_reg
         if is_global:
-            code += "la {}, {}".format(address_reg, identifier)
+            code += "la {}, {}\n".format(address_reg, identifier)
         else:
             identifier = scopename + "." + identifier
             reg, offset = self.var_offset_dict[identifier]
             code += "addi {}, {}, {}\n".format(address_reg, reg, offset)
 
         # double the index twice ( = 4 * index)
-        code += "add {}, {}, {}".format(index_reg, index_reg, index_reg)
-        code += "add {}, {}, {}".format(index_reg, index_reg, index_reg)
+        code += "add {}, {}, {}\n".format(index_reg, index_reg, index_reg)
+        code += "add {}, {}, {}\n".format(index_reg, index_reg, index_reg)
 
         # combine the two components of the address
-        code += "add {}, {}, {}".format(address_reg, address_reg, index_reg)
+        code += "add {}, {}, {}\n".format(address_reg, address_reg, index_reg)
 
         self.releaseReg(index_reg)
         return code, address_reg
