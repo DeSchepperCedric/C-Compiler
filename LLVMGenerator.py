@@ -433,7 +433,6 @@ class LLVMGenerator:
         statements = list(filter(lambda s: s.strip() != "", code.split("\n")))
 
         if not statements[-1].startswith("ret"):
-            # TODO type check
             if return_type in ["i32", "i8", "i1"]:
                 code += "ret {} 0\n".format(return_type)
             elif return_type == "float":

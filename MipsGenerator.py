@@ -19,7 +19,7 @@ class MipsGenerator:
         # dict that maps function names to FuncDef objects
         self.function_defs = dict()
 
-        self.sp_offset = 0 # offset to the final stack pointer
+        self.sp_offset = 0  # offset to the final stack pointer
 
         self.label_counter = 0
         self.free_regs = ["$t0", "$t1", "$t2", "$t3"]
@@ -391,13 +391,14 @@ class MipsGenerator:
 
                 return self.loadRegister(reg, offset, is_float)
             else:
-                raise Exception("Error when loading variable '{}': variable is not yet stored on the stack".format(varname))
+                raise Exception(
+                    "Error when loading variable '{}': variable is not yet stored on the stack".format(varname))
 
     ################################### CONSTANT EXPRESSIONS ###################################
 
     def boolConstantExpr(self, expr):
         """
-        Return a constant bool with its type and the register it's stored in
+        Return a constant bool and the register it's stored in
         """
 
         value = 1 if expr.getBoolValue() is True else 0
@@ -407,10 +408,9 @@ class MipsGenerator:
 
     def floatConstantExpr(self, expr):
         """
-        Return a constant float with its type and the register it's stored in
+        Return a constant float and the register it's stored in
         """
 
-        # TODO handle floats
         # add to data segment
         float_id = "float." + str(self.float_counter)
         self.float_counter += 1
@@ -443,10 +443,10 @@ class MipsGenerator:
         """
         reg = self.getFreeReg()
 
-        char_val = expr.getCharValue()[1:-1] # strip '
+        char_val = expr.getCharValue()[1:-1]  # strip '
         char_val = char_val.replace("\\\\", "\\")
         char_val = char_val.replace("\\t", "\t")
-        char_val = char_val.replace("\\n","\n")
+        char_val = char_val.replace("\\n", "\n")
         char_val = char_val.replace("\\0", "\0")
         char_val = char_val.replace("\\'", "'")
 
@@ -748,9 +748,7 @@ class MipsGenerator:
             is_arg_float = arg.getExpressionType().toString() == "float"
             code += self.storeRegister(arg_reg, "$fp", fp_arg_offset, is_float=is_arg_float)
 
-            fp_arg_offset += 4 # do this after since the $fp points to the a free stack place
-
-
+            fp_arg_offset += 4  # do this after since the $fp points to the a free stack place
 
             self.var_offset_dict[function_scopename + "." + param_name] = ("$fp", fp_arg_offset)
 
@@ -769,7 +767,6 @@ class MipsGenerator:
 
         # load $fp
         code += "lw $fp, {}($fp)\n".format(sp_location_rel_to_fp + 4)
-
 
         # load t0-t3
         code += "lw $t3, {}($sp)\n".format(-4)
@@ -811,8 +808,6 @@ class MipsGenerator:
 
         # TODO strip " ?
 
-
-
         split_string = self.split_formatted_string(formatted_string)
 
         # annotate formatters with expressions
@@ -827,8 +822,8 @@ class MipsGenerator:
                 pass
 
             else:
-                formatter:str = value[0]
-                argument:Expression = value[1]
+                formatter: str = value[0]
+                argument: Expression = value[1]
 
                 # eval expression
                 # do syscall on register
@@ -898,7 +893,6 @@ class MipsGenerator:
 
             operation += ".s"
 
-
         # re-use reg_left as destination register
         code += "{} {}, {}, {}\n".format(operation, reg_left, reg_left, reg_right)
 
@@ -940,7 +934,7 @@ class MipsGenerator:
             # no longer needed
             self.releaseReg(return_reg)
 
-        else: # types are equal
+        else:  # types are equal
             if retval_typename == "float":
                 code += "mov.s {}, {}\n".format(self.float_return_reg, expr_reg)
             else:
@@ -976,9 +970,11 @@ class MipsGenerator:
             code += code_left
             code += code_right
 
-        # TODO release registers?
-
         code += "{} {}, {}\n".format(op, reg_left, reg_right)
+
+        self.releaseReg(reg_left)
+        self.releaseReg(reg_right)
+
         return code, - 1
 
     def assignmentExpr(self, node):
@@ -996,9 +992,9 @@ class MipsGenerator:
             convert, register = self.convertToType(register, right_type, left_type)
             code += convert
 
-        # TODO release register?
-
         code += self.storeVariable(register, node.getLeft())
+        self.releaseReg(register)
+
         return code, -1
 
     def expressionStatement(self, node):
@@ -1061,8 +1057,7 @@ class MipsGenerator:
 
         convert, convert_reg = self.convertToType(expr_reg, source_type, target_type)  # perform conversion
 
-        # TODO release expr_reg?
-
+        self.releaseReg(expr_reg)
         code += convert
         return code, convert_reg  # return code, and the location of the conversion
 
@@ -1106,7 +1101,6 @@ class MipsGenerator:
         int_reg = self.getFreeReg()
         code = "cvt.w.s {}, {}\n".format(float_reg, float_reg)
         code += "mfc1 {}, {}\n".format(int_reg, float_reg)
-
 
         # float_reg isn't necessary anymore
         self.releaseReg(float_reg)
@@ -1173,22 +1167,6 @@ class MipsGenerator:
         else:
             return value
 
-    # QUESTION type methods still needed?
-    def getCType(self, type_node):
-        """ Converts a symbolType to an LLVM type"""
-        if type_node.isFunction():
-            return type_node.getReturnTypeAsString()
-
-        elif type_node.isVar():
-            return type_node.toString()
-
-        elif type_node.isArray():
-            return type_node.getEntryTypeAsString()
-
-        else:
-            raise Exception("Incorrect type node")
-
-    # QUESTION type methods still needed?
     def getMipsType(self, type_node):
         """ Converts a symbolType to a Mips type"""
         if type_node.isFunction():
@@ -1206,4 +1184,3 @@ class MipsGenerator:
         type_string = type_string.replace("bool", "byte")
         type_string = type_string.replace("char", "character")
         return type_string
-
