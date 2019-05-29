@@ -126,9 +126,9 @@ class MipsGenerator:
             return self.postfixArithmetics(node, "sub")
 
         elif isinstance(node, LogicAndExpr):
-            return self.logicAndExpr(node)
+            return self.logicBinopExpr(node, op="and")
         elif isinstance(node, LogicOrExpr):
-            return self.logicOrExpr(node)
+            return self.logicBinopExpr(node, op="or")
         elif isinstance(node, LogicNotExpr):
             return self.logicNotExpr(node)
 
@@ -491,6 +491,12 @@ class MipsGenerator:
 
         code = ".text\n"
 
+        # init zero reg to 0
+        self.data_string += "float_zero: .float 0.0\n"
+
+        code += "la $t0, float_zero\n"
+        code += "lwc1 $f30, 0($t0)\n"
+
         code += "j func_main\n"  # jump to main function
 
         # discover function nodes
@@ -564,14 +570,15 @@ class MipsGenerator:
 
         if is_float:
             # float must first be evaluated, then the bit must be checked
-            # TODO handle floats
-            raise Exception("If statements with float are not yet implemented.")
+            code += "c.eq.s {}, {}\n".format(cond_reg, self.float_zero_reg)
 
-            code += "bc1f else_branch_{}\n".format(label)
+            code += "bc1t else_branch_{}\n".format(label)
         else:
             # non-float, simple branch statement is enough
             # if the result is false => go to else
             code += "beqz {}, else_branch_{}\n".format(cond_reg, label)
+
+        self.releaseReg(cond_reg)
 
         code += "if_branch_{}:\n".format(label)
         code += if_code
@@ -610,15 +617,20 @@ class MipsGenerator:
         code += cond_code
 
         if is_float:
-            raise Exception("While statements with float are not yet implemented.")
+            # float must first be evaluated, then the bit must be checked
+            code += "c.eq.s {}, {}\n".format(cond_reg, self.float_zero_reg)
+
+            code += "bc1t endwhile_{}\n".format(endwhile_label_id)
         else:
             # if the result is false => go to endwhile
             code += "beq {} $0 endwhile_{}:\n".format(cond_reg, endwhile_label_id)
 
+        self.releaseReg(cond_reg)
+
         code += "loop_{}:\n".format(loop_label_id)
         code += body_code
 
-        code += "j cond_{}:\n".format(cond_label_id)
+        code += "j cond_{}\n".format(cond_label_id)
 
         code += "endwhile_{}:\n".format(endwhile_label_id)
 
@@ -1161,8 +1173,6 @@ class MipsGenerator:
 
         return code, -1
 
-
-
     def split_formatted_string(self, string):
         """
             Split a formatted string into formatters and normal strings.
@@ -1348,10 +1358,20 @@ class MipsGenerator:
         right_type = self.getMipsType(node.getRight().getExpressionType())
         left_type = self.getMipsType(node.getLeft().getExpressionType())
 
+        # don't do anything when assigning between bool and int
+        if right_type == "byte" and left_type == "word":
+            print("no conversion")
+            pass
+        elif right_type == "word" and left_type == "byte":
+            print("no conversion")
+            pass
         # type conversion
-        if right_type != left_type:
+        elif right_type != left_type:
+            print("convert between {} and {}\n".format(right_type, left_type))
             convert, register = self.convertToType(register, right_type, left_type)
             code += convert
+        else:
+            pass
 
         code += self.storeVariable(register, node.getLeft())
         self.releaseReg(register)
@@ -1547,12 +1567,33 @@ class MipsGenerator:
         """
         code, expr_reg = self.astNodeToMIPS(node.getExpr())  # convert expression to MIPS code
 
-        source_type = self.getMipsType(node.getExpr().getExpressionType())  # get type of expression
-        target_type = self.getMipsType(node.getTargetType())  # get target type
+        #source_type = self.getMipsType(node.getExpr().getExpressionType())  # get type of expression
+        #target_type = self.getMipsType(node.getTargetType())  # get target type
 
-        convert, convert_reg = self.convertToType(expr_reg, source_type, target_type)  # perform conversion
+        source_type = node.getExpr().getExpressionType()  # get type of expression
+        target_type = node.getTargetType()  # get target type
 
-        self.releaseReg(expr_reg)
+        # original code that uses get_mips type is NOT correct.
+        # types such as "word", "character", "byte" are not relevant in this context.
+        if target_type.toString() == "bool":
+            convert, convert_reg = self.convertToBool(expr_reg)
+            self.releaseReg(expr_reg)
+        elif target_type.toString() == "float" and source_type.toString() != "float":
+            convert, convert_reg = self.convertIntegerToFloat(expr_reg)
+            # register already released
+        elif target_type.toString() != "float" and source_type.toString() == "float":
+            convert, convert_reg = self.convertFloatToInteger(expr_reg)
+            # register already released
+        else:
+            # do nothing
+            convert = ""
+            convert_reg = expr_reg
+
+
+        #else:
+        #    convert, convert_reg = self.convertToType(expr_reg, source_type, target_type)  # perform conversion
+
+
         code += convert
         return code, convert_reg  # return code, and the location of the conversion
 
@@ -1615,50 +1656,56 @@ class MipsGenerator:
         else:
             raise Exception("Prefix arithmetics aren't supported for type {}".format(type(target)))
 
-    def logicAndExpr(self, node: LogicAndExpr):
-        pass
-
-    def logicOrExpr(self, node: LogicOrExpr):
-        pass
-
-    def logicNotExpr(self, node: LogicNotExpr):
-        pass
-
-    def convertToBool(self, source_reg:str):
+    def logicBinopExpr(self, node, op) -> (str, str):
         """
-            Convert to value in the specified register to a boolean.
+         Process the logical and expression: x && y; x and y
 
-            This means that source_reg will be compared to zero so that
-                0x00000 -> False
-                Anything else is True
-
-        :return: (code, reg) with code being the conversion code and reg being a register with the result.
+         :param op: the operator. can be "and", "or"
         """
-
-        is_float = not (re.compile(r'^\$f\d+$').match(source_reg) is None)
 
         code = ""
 
-        # request reg for result
-        result_reg = self.getFreeReg()
+        # process left and right, and convert to bool
+        code_left, reg_left = self.astNodeToMIPS(node.getLeft())
+        code += code_left
+        conv_left,  left_bool_reg  = self.convertToBool(reg_left)
+        code += conv_left
+        self.releaseReg(reg_left)
 
-        # id of branch label
-        label_id = self.getUniqueLabelId()
+        code_right, reg_right = self.astNodeToMIPS(node.getRight())
+        code += code_right
+        conv_right, right_bool_reg = self.convertToBool(reg_right)
+        code += conv_right
+        self.releaseReg(reg_right)
 
-        # compare to zero, float and int separately
-        if is_float:
-            pass
-        else:
+        # perform and on the two bools
+        code += "{} {}, {}, {}\n".format(op, left_bool_reg, left_bool_reg, right_bool_reg)
 
-            code += "beq {}, comp_true_{}\n".format(source_reg, label_id)
+        self.releaseReg(right_bool_reg)
 
-        # no branch, so non-zero -> return true
-        code += "li {}, 1\n".format(result_reg)
-        code += "comp_true_{}:\n".format(label_id)
-        code += "li {}, 0\n".format(result_reg)
+        return code, left_bool_reg
 
-        return code, result_reg
+    def logicNotExpr(self, node: LogicNotExpr) -> (str, str):
+        """
+            Process a "not" expression.
+        """
 
+        target_code, target_reg = self.astNodeToMIPS(node.getExpr())
+        bool_code, bool_reg = self.convertToBool(target_reg)
+        self.releaseReg(target_reg)
+
+        code = ""
+        code += target_code
+        code += bool_code
+
+        code += "not {}, {}\n".format(bool_reg, bool_reg)
+        # we do and on 1. This is since "0x00001" will be inverted to "0x11110"
+        # we now need to set the other bits to zero.
+        # also 0x00000 is converted into 0x11111, the other bits need to be set
+        # to zero.
+        code += "andi {}, {}, 1\n".format(bool_reg, bool_reg)
+
+        return code, bool_reg
 
     ############################################# TYPE METHODS #############################################
 
@@ -1695,6 +1742,48 @@ class MipsGenerator:
         # float_reg isn't necessary anymore
         self.releaseReg(float_reg)
         return code, int_reg
+
+    def convertToBool(self, source_reg:str) -> (str, str):
+        """
+            Convert to value in the specified register to a boolean.
+
+            The method will automatically detect if the register is
+            a float or int reg.
+
+            This means that source_reg will be compared to zero so that
+                0x00000 -> False
+                Anything else is True
+
+        :return: (code, reg) with code being the conversion code and reg being a register with the result.
+        """
+
+        # check if it is a $f0-$f31 reg
+        is_float = not (re.compile(r'^\$f\d+$').match(source_reg) is None)
+
+        code = ""
+
+        # request reg for result
+        result_reg = self.getFreeReg()
+
+        # id of branch label
+        label_id = self.getUniqueLabelId()
+
+        # compare to zero, float and int separately
+        if is_float:
+            code += "c.eq.s {}, {}\n".format(source_reg, self.float_zero_reg)
+            code += "bc1t comp_iszero_{}\n".format(label_id)
+        else:
+
+            code += "beq {}, $zero, comp_iszero_{}\n".format(source_reg, label_id)
+
+        # no branch, so non-zero -> return true
+        code += "li {}, 1\n".format(result_reg)
+        code += "j end_comp_{}\n".format(label_id)
+        code += "comp_iszero_{}:\n".format(label_id) # label for when the reg is zero.
+        code += "li {}, 0\n".format(result_reg)
+        code += "end_comp_{}:\n".format(label_id)
+
+        return code, result_reg
 
     def convertToType(self, reg, old_type, new_type):
         if "float" in new_type and "float" not in old_type:

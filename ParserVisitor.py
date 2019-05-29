@@ -739,7 +739,7 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#pointer.
     def visitPointer(self, ctx: CParser.PointerContext):
-        raise Exception("'pointer' rule must node be visited during conversion to AST!")
+        return "*"
 
     # Visit a parse tree produced by CParser#constant.
     def visitConstant(self, ctx: CParser.ConstantContext):
