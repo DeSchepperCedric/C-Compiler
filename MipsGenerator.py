@@ -23,6 +23,15 @@ class MipsGenerator:
 
         self.label_counter = 0
 
+        # NOTE: $v0, $f0 and $f12 are reserved.
+        # NOTE: $f31 and $v1 also cannot be used for temp regs since they
+        # are used for returns
+        # NOTE: $f30 is the float register that is always zero just like $0
+
+        self.float_return_reg = "$f31"
+        self.return_reg = "$v1"
+        self.float_zero_reg = "$f30"
+
         # list of all registers that are available for this program
         self.all_temp_regs = {"$t0", "$t1", "$t2", "$t3"}
         self.all_float_regs = {"$f1", "$f2", "$f3", "$f4"}
@@ -33,10 +42,7 @@ class MipsGenerator:
         self.free_regs = ["$t0", "$t1", "$t2", "$t3"]
         self.free_float_regs = ["$f1", "$f2", "$f3", "$f4"]
 
-        # note: $v0, $f0 and $f12 are reserved.
 
-        self.float_return_reg = "$f31"
-        self.return_reg = "$v1"
 
     def astNodeToMIPS(self, node):
         """
@@ -118,6 +124,13 @@ class MipsGenerator:
             return self.postfixArithmetics(node, "add")
         elif isinstance(node, PostfixDecExpr):
             return self.postfixArithmetics(node, "sub")
+
+        elif isinstance(node, LogicAndExpr):
+            return self.logicAndExpr(node)
+        elif isinstance(node, LogicOrExpr):
+            return self.logicOrExpr(node)
+        elif isinstance(node, LogicNotExpr):
+            return self.logicNotExpr(node)
 
         # format here is (node, int-op, float-op)
         elif isinstance(node, EqualityExpr):
@@ -1601,6 +1614,51 @@ class MipsGenerator:
 
         else:
             raise Exception("Prefix arithmetics aren't supported for type {}".format(type(target)))
+
+    def logicAndExpr(self, node: LogicAndExpr):
+        pass
+
+    def logicOrExpr(self, node: LogicOrExpr):
+        pass
+
+    def logicNotExpr(self, node: LogicNotExpr):
+        pass
+
+    def convertToBool(self, source_reg:str):
+        """
+            Convert to value in the specified register to a boolean.
+
+            This means that source_reg will be compared to zero so that
+                0x00000 -> False
+                Anything else is True
+
+        :return: (code, reg) with code being the conversion code and reg being a register with the result.
+        """
+
+        is_float = not (re.compile(r'^\$f\d+$').match(source_reg) is None)
+
+        code = ""
+
+        # request reg for result
+        result_reg = self.getFreeReg()
+
+        # id of branch label
+        label_id = self.getUniqueLabelId()
+
+        # compare to zero, float and int separately
+        if is_float:
+            pass
+        else:
+
+            code += "beq {}, comp_true_{}\n".format(source_reg, label_id)
+
+        # no branch, so non-zero -> return true
+        code += "li {}, 1\n".format(result_reg)
+        code += "comp_true_{}:\n".format(label_id)
+        code += "li {}, 0\n".format(result_reg)
+
+        return code, result_reg
+
 
     ############################################# TYPE METHODS #############################################
 
