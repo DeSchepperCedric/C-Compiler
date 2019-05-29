@@ -806,7 +806,7 @@ class MipsGenerator:
             # the current function definition!
 
         # note do this AFTER param evaluation, since the param eval still needs a working $sp!
-        code += "addi $sp, $fp, 0\n"
+        code += "move $sp, $fp\n"
         # $fp and $sp point now to the first parameter
         # the callee will adjust $sp to the end of the stackframe.
 
@@ -820,6 +820,9 @@ class MipsGenerator:
 
         # load $fp
         code += "lw $fp, {}($fp)\n".format(sp_location_rel_to_fp + 4)
+
+        # load $ra
+        code += "lw $ra, {}($fp)\n".format(sp_location_rel_to_fp + 8)
 
         # load t0-t3
         code += self.loadRegister("$sp", offset=-4, is_float=False, target_reg="$t3")
@@ -941,7 +944,7 @@ class MipsGenerator:
             # the current function definition!
 
         # note do this AFTER param evaluation, since the param eval still needs a working $sp!
-        code += "addi $sp, $fp, 0\n"
+        code += "move $sp, $fp\n"
         # $fp and $sp point now to the first parameter
         # the callee will adjust $sp to the end of the stackframe.
 
@@ -953,7 +956,10 @@ class MipsGenerator:
         # load $sp, this is just below the parameters relative to the current $fp
         code += "lw $sp, {}($fp)\n".format(sp_location_rel_to_fp)
 
-        # load $fp
+        # load $ra
+        code += "lw $ra, {}($fp)\n".format(sp_location_rel_to_fp + 8)
+
+        # load $fp NOTE: do this last, since the loading of $fp, $ra, $sp depends on $fp
         code += "lw $fp, {}($fp)\n".format(sp_location_rel_to_fp + 4)
 
         temp_offset = 0
