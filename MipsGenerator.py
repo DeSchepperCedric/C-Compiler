@@ -94,8 +94,7 @@ class MipsGenerator:
             elif node.getFunctionID().getIdentifierName() == "scanf":
                 return self.scanfExpr(node)
             else:
-                return self.funcCallExpr(node)
-            # TODO run looped
+                return self.funcCallExprLooped(node)
 
         elif isinstance(node, AddExpr):
             return self.arithmeticExpr(node, "add")
