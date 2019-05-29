@@ -1563,6 +1563,17 @@ class LogicOrExpr(Expression):
         self.left, constants = self.left.constantFolding(constants, while_body)
         self.right, constants = self.right.constantFolding(constants, while_body)
 
+        if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
+            left_type = get_constant_type(self.left)
+            right_type = get_constant_type(self.right)
+            a = change_constant_type(self.left.getValue(), left_type, "bool")
+            b = change_constant_type(self.right.getValue(), right_type, "bool")
+
+            result = a or b
+            node = BoolConstantExpr(result)
+            node.resolveExpressionType(node.getSymbolTable())
+            return node, constants
+
 
 
         return self, constants
@@ -1689,7 +1700,7 @@ class EqualityExpr(Expression):
             b = change_constant_type(self.right.getValue(), right_type, comp_type)
 
             result = (a == b)
-            node = BoolConstantExpr(str(result))
+            node = BoolConstantExpr(result)
             node.resolveExpressionType(node.getSymbolTable())
             return node, constants
         return self, constants
@@ -1758,7 +1769,7 @@ class InequalityExpr(Expression):
             b = change_constant_type(self.right.getValue(), right_type, comp_type)
 
             result = (a != b)
-            node = BoolConstantExpr(str(result))
+            node = BoolConstantExpr(result)
             node.resolveExpressionType(node.getSymbolTable())
             return node, constants
         return self, constants
@@ -1827,7 +1838,7 @@ class CompGreater(Expression):
             b = change_constant_type(self.right.getValue(), right_type, comp_type)
 
             result = a > b
-            node = BoolConstantExpr(str(result))
+            node = BoolConstantExpr(result)
             node.resolveExpressionType(node.getSymbolTable())
             return node, constants
         return self, constants
@@ -1896,7 +1907,7 @@ class CompLess(Expression):
             b = change_constant_type(self.right.getValue(), right_type, comp_type)
 
             result = a < b
-            node = BoolConstantExpr(str(result))
+            node = BoolConstantExpr(result)
             node.resolveExpressionType(node.getSymbolTable())
             return node, constants
         return self, constants
@@ -1965,7 +1976,7 @@ class CompGreaterEqual(Expression):
             b = change_constant_type(self.right.getValue(), right_type, comp_type)
 
             result = a >= b
-            node = BoolConstantExpr(str(result))
+            node = BoolConstantExpr(result)
             node.resolveExpressionType(node.getSymbolTable())
             return node, constants
         return self, constants
@@ -2034,7 +2045,7 @@ class CompLessEqual(Expression):
             b = change_constant_type(self.right.getValue(), right_type, comp_type)
 
             result = a <= b
-            node = BoolConstantExpr(str(result))
+            node = BoolConstantExpr(result)
             node.resolveExpressionType(node.getSymbolTable())
             return node, constants
         return self, constants
@@ -3367,16 +3378,6 @@ def will_conversion_narrow(target, value):
 
 
 def change_constant_type(value, old_type, new_type):
-    if old_type == "float":
-        value = float(value)
-    elif old_type == "int":
-        value = int(round(float(value)))
-    elif old_type == "char":
-        value = value[1:-1]
-        value = ord(value)
-    elif old_type == "bool":
-        value = value == "True"
-
     if old_type == "int" and new_type != old_type:
         value = int(value)
 
@@ -3428,13 +3429,13 @@ def change_constant_type(value, old_type, new_type):
 
 def create_constant_node(value, type):
     if type == "float":
-        return FloatConstantExpr(str(value))
+        return FloatConstantExpr(value)
     elif type == "int":
-        return IntegerConstantExpr(str(value))
+        return IntegerConstantExpr(value)
     elif type == "char":
         return CharConstantExpr("\'" + chr(value) + "\'")
     elif type == "bool":
-        return BoolConstantExpr(str(value))
+        return BoolConstantExpr(value)
     else:
 
         raise Exception("Invalid call to create_constant_node for '{}'".format(type))

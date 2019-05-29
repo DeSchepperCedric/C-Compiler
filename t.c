@@ -9,8 +9,10 @@ return 2;
 
 int main(int argc, char** argv)
 {
-5;
-int b = 1 && test();
+int b = "c" || false;
+char q = "d";
+int c = q;
+printf("%d", c);
 
 return 0;
 }
