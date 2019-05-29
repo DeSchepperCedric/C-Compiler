@@ -22,6 +22,14 @@ class MipsGenerator:
         self.sp_offset = 0  # offset to the final stack pointer
 
         self.label_counter = 0
+
+        # list of all registers that are available for this program
+        self.all_temp_regs = {"$t0", "$t1", "$t2", "$t3"}
+        self.all_float_regs = {"$f1", "$f2", "$f3", "$f4"}
+
+        # TODO make copy to init these regs, also add "resetUsedRegs()" and call
+        # TODO that function when processing a FuncDef so that memleaks don't propagate
+
         self.free_regs = ["$t0", "$t1", "$t2", "$t3"]
         self.free_float_regs = ["$f1", "$f2", "$f3", "$f4"]
 
@@ -86,7 +94,8 @@ class MipsGenerator:
             elif node.getFunctionID().getIdentifierName() == "scanf":
                 return self.scanfExpr(node)
             else:
-                return self.funcCallExprLooped(node)
+                return self.funcCallExpr(node)
+            # TODO run looped
 
         elif isinstance(node, AddExpr):
             return self.arithmeticExpr(node, "add")
@@ -818,11 +827,11 @@ class MipsGenerator:
         # load $sp, this is just below the parameters relative to the current $fp
         code += "lw $sp, {}($fp)\n".format(sp_location_rel_to_fp)
 
-        # load $fp
-        code += "lw $fp, {}($fp)\n".format(sp_location_rel_to_fp + 4)
-
         # load $ra
         code += "lw $ra, {}($fp)\n".format(sp_location_rel_to_fp + 8)
+
+        # load $fp NOTE: do this last, since the loading of $fp, $ra, $sp depends on $fp
+        code += "lw $fp, {}($fp)\n".format(sp_location_rel_to_fp + 4)
 
         # load t0-t3
         code += self.loadRegister("$sp", offset=-4, is_float=False, target_reg="$t3")
@@ -893,11 +902,8 @@ class MipsGenerator:
 
         temp_offset = 0
 
-        all_temp_regs = ["$t0", "$t1", "$t2", "$t3"]
-        all_float_regs = ["$f1", "$f2", "$f3", "$f4"]
-
-        used_temp_regs = list(set(self.free_regs).difference(all_temp_regs))
-        used_float_regs = list(set(self.free_float_regs).difference(all_float_regs))
+        used_temp_regs  = self.all_temp_regs.difference(self.free_regs)
+        used_float_regs = self.all_float_regs.difference(self.free_float_regs)
 
         for used_reg in used_temp_regs:
             temp_offset -= 4
