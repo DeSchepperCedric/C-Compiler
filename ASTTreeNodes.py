@@ -2397,7 +2397,7 @@ class CastExpr(Expression):
         self.target_type = target_type
         self.expression = expression
 
-    def getTargetType(self):
+    def getTargetType(self) -> SymbolType:
         return self.target_type
 
     def getExpr(self):
@@ -2469,7 +2469,11 @@ class LogicNotExpr(Expression):
                     target_type.toString(), self.getLineNr()))
             raise AstTypingException()
 
-        self.expression_type = target_type
+        self.expression_type = VariableType("bool")
+        # self.expression_type = target_type
+
+        if target_type.toString() != "bool":
+            Logger.warning("Using expression of type '{}' in not-expression will result in narrowing on line {}.".format(target_type.toString(), self.getLineNr()))
 
         return self.expression_type
 
