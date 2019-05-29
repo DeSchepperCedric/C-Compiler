@@ -414,7 +414,7 @@ class MipsGenerator:
         Return a constant bool and the register it's stored in
         """
 
-        value = 1 if expr.getBoolValue() is True else 0
+        value = 1 if expr.getValue() is True else 0
         reg = self.getFreeReg()
         code = "li {}, {}\n".format(reg, value)
         return code, reg
@@ -427,7 +427,7 @@ class MipsGenerator:
         # add to data segment
         float_id = "float." + str(self.float_counter)
         self.float_counter += 1
-        self.data_string += "{}: .float {}\n".format(float_id, expr.getFloatValue())
+        self.data_string += "{}: .float {}\n".format(float_id, expr.getValue())
         code = ""
 
         # aquire register
@@ -447,7 +447,7 @@ class MipsGenerator:
         Return a constant integer and the register it's stored in
         """
         reg = self.getFreeReg()
-        code = "li {}, {}\n".format(reg, expr.getIntValue())
+        code = "li {}, {}\n".format(reg, expr.getValue())
         return code, reg
 
     def charConstantExpr(self, expr):
@@ -456,7 +456,7 @@ class MipsGenerator:
         """
         reg = self.getFreeReg()
 
-        char_val = expr.getCharValue()[1:-1]  # strip '
+        char_val = expr.getValue()[1:-1]  # strip '
         char_val = self.handleSpecialCharacters(char_val)
 
         code = "li {}, {}\n".format(reg, ord(char_val))
@@ -466,7 +466,7 @@ class MipsGenerator:
         """
             Return a a constant string and the register it's stored in
         """
-        string = "\"" + self.handleSpecialCharacters(expr.getStrValue()) + "\""
+        string = "\"" + self.handleSpecialCharacters(expr.getValue()) + "\""
         string_id = "string." + str(self.string_counter)
         self.string_counter += 1
         self.data_string += "{}: .asciiz {}\n".format(string_id, string)
@@ -1021,7 +1021,7 @@ class MipsGenerator:
         if not isinstance(string_expr, StringConstantExpr):
             raise Exception("First argument to printf must be string constant.")
 
-        formatted_string = string_expr.getStrValue()
+        formatted_string = string_expr.getValue()
 
         split_string = self.split_formatted_string(formatted_string)
 
@@ -1129,7 +1129,7 @@ class MipsGenerator:
         if not isinstance(formatter_expr, StringConstantExpr):
             raise Exception("First argument to scanf must be string constant.")
 
-        formatter_str = formatter_expr.getStrValue()
+        formatter_str = formatter_expr.getValue()
 
         target_code, target_addr_reg = self.astNodeToMIPS(target_expr)
         # target_addr_reg contains the address where the value needs to be stored.
@@ -1442,7 +1442,7 @@ class MipsGenerator:
 
     def arrayDecl(self, node):
         # array size expression must be of a IntegerConstantExpression
-        array_size = node.getSizeExpr().getIntValue()
+        array_size = node.getSizeExpr().getValue()
 
         array_id = node.getID()
         array_type, table = node.getSymbolTable().lookup(array_id)

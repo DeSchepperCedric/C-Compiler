@@ -1563,6 +1563,8 @@ class LogicOrExpr(Expression):
         self.left, constants = self.left.constantFolding(constants, while_body)
         self.right, constants = self.right.constantFolding(constants, while_body)
 
+
+
         return self, constants
 
 
@@ -3199,9 +3201,6 @@ class IntegerConstantExpr(ConstantExpr):
     def __init__(self, integer_value):
         super().__init__(constant_expr_type="IntConstant", value=integer_value)
 
-    def getIntValue(self):
-        return int(round(float(self.getValue())))
-
     def resolveExpressionType(self, symbol_table):
         self.expression_type = VariableType('int')
 
@@ -3216,9 +3215,6 @@ class FloatConstantExpr(ConstantExpr):
     def __init__(self, float_value):
         super().__init__(constant_expr_type="FloatConstant", value=float_value)
 
-    def getFloatValue(self):
-        return float(self.getValue())
-
     def resolveExpressionType(self, symbol_table):
         self.expression_type = VariableType('float')
 
@@ -3232,9 +3228,6 @@ class StringConstantExpr(ConstantExpr):
 
     def __init__(self, str_value):
         super().__init__(constant_expr_type="StrConstant", value=str_value)
-
-    def getStrValue(self) -> str:
-        return str(self.getValue())
 
     def resolveExpressionType(self, symbol_table):
         # string is a char pointer
@@ -3251,9 +3244,6 @@ class CharConstantExpr(ConstantExpr):
     def __init__(self, char_value):
         super().__init__(constant_expr_type="CharConstant", value=char_value)
 
-    def getCharValue(self):
-        return str(self.getValue())
-
     def resolveExpressionType(self, symbol_table):
         self.expression_type = VariableType('char')
 
@@ -3267,9 +3257,6 @@ class BoolConstantExpr(ConstantExpr):
 
     def __init__(self, bool_value):
         super().__init__(constant_expr_type="BoolConstant", value=bool_value)
-
-    def getBoolValue(self):
-        return str(self.getValue()).lower() == "true"
 
     def resolveExpressionType(self, symbol_table):
         self.expression_type = VariableType('bool')

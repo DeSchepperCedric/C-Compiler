@@ -126,7 +126,7 @@ class LLVMGenerator:
         register = self.cur_reg
         self.cur_reg += 1
         llvm_type = "i1"
-        value = 1 if expr.getBoolValue() is True else 0
+        value = 1 if expr.getValue() is True else 0
         code += "%{} = alloca {}\n".format(register, llvm_type)
         code += "store {} {}, {}* %{}\n".format(llvm_type, value, llvm_type, register)
 
@@ -142,7 +142,7 @@ class LLVMGenerator:
         llvm_type = "float"
 
         code += "%{} = alloca {}\n".format(register, llvm_type)
-        code += "store {} {}, {}* %{}\n".format(llvm_type, self.floatToHex(expr.getFloatValue()), llvm_type, register)
+        code += "store {} {}, {}* %{}\n".format(llvm_type, self.floatToHex(expr.getValue()), llvm_type, register)
 
         return code, register
 
@@ -157,7 +157,7 @@ class LLVMGenerator:
         llvm_type = "i32"
 
         code += "%{} = alloca {}\n".format(register, llvm_type)
-        code += "store {} {}, {}* %{}\n".format(llvm_type, expr.getIntValue(), llvm_type, register)
+        code += "store {} {}, {}* %{}\n".format(llvm_type, expr.getValue(), llvm_type, register)
 
         return code, register
 
@@ -170,7 +170,7 @@ class LLVMGenerator:
 
         llvm_type = "i8"
         code = "%{} = alloca {}\n".format(register, llvm_type)
-        code += "store {} {}, {}* %{}\n".format(llvm_type, ord(expr.getCharValue()[1]), llvm_type, register)
+        code += "store {} {}, {}* %{}\n".format(llvm_type, ord(expr.getValue()[1]), llvm_type, register)
 
         return code, register
 
@@ -178,7 +178,7 @@ class LLVMGenerator:
         register = self.cur_reg
         self.cur_reg += 1
 
-        string_reg = self.addStringToGlobal(expr.getStrValue())
+        string_reg = self.addStringToGlobal(expr.getValue())
         llvm_type = "i8*"
 
         code = "%{} = alloca {}\n".format(register, llvm_type)
@@ -1035,7 +1035,7 @@ class LLVMGenerator:
 
     def arrayDecl(self, node):
         # array size expression must be of a IntegerConstantExpression
-        array_size = node.getSizeExpr().getIntValue()
+        array_size = node.getSizeExpr().getValue()
 
         array_id = node.getID()
         array_type, table = node.getSymbolTable().lookup(array_id)
@@ -1096,7 +1096,7 @@ class LLVMGenerator:
         element_reg = self.cur_reg
 
         if isinstance(node.getLeft().getIndexArray(), IntegerConstantExpr):
-            index = node.getLeft().getIndexArray().getIntValue()
+            index = node.getLeft().getIndexArray().getValue()
         else:
             index_code, index_reg = self.astNodeToLLVM(node.getLeft().getIndexArray())
             code += index_code
@@ -1140,7 +1140,7 @@ class LLVMGenerator:
             identifier = table + "." + identifier
 
         if isinstance(node.getIndexArray(), IntegerConstantExpr):
-            index = node.getIndexArray().getIntValue()
+            index = node.getIndexArray().getValue()
         else:
 
             index_code, index_reg = self.astNodeToLLVM(node.getIndexArray())
