@@ -1,0 +1,29 @@
+
+Statements with no effect:
+
+ARITHMETICS;
+x + 0
+0 + x
+x - 0
+x * 1
+1 * x
+x / 1
+
+EXPRESSIONS:
+Comparisons (ex. 5 > 2;)
+Identifier (ex. x;)
+Constants (ex. 5;)
+Logic operations (ex. &&, ||,...)
+Arithmetics(ex. 5 + 1:)
+MinPrefix(ex. -x;)
+PlusPrefix(ex. +x;)
+
+
+LOGICAL OPERATIONS:
+we will leave these expressions unaltered for the following reason:
+
+int a = 1 && id
+
+If we remove '1 &&', a will receive the value of id instead of a boolean value (0/1).
+This could be solved by using a cast expression (bool) id but adds unnecessary complexity
+

@@ -678,7 +678,6 @@ class StatementContainer:
         for child in self.child_list:
             child.setSymbolTable(symbol_table)
 
-
     def addScopeToSymbolTable(self, parent_table, as_child):
         """
             Add the symbols declared in this statement container to the specified symbol table.
@@ -956,10 +955,13 @@ class StatementContainer:
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
+        new_child_list = []
+        for child in self.child_list:
+            new_child, constants = child.constantFolding(constants, while_body)
+            if new_child:
+                new_child_list.append(child)
 
-        for i in range(0, len(self.child_list)):
-            self.child_list[i], constants = self.child_list[i].constantFolding(constants, while_body)
-
+        self.child_list = new_child_list
         return self, constants
 
 
@@ -1064,7 +1066,6 @@ class CompoundStmt(Statement, StatementContainer):
         self.symbol_table = symbol_table
         for child in self.child_list:
             child.setSymbolTable(symbol_table)
-
 
     def constantFolding(self, constants, while_body=False):
         """
@@ -1371,6 +1372,16 @@ class ExpressionStatement(Statement):
             Returns updated node (when possible) and dict with constant values
         """
         self.expression, constants = self.expression.constantFolding(constants, while_body)
+        # statement with no effect => delete
+        if isinstance(self.expression, Expression) \
+                and not isinstance(self.expression, AssignmentExpr)\
+                and not isinstance(self.expression, FuncCallExpr)\
+                and not isinstance(self.expression, PrefixIncExpr) \
+                and not isinstance(self.expression, PrefixDecExpr) \
+                and not isinstance(self.expression, PostfixIncExpr) \
+                and not isinstance(self.expression, PostfixDecExpr):
+            return None, constants
+
         return self, constants
 
 
@@ -1551,6 +1562,7 @@ class LogicOrExpr(Expression):
         """
         self.left, constants = self.left.constantFolding(constants, while_body)
         self.right, constants = self.right.constantFolding(constants, while_body)
+
         return self, constants
 
 
@@ -1608,6 +1620,7 @@ class LogicAndExpr(Expression):
         """
         self.left, constants = self.left.constantFolding(constants, while_body)
         self.right, constants = self.right.constantFolding(constants, while_body)
+
         return self, constants
 
 
@@ -2079,6 +2092,7 @@ class AddExpr(Expression):
         """
         self.left, constants = self.left.constantFolding(constants, while_body)
         self.right, constants = self.right.constantFolding(constants, while_body)
+        # constant folding
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
@@ -2090,6 +2104,13 @@ class AddExpr(Expression):
             node = create_constant_node(result, new_type)
             node.resolveExpressionType(node.getSymbolTable())
             return node, constants
+
+        # 0 + x => x
+        elif isinstance(self.left, ConstantExpr) and self.left.getValue() == 0:
+            return self.right, constants
+        # x + 0 => x
+        elif isinstance(self.right, ConstantExpr) and self.right.getValue() == 0:
+            return self.left, constants
 
         return self, constants
 
@@ -2160,6 +2181,9 @@ class SubExpr(Expression):
             node = create_constant_node(result, new_type)
             node.resolveExpressionType(node.getSymbolTable())
             return node, constants
+        # x - 0 => x
+        elif isinstance(self.right, ConstantExpr) and self.right.getValue() == 0:
+            return self.left, constants
 
         return self, constants
 
@@ -2230,6 +2254,12 @@ class MulExpr(Expression):
             node = create_constant_node(result, new_type)
             node.resolveExpressionType(node.getSymbolTable())
             return node, constants
+        # 1 * x => x
+        elif isinstance(self.left, ConstantExpr) and self.left.getValue() == 1:
+            return self.right, constants
+        # x * 1 => x
+        elif isinstance(self.right, ConstantExpr) and self.right.getValue() == 1:
+            return self.left, constants
 
         return self, constants
 
@@ -2300,6 +2330,10 @@ class DivExpr(Expression):
             node = create_constant_node(result, new_type)
             node.resolveExpressionType(node.getSymbolTable())
             return node, constants
+
+        # x / 1 => x
+        elif isinstance(self.right, ConstantExpr) and self.right.getValue() == 1:
+            return self.left, constants
 
         return self, constants
 
