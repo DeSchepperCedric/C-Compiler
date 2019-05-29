@@ -59,7 +59,6 @@ More details on what is all implemented:
     <li> x * 1 => x</li>
     <li> 1 * x => x</li>
     <li> x / 1 => x</li>
-
     <li> cst + cst => cst</li>
     <li> cst - cst => cst</li>
     <li> cst / cst => cst</li>
@@ -85,22 +84,16 @@ int a = func() && 1 != func() but == (bool) func()
 <ul>
     <li>x && 1 => (bool) x</li>
     <li>1 && x => (bool) x</li>
-
     <li>x && 0 => 0</li>
     <li>0 && x => 0</li>
-
     <li>x || 0 => (bool) x</li>
     <li>0 || x => (bool) x</li>
-
     <li>x || 1 => 1</li>
     <li>1 || x => 1</li>
-
     <li>cst && cst => 0/1</li>
     <li>cst || cst => 0/1</li>
-
     <li>!0 => 1</li>
     <li>!1 => 0</li>
-
     <li>!!x => x</li>
 </ul>
 
