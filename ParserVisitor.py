@@ -254,7 +254,7 @@ class ParserVisitor(CVisitor):
         # Otherwise, transform statement to compound.
         if len(body_statements) == 1 and isinstance(body_statements[0], CompoundStmt):
             pass
-            #body = Body(compound_statement.child_list).setLineNr(ctx.start.line).setolNr(ctx.start.column)
+            # body = Body(compound_statement.child_list).setLineNr(ctx.start.line).setolNr(ctx.start.column)
         else:
             # body = Body(body_statements).setLineNr(ctx.start.line).setColNr(ctx.start.column)
             body_statements = [CompoundStmt([body_statements])]
@@ -277,7 +277,8 @@ class ParserVisitor(CVisitor):
         cur_target = 0  # specifies what we're looking for
 
         init_list = []
-        cond_expr = BoolConstantExpr("true").setLineNr(ctx.start.line).setColNr(ctx.start.column) # empty condition is "true"
+        cond_expr = BoolConstantExpr("true").setLineNr(ctx.start.line).setColNr(
+            ctx.start.column)  # empty condition is "true"
         iter_list = []
 
         for i in range(0, ctx.getChildCount()):
@@ -562,7 +563,7 @@ class ParserVisitor(CVisitor):
         type_list = [self.manuallyVisitChild(ctx) for ctx in type_spec]
 
         typename = "".join(type_list)
-
+        print(typename)
         return CastExpr(VariableType(typename), expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#unaryAsPostfix.
@@ -594,14 +595,16 @@ class ParserVisitor(CVisitor):
         # note: the postfix counterparts are handled somewhere else
         elif operator == "++":
             if not is_valid_assignment_target_expr(expr):
-                Logger.error("Invalid target '{}' for prefix increment on line '{}'".format(get_full_context_source(ctx.getChild(1)), ctx.start.line))
+                Logger.error("Invalid target '{}' for prefix increment on line '{}'".format(
+                    get_full_context_source(ctx.getChild(1)), ctx.start.line))
                 raise AstCreationException()
 
             return PrefixIncExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         elif operator == "--":
             if not is_valid_assignment_target_expr(expr):
-                Logger.error("Invalid target '{}' for prefix decrement on line '{}'".format(get_full_context_source(ctx.getChild(1)), ctx.start.line))
+                Logger.error("Invalid target '{}' for prefix decrement on line '{}'".format(
+                    get_full_context_source(ctx.getChild(1)), ctx.start.line))
                 raise AstCreationException()
 
             return PrefixDecExpr(expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
@@ -631,7 +634,8 @@ class ParserVisitor(CVisitor):
         expression = self.manuallyVisitChild(ctx.getChild(0))
 
         if not is_valid_assignment_target_expr(expression):
-            Logger.error("Invalid target '{}' for postfix decrement on line '{}'".format(get_full_context_source(ctx.getChild(0)), ctx.start.line))
+            Logger.error("Invalid target '{}' for postfix decrement on line '{}'".format(
+                get_full_context_source(ctx.getChild(0)), ctx.start.line))
             raise AstCreationException()
 
         return PostfixDecExpr(expression).setLineNr(ctx.start.line).setColNr(ctx.start.column)
@@ -662,7 +666,8 @@ class ParserVisitor(CVisitor):
         expression = self.manuallyVisitChild(ctx.getChild(0))
 
         if not is_valid_assignment_target_expr(expression):
-            Logger.error("Invalid target '{}' for postfix decrement on line '{}'".format(get_full_context_source(ctx.getChild(0)), ctx.start.line))
+            Logger.error("Invalid target '{}' for postfix decrement on line '{}'".format(
+                get_full_context_source(ctx.getChild(0)), ctx.start.line))
             raise AstCreationException()
 
         return PostfixIncExpr(expression).setLineNr(ctx.start.line).setColNr(ctx.start.column)
@@ -742,11 +747,13 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#int_constant.
     def visitInt_constant(self, ctx: CParser.Int_constantContext):
-        return IntegerConstantExpr(ctx.getText()).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+        value = int(round(float(ctx.getText())))
+        return IntegerConstantExpr(value).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#float_constant.
     def visitFloat_constant(self, ctx: CParser.Float_constantContext):
-        return FloatConstantExpr(ctx.getText()).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+        value = float(ctx.getText())
+        return FloatConstantExpr(value).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#str_constant.
     def visitStr_constant(self, ctx: CParser.Str_constantContext):
@@ -759,7 +766,8 @@ class ParserVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#bool_constant.
     def visitBool_constant(self, ctx: CParser.Bool_constantContext):
-        return BoolConstantExpr(ctx.getText()).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+        value = ctx.getText().lower() == "true"
+        return BoolConstantExpr(value).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
 
 def is_valid_assignment_target_expr(target_expr):
