@@ -1573,8 +1573,26 @@ class LogicOrExpr(Expression):
             node = BoolConstantExpr(result)
             node.resolveExpressionType(node.getSymbolTable())
             return node, constants
-
-
+        # x || 0 => (bool) x
+        elif isinstance(self.right, ConstantExpr) and self.right.getValue() == 0:
+            node = CastExpr(VariableType("bool"), self.left)
+            node.resolveExpressionType(self.getSymbolTable())
+            return node, constants
+        # 0 || x => (bool) x
+        elif isinstance(self.left, ConstantExpr) and self.left.getValue() == 0:
+            node = CastExpr(VariableType("bool"), self.right)
+            node.resolveExpressionType(self.getSymbolTable())
+            return node, constants
+        # x || 1 => 1
+        elif isinstance(self.right, ConstantExpr) and self.right.getValue() == 1:
+            node = BoolConstantExpr(True)
+            node.resolveExpressionType(self.getSymbolTable())
+            return node, constants
+        # 1 || x => 1
+        elif isinstance(self.left, ConstantExpr) and self.left.getValue() == 1:
+            node = BoolConstantExpr(True)
+            node.resolveExpressionType(self.getSymbolTable())
+            return node, constants
 
         return self, constants
 
@@ -1633,6 +1651,37 @@ class LogicAndExpr(Expression):
         """
         self.left, constants = self.left.constantFolding(constants, while_body)
         self.right, constants = self.right.constantFolding(constants, while_body)
+
+        if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
+            left_type = get_constant_type(self.left)
+            right_type = get_constant_type(self.right)
+            a = change_constant_type(self.left.getValue(), left_type, "bool")
+            b = change_constant_type(self.right.getValue(), right_type, "bool")
+
+            result = a and b
+            node = BoolConstantExpr(result)
+            node.resolveExpressionType(node.getSymbolTable())
+            return node, constants
+        # x && 1 => (bool) x
+        elif isinstance(self.right, ConstantExpr) and self.right.getValue() == 1:
+            node = CastExpr(VariableType("bool"), self.left)
+            node.resolveExpressionType(self.getSymbolTable())
+            return node, constants
+        # 1 && x => (bool) x
+        elif isinstance(self.left, ConstantExpr) and self.left.getValue() == 1:
+            node = CastExpr(VariableType("bool"), self.right)
+            node.resolveExpressionType(self.getSymbolTable())
+            return node, constants
+        # x && 0 => 0
+        elif isinstance(self.right, ConstantExpr) and self.right.getValue() == 0:
+            node = BoolConstantExpr(False)
+            node.resolveExpressionType(self.getSymbolTable())
+            return node, constants
+        # 0 && x => 0
+        elif isinstance(self.left, ConstantExpr) and self.left.getValue() == 0:
+            node = BoolConstantExpr(False)
+            node.resolveExpressionType(self.getSymbolTable())
+            return node, constants
 
         return self, constants
 
@@ -2535,6 +2584,21 @@ class LogicNotExpr(Expression):
             Returns updated node (when possible) and dict with constant values
         """
         self.expression, constants = self.expression.constantFolding(constants, while_body)
+
+        # !0 => 1
+        # !1 => 0
+        if isinstance(self.expression, ConstantExpr):
+            expr_ype = get_constant_type(self.expression)
+            a = change_constant_type(self.expression.getValue(), expr_ype, "bool")
+
+            result = not a
+            node = BoolConstantExpr(result)
+            node.resolveExpressionType(node.getSymbolTable())
+            return node, constants
+        # !!x => x
+        elif isinstance(self.expression, LogicNotExpr):
+            return self.expression.expression, constants
+
         return self, constants
 
 

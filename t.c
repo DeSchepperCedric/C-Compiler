@@ -4,15 +4,13 @@
 
 #include <stdio.h>
 int test(){
-return 2;
+return 0;
 }
 
 int main(int argc, char** argv)
 {
-int b = "c" || false;
-char q = "d";
-int c = q;
-printf("%d", c);
+int b = !0;
+printf("%d", b);
 
 return 0;
 }
