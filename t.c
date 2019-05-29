@@ -9,7 +9,7 @@ return 0;
 
 int main(int argc, char** argv)
 {
-int b = !0;
+char b = 'q';
 printf("%d", b);
 
 return 0;
