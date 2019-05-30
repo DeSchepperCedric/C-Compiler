@@ -654,11 +654,11 @@ class LLVMGenerator:
 
         return code, self.cur_reg - 1
 
-    def logicBinopExpr(self, node, operation):
+    def logicBinopExpr(self, node, op):
         """
             Process a binary logical operation.
         :param node:
-        :param operation: Can be "and", "or".
+        :param op: Can be "and", "or".
         :return:
         """
         code = ""
@@ -691,7 +691,7 @@ class LLVMGenerator:
 
             code += code_left
             code += code_right
-            code += "%{} = {} float %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
+            code += "%{} = {} float %{}, %{}\n".format(self.cur_reg, op, reg_left, reg_right)
             llvm_type = "float"
 
         elif strongest_type == "int":
@@ -700,7 +700,7 @@ class LLVMGenerator:
 
             code += code_left
             code += code_right
-            code += "%{} = {} i32 %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
+            code += "%{} = {} i32 %{}, %{}\n".format(self.cur_reg, op, reg_left, reg_right)
             llvm_type = "i32"
 
         elif strongest_type == "char":
@@ -709,7 +709,7 @@ class LLVMGenerator:
 
             code += code_left
             code += code_right
-            code += "%{} = {} i8 %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
+            code += "%{} = {} i8 %{}, %{}\n".format(self.cur_reg, op, reg_left, reg_right)
             llvm_type = "i8"
         elif strongest_type == "bool":
             code_left, reg_left = self.convertToBool(reg_left, type_left)
@@ -717,7 +717,7 @@ class LLVMGenerator:
 
             code += code_left
             code += code_right
-            code += "%{} = {} i1 %{}, %{}\n".format(self.cur_reg, operation, reg_left, reg_right)
+            code += "%{} = {} i1 %{}, %{}\n".format(self.cur_reg, op, reg_left, reg_right)
             llvm_type = "i1"
         else:
             raise Exception("Invalid return type from getStrongestType '{}'".format(strongest_type))
@@ -747,7 +747,7 @@ class LLVMGenerator:
 
         # extra load not necessary when dealing with Identifiers
         if not isinstance(target_expr, IdentifierExpr):
-            load, reg_left = self.loadVariable(reg_target, target_type, False)
+            load, reg_target = self.loadVariable(reg_target, target_type, False)
             code_target += load
 
         code += code_target
@@ -760,27 +760,27 @@ class LLVMGenerator:
             code_target, reg_target = self.convertToFloat(reg_target, target_type)
 
             code += code_target
-            code += "%{} = fcmp float %{}, 0.0\n".format(self.cur_reg, reg_target)
+            code += "%{} = fcmp oeq float %{}, 0.0\n".format(self.cur_reg, reg_target)
             llvm_type = "i1"
 
         elif strongest_type == "int":
             code_target, reg_target = self.convertToInt(reg_target, target_type)
 
             code += code_target
-            code += "%{} = icmp i32 %{}, 0\n".format(self.cur_reg, reg_target)
+            code += "%{} = icmp eq i32 %{}, 0\n".format(self.cur_reg, reg_target)
             llvm_type = "i1"
 
         elif strongest_type == "char":
             code_target, reg_target = self.convertToInt(reg_target, target_type)
 
             code += code_target
-            code += "%{} = icmp i8 %{}, 0\n".format(self.cur_reg, reg_target)
+            code += "%{} = icmp eq i8 %{}, 0\n".format(self.cur_reg, reg_target)
             llvm_type = "i1"
         elif strongest_type == "bool":
             code_target, reg_target = self.convertToBool(reg_target, target_type)
 
             code += code_target
-            code += "%{} = icmp i1 %{}, 0\n".format(self.cur_reg, reg_target)
+            code += "%{} = icmp eq i1 %{}, 0\n".format(self.cur_reg, reg_target)
             llvm_type = "i1"
         else:
             raise Exception("Invalid return type from getStrongestType '{}'".format(strongest_type))
