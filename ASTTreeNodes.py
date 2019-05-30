@@ -2384,6 +2384,7 @@ class SubExpr(Expression):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
             new_type = get_strongest_type(left_type, right_type)
+            print(new_type)
             a = change_constant_type(self.left.getValue(), left_type, new_type)
             b = change_constant_type(self.right.getValue(), right_type, new_type)
 
@@ -3869,7 +3870,9 @@ def will_conversion_narrow(target, value):
 
 
 def change_constant_type(value, old_type, new_type):
-    if old_type == "int" and new_type != old_type:
+    if old_type == "char" and new_type == old_type:
+        new_type = "int"
+    elif old_type == "int" and new_type != old_type:
         value = int(value)
 
     elif old_type == "float" and new_type != old_type:
@@ -3890,7 +3893,8 @@ def change_constant_type(value, old_type, new_type):
         return float(value)
 
     elif old_type == "char" and new_type == "int":
-        return value
+        value = value[1:-1]
+        return ord(value)
 
     # integer
     elif old_type == "int" and new_type == "float":
