@@ -39,8 +39,7 @@ class MipsGenerator:
         # TODO make copy to init these regs, also add "resetUsedRegs()" and call
         # TODO that function when processing a FuncDef so that memleaks don't propagate
 
-        self.free_regs = ["$t0", "$t1", "$t2", "$t3"]
-        self.free_float_regs = ["$f1", "$f2", "$f3", "$f4"]
+        self.resetRegs()
 
 
 
@@ -111,10 +110,7 @@ class MipsGenerator:
         elif isinstance(node, DivExpr):
             return self.arithmeticExpr(node, "div")
         elif isinstance(node, ModExpr):
-            #  no mod operation
-            # see https://stackoverflow.com/questions/21695333/how-do-i-correctly-use-the-mod-operator-in-mips
-            # return self.arithmeticExpr(node, "srem")
-            pass
+            return self.modExpr(node)
 
         elif isinstance(node, PrefixIncExpr):
             return self.prefixArithmetics(node, "add")
@@ -155,6 +151,10 @@ class MipsGenerator:
             return self.branchStatement(node)
         elif isinstance(node, WhileStmt):
             return self.whileStatement(node)
+        elif isinstance(node, BreakStatement):
+            return self.breakStatement(node)
+        elif isinstance(node, ContinueStatement):
+            return self.continueStatement(node)
 
         elif isinstance(node, ExpressionStatement):
             return self.expressionStatement(node)
@@ -211,6 +211,13 @@ class MipsGenerator:
             raise Exception("Error when requesting free float register: no float register availble.")
 
         return self.free_float_regs.pop()
+
+    def resetRegs(self):
+        """
+            Free all used registers.
+        """
+        self.free_regs       = list(self.all_temp_regs)
+        self.free_float_regs = list(self.all_float_regs)
 
     def getSpOffset(self):
         """
@@ -572,9 +579,6 @@ class MipsGenerator:
         # check of the condition expression is float
         is_float = node.getCondExpr().getExpressionType().toString() == "float"
 
-        if_code, reg = self.astNodeToMIPS(node.getIfBody())
-        else_code, reg = self.astNodeToMIPS(node.getElseBody())
-
         label = self.getUniqueLabelId()
 
         code = "cond_{}:\n".format(label)
@@ -591,6 +595,9 @@ class MipsGenerator:
             code += "beqz {}, else_branch_{}\n".format(cond_reg, label)
 
         self.releaseReg(cond_reg)
+
+        if_code, reg = self.astNodeToMIPS(node.getIfBody())
+        else_code, reg = self.astNodeToMIPS(node.getElseBody())
 
         code += "if_branch_{}:\n".format(label)
         code += if_code
@@ -619,13 +626,13 @@ class MipsGenerator:
         # check of the condition expression is float
         is_float = node.getCondExpr().getExpressionType().toString() == "float"
 
-        body_code, body_reg = self.astNodeToMIPS(node.getBody())
-
         cond_label_id = self.getUniqueLabelId()
         loop_label_id = self.getUniqueLabelId()
         endwhile_label_id = self.getUniqueLabelId()
 
         code = "cond_{}:\n".format(cond_label_id)
+        self.most_recent_whilecond = "cond_{}".format(cond_label_id)
+
         code += cond_code
 
         if is_float:
@@ -639,12 +646,28 @@ class MipsGenerator:
 
         self.releaseReg(cond_reg)
 
+        # only do body now that condition is done!
+        body_code, body_reg = self.astNodeToMIPS(node.getBody())
+
         code += "loop_{}:\n".format(loop_label_id)
+
         code += body_code
 
         code += "j cond_{}\n".format(cond_label_id)
 
         code += "endwhile_{}:\n".format(endwhile_label_id)
+        self.most_recent_endwhile = "endwhile_{}".format(endwhile_label_id)
+
+        return code, -1
+
+    def breakStatement(self, node:BreakStatement):
+
+        code = "j {}\n".format(self.most_recent_endwhile)
+
+        return code, -1
+
+    def continueStatement(self, node:ContinueStatement):
+        code = "j {}\n".format(self.most_recent_whilecond)
 
         return code, -1
 
@@ -652,6 +675,10 @@ class MipsGenerator:
         # iterate over statements and process
         code = ""
         for child in node.getChildren():
+            self.resetRegs()
+            print("line:",child.getLineNr())
+            print("f-regs:",self.free_float_regs)
+            print("t-regs:",self.free_regs)
             new_code, reg = self.astNodeToMIPS(child)
             code += new_code
             code += "\n"
@@ -721,6 +748,9 @@ class MipsGenerator:
 
             fp_arg_offset += 4
 
+        # reset all registers.
+        self.resetRegs()
+
         # function body
         # return value is placed into $v0 or $f31 by a return expression
         func_body, reg = self.astNodeToMIPS(node.getBody())
@@ -741,6 +771,9 @@ class MipsGenerator:
         sp_adjust = "addi $sp, $sp, {}\n".format(self.getSpOffset())
 
         code = function_doc + func_label + sp_adjust + func_body + func_return
+
+        print(self.free_regs)
+        print(self.free_float_regs)
 
         # we don't return a register since a function definition does not return anything
         return code, -1
@@ -1062,6 +1095,9 @@ class MipsGenerator:
                 # add string to data segment (label?)
                 # do syscall to print string
 
+                # %% is the escape for "%"
+                value = value.replace("%%", "%")
+
                 substring_id = "string.{}.{}".format(self.string_counter, substring_counter)
                 substring_counter += 1
 
@@ -1084,6 +1120,8 @@ class MipsGenerator:
                 code += arg_code
 
                 if formatter == "%d":
+
+
                     # place argument
                     code += "move $a0, {}\n".format(arg_reg)
 
@@ -1258,6 +1296,29 @@ class MipsGenerator:
         code += "{} {}, {}, {}\n".format(operation, reg_left, reg_left, reg_right)
 
         self.releaseReg(reg_right)
+        return code, reg_left
+
+    def modExpr(self, node: ModExpr) -> (str, str):
+        """
+            Process a modulo expression.
+        """
+
+        code = ""
+
+        code_left, reg_left = self.astNodeToMIPS(node.getLeft())
+        code_right, reg_right = self.astNodeToMIPS(node.getRight())
+
+        code += code_left
+        code += code_right
+
+        # perform div
+        code += "div {}, {}\n".format(reg_left, reg_right)
+
+        self.releaseReg(reg_right)
+
+        # take remainder
+        code += "mfhi {}\n".format(reg_left)
+
         return code, reg_left
 
     def returnWithExprStatement(self, node: ReturnWithExprStatement):
@@ -1466,6 +1527,8 @@ class MipsGenerator:
             code, target_reg = self.astNodeToMIPS(target)
             load, register = self.loadRegister(target_reg, 0, is_float)
             code += load
+            self.releaseReg(target_reg) # no longer needed, and loadRegister
+            # does not free the reg.
             return code, register
 
     def arrayDecl(self, node):

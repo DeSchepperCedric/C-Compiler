@@ -114,6 +114,10 @@ class LLVMGenerator:
             return self.branchStatement(node)
         elif isinstance(node, WhileStmt):
             return self.whileStatement(node)
+        elif isinstance(node, BreakStatement):
+            return self.breakStatement(node)
+        elif isinstance(node, ContinueStatement):
+            return self.continueStatement(node)
 
         elif isinstance(node, ExpressionStatement):
             return self.expressionStatement(node)
@@ -330,6 +334,7 @@ class LLVMGenerator:
 
         code += "\nif.{}:\n".format(register)
         code += code_if
+
         code += "br label %end.{}\n".format(register)
         # if "\nret" in code_if or code_if.startswith("ret"):
         #     self.cur_reg += 1
@@ -337,6 +342,7 @@ class LLVMGenerator:
         code_else, reg = self.astNodeToLLVM(node.getElseBody())
         code += "\nelse.{}:\n".format(register)
         code += code_else
+
         code += "br label %end.{}\n".format(register)
         # if "\nret" in code_else or code_else.startswith("ret"):
         #     self.cur_reg += 1
@@ -359,16 +365,29 @@ class LLVMGenerator:
         code += code_cond
         code += "br i1 %{}, label %while.{}, label %end.{}\n".format(register, register, register)
 
+        self.mostrecent_break_label = "%end.{}".format(register)
+
         code_while, reg = self.astNodeToLLVM(node.getBody())
         code += "\nwhile.{}:\n".format(register)
         code += code_while
-        code += "br label %cond.{}\n".format(register)
+
+        if not codeEndsWithBr(code):
+            code += "br label %cond.{}\n".format(register)
+
+        self.mostrecent_continue_label = "%cond.{}".format(register)
+
         # if "\nret" in code_while or code_while.startswith("ret"):
         #     self.cur += 1
 
         code += "\nend.{}:\n".format(register)
 
         return code, -1
+
+    def breakStatement(self, node:BreakStatement):
+        raise Exception("Break statements are not available in LLVM.")
+
+    def continueStatement(self, node:ContinueStatement):
+        raise Exception("Break statements are not available in LLVM.")
 
     def programNode(self, node):
         code = ""
@@ -1474,3 +1493,8 @@ class LLVMGenerator:
 
         else:
             raise Exception("Prefix arithmetics aren't supported for type {}".format(type(target)))
+
+def codeEndsWithBr(code:str) -> bool:
+    split = list(filter(len, code.split("\n")))
+
+    return split[-1].startswith("br")

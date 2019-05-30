@@ -20,6 +20,7 @@ int main(int argc, char** argv)
 		f -= 0.5;
 		k = i;
 	}
+
 	printf("k=%d, this is k-5=%d iterations.\n", k, k-5);
 
 	// test break

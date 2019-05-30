@@ -66,7 +66,7 @@ int main(int argc, char** argv)
 
 	void func_defined_after_call();
 
-	printf("Calling 'func_defined_after_call'\n")
+	printf("Calling 'func_defined_after_call'\n");
 	func_defined_after_call();
 
 	printf("Entering compound statement.\n");
