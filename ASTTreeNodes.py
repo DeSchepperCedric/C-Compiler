@@ -533,10 +533,18 @@ class VarDeclWithInit(SymbolDecl):
         symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, own_scope_only=True)
         full_id = scope_name + "." + self.symbol_id + "." + "used"
         variables[full_id] = False
-
         # ignore globals
         if isinstance(self.init_expr, ConstantExpr) and not self.getSymbolTable().isGlobal(self.symbol_id):
-            t, table = self.getSymbolTable().lookup(self.symbol_id)
+
+            variable_type, table = self.getSymbolTable().lookup(self.symbol_id)
+            constant_type = get_constant_type(self.init_expr)
+            variable_type = variable_type.toString()
+            # convert to variable type
+            if constant_type != variable_type:
+                value = change_constant_type(self.init_expr.getValue(), constant_type, variable_type)
+                self.init_expr = create_constant_node(value, variable_type)
+                self.init_expr.resolveExpressionType(self.getSymbolTable())
+
             identifier = table + "." + self.symbol_id
             variables[identifier] = self.init_expr
 
@@ -1559,10 +1567,18 @@ class AssignmentExpr(Expression):
         if self.getSymbolTable().isGlobal(self.left.getIdentifierName()):
             return self, variables
 
-        t, table = self.getSymbolTable().lookup(self.left.getIdentifierName())
+        variable_type, table = self.getSymbolTable().lookup(self.left.getIdentifierName())
         identifier = table + "." + self.left.getIdentifierName()
 
         if isinstance(self.right, ConstantExpr):
+            constant_type = get_constant_type(self.right)
+            variable_type = variable_type.toString()
+            # convert to variable type
+            if constant_type != variable_type:
+                value = change_constant_type(self.right.getValue(), constant_type, variable_type)
+                self.right = create_constant_node(value, variable_type)
+                self.right.resolveExpressionType(self.getSymbolTable())
+
             variables[identifier] = self.right
         else:
             try:
@@ -3442,12 +3458,10 @@ class AddressExpr(Expression):
             - Remove variables that are not used
             Returns updated node (when possible) and dict with constant values
         """
-        self.target_expr, variables = self.target_expr.optimiseNodes(variables, while_body)
-
         # check if variable is used
         if isinstance(self.target_expr, IdentifierExpr):
             variables = add_to_used_variables(variables, self.target_expr)
-
+        print(variables)
         return self, variables
 
 
@@ -3575,12 +3589,26 @@ class FuncCallExpr(Expression):
         # add function to used variables
         variables[self.getFunctionID().getIdentifierName()] = True
 
-        for i in range(0, len(self.argument_list)):
-            self.argument_list[i], variables = self.argument_list[i].optimiseNodes(variables, while_body)
+        if self.getFunctionID().getIdentifierName() == "scanf":
+            for i in range(0, len(self.argument_list)):
 
-            # check if variable is used
-            if isinstance(self.argument_list[i], IdentifierExpr):
-                add_to_used_variables(variables, self.argument_list[i])
+                if isinstance(self.argument_list[i], AddressExpr):
+                    identifier = self.argument_list[i].getTargetExpr().getIdentifierName()
+                    t, table = self.getSymbolTable().lookup(identifier)
+                    identifier = table + "." + identifier
+                    try:
+                        del variables[identifier]
+                    except KeyError:
+                        pass
+
+        else:
+            for i in range(0, len(self.argument_list)):
+
+                self.argument_list[i], variables = self.argument_list[i].optimiseNodes(variables, while_body)
+
+                # check if variable is used
+                if isinstance(self.argument_list[i], IdentifierExpr):
+                    add_to_used_variables(variables, self.argument_list[i])
 
         return self, variables
 
@@ -3927,6 +3955,8 @@ def create_constant_node(value, type):
         return FloatConstantExpr(value)
     elif type == "int":
         return IntegerConstantExpr(value)
+    elif type == "char" and isinstance(value, str):
+        return CharConstantExpr("\'" + value + "\'")
     elif type == "char":
         return CharConstantExpr("\'" + chr(value) + "\'")
     elif type == "bool":

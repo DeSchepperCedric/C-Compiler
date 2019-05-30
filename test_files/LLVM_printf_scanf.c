@@ -11,10 +11,10 @@ int main(int argc, char** argv)
 	scanf("%d", &received_int);
 	printf("Received int: %d\n", received_int);
 
-	float recieved_float = 0.0;
+	float received_float = 0.0;
 	printf("Enter float:\n");
-	scanf("%f", &recieved_float);
-	printf("Received float: %f\n", recieved_float);
+	scanf("%f", &received_float);
+	printf("Received float: %f\n", received_float);
 
 	return 0;
 }
