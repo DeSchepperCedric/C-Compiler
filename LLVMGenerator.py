@@ -931,10 +931,15 @@ class LLVMGenerator:
             value = float(value)
 
         if old_type == "i1" and new_type != old_type:
-            value = False if value == "false" else value
-            value = True if value == "true" else value
+            #value = False if value == "false" else value
+            #value = True if value == "true" else value
+            value = 0 if (value == "false" or value == False) else value
+            value = 1 if (value == "true" or value == True) else value
 
         if new_type == old_type:
+            # convert True to 1, False to 0, etc.
+            value = 0 if (value == "false" or value == False) else value
+            value = 1 if (value == "true" or value == True) else value
             return value
 
         elif new_type == "i1":
