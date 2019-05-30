@@ -48,7 +48,6 @@ class MipsGenerator:
             Returns a tuple (code, reg) with code being the MIPS code and reg
             being the register that contains the result.
         """
-        print(type(node))
         if isinstance(node, IncludeNode):
             return "", -1
 
@@ -152,10 +151,6 @@ class MipsGenerator:
             return self.branchStatement(node)
         elif isinstance(node, WhileStmt):
             return self.whileStatement(node)
-        elif isinstance(node, BreakStatement):
-            return self.breakStatement(node)
-        elif isinstance(node, ContinueStatement):
-            return self.continueStatement(node)
 
         elif isinstance(node, ExpressionStatement):
             return self.expressionStatement(node)
@@ -677,9 +672,6 @@ class MipsGenerator:
         code = ""
         for child in node.getChildren():
             self.resetRegs()
-            print("line:",child.getLineNr())
-            print("f-regs:",self.free_float_regs)
-            print("t-regs:",self.free_regs)
             new_code, reg = self.astNodeToMIPS(child)
             code += new_code
             code += "\n"
@@ -772,9 +764,6 @@ class MipsGenerator:
         sp_adjust = "addi $sp, $sp, {}\n".format(self.getSpOffset())
 
         code = function_doc + func_label + sp_adjust + func_body + func_return
-
-        print(self.free_regs)
-        print(self.free_float_regs)
 
         # we don't return a register since a function definition does not return anything
         return code, -1
@@ -1619,6 +1608,7 @@ class MipsGenerator:
         code += self.storeRegister(value_reg, address_reg, 0, is_float)
         self.releaseReg(address_reg)
         self.releaseReg(value_reg)
+
         return code, -1
 
     def arrayElementAccess(self, node):
