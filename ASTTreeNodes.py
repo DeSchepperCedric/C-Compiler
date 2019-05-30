@@ -835,54 +835,6 @@ class StatementContainer:
                             .format(cond_expr_type.toString(), child.getLineNr()))
                     raise AstTypingException()
 
-            elif isinstance(child, ForStmt):
-                # for statement: has its own scope
-
-                # filter out expression
-                init_decl_list = [decl for decl in child.getInitList() if isinstance(decl, SymbolDecl)]
-                body = child.getBody()
-
-                # allocate new scope
-                for_scope = symbol_table.allocate()
-
-                # merge body and declarators
-                for decl in init_decl_list:
-                    # only declarations
-                    decl.addToSymbolTable(for_scope)
-                # note: this also sets the symbol table for the body
-                body.setParentFunctionType(self.parent_function_type)
-                body.addScopeToSymbolTable(parent_table=for_scope, as_child=False)
-
-                # if we retrieve the symbol table
-                # it will be the one with the children of the for body, and de declarations
-                child.setSymbolTable(for_scope)
-
-                # annotate for-condition expressions and resolve expression types
-                init_expr_list = [expr for expr in child.getInitList() if isinstance(expr, Expression)]
-
-                for expr in init_expr_list:
-                    expr.setExprTreeSymbolTable(for_scope)
-                    expr.resolveExpressionType(for_scope)
-
-                for expr in child.getIterList():
-                    if isinstance(expr, Expression):  # skip empty node
-                        expr.setExprTreeSymbolTable(for_scope)
-                        expr.resolveExpressionType(for_scope)
-
-                # annotate the conditional expression with symbol table and resolve expression_type
-                cond_expr = child.getCondExpr()
-                cond_expr.setExprTreeSymbolTable(for_scope)
-                cond_expr.resolveExpressionType(for_scope)
-
-                # check that expression is compatible with bool
-                cond_expr_type = cond_expr.getExpressionType()
-
-                if not is_conversion_possible(VariableType('bool'), cond_expr_type):
-                    Logger.error(
-                        "Conditonal expression in for-statement evaluates to type '{}'. Must be compatible with 'bool'. Error on line {}."
-                            .format(cond_expr_type.toString(), child.getLineNr()))
-                    raise AstTypingException()
-
             elif isinstance(child, WhileStmt):
                 # while statement: has its own scope
                 # retrieve body and add as child.
@@ -1015,9 +967,6 @@ class StatementContainer:
                     has_pruned = True
                     break
             elif isinstance(child, WhileStmt):
-                # pass in_loop so that children are aware
-                child.pruneDeadCode(in_loop)  # return value does not matter.
-            elif isinstance(child, ForStmt):
                 # pass in_loop so that children are aware
                 child.pruneDeadCode(in_loop)  # return value does not matter.
             elif isinstance(child, CompoundStmt):
@@ -1250,69 +1199,6 @@ class WhileStmt(Statement):
         """
         self.cond_expr, constants = self.cond_expr.optimiseNodes(constants, True)
         self.body, constants = self.body.optimiseNodes(constants, True)
-
-        # check if variable is used
-        if isinstance(self.cond_expr, IdentifierExpr):
-            add_to_used_variables(constants, self.cond_expr)
-
-        return self, constants
-
-
-class ForStmt(Statement):
-    """
-        Node that represents a for loop.
-    """
-
-    def __init__(self, init_list, condition_expr, iter_list, body):
-        """
-            'init_list': a list of declarations, or expressions.
-            'condition_expr': an expression that will be evaluated to determine whether or not to
-            continue iterating, or None.
-            'iter_list': a list of expressions that will be performed at the end of each iteration.
-        """
-        super().__init__(statement_type="ForStmt")
-        self.init_list = init_list
-        self.cond_expr = condition_expr
-        self.iter_list = iter_list
-        self.body = body
-
-    def getInitList(self):
-        return self.init_list
-
-    def getCondExpr(self):
-        return self.cond_expr
-
-    def getIterList(self):
-        return self.iter_list
-
-    def getBody(self):
-        return self.body
-
-    def toDot(self, parent_nr, begin_nr, add_open_close=False):
-        return self.M_defaultToDotImpl(children=[*self.init_list, self.cond_expr, *self.iter_list, self.body],
-                                       parent_nr=parent_nr,
-                                       begin_nr=begin_nr,
-                                       add_open_close=add_open_close)
-
-    def pruneDeadCode(self, in_loop=False):
-        # init list, iter list and cond_expr don't need to be pruned, since no return or break can exist there
-        self.body.pruneDeadCode(
-            in_loop=True)  # set in_loop to true so that children know that "break" and "continue" are valid
-        return False  # no guarantees that the while loop will always be exectued, so no prune propagation
-
-    def optimiseNodes(self, constants, while_body=False):
-        """
-            Optimises nodes :
-            - Removes null sequences
-            - Constant folding: Evaluate constant expressions at compile time.
-            - Constant propagation: Substitute the values of known constants in expressions
-            - Remove variables that are not used
-            at compile time
-            Returns updated node (when possible) and dict with constant values
-        """
-        self.init_list, constants = self.init_list.optimiseNodes(constants, while_body)
-        self.cond_expr, constants = self.cond_expr.optimiseNodes(constants, while_body)
-        self.body, constants = self.body.optimiseNodes(constants, while_body)
 
         # check if variable is used
         if isinstance(self.cond_expr, IdentifierExpr):
