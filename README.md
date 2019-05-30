@@ -14,10 +14,9 @@ Compiles C code to either LLVM or MIPS.
     <li>Comments</li>
     <li>Operations: =, +, -, *, /, <, >, ==</li>
     <li>Functions, function calling</li>
-    <li>Array</li>
+    <li>1-dimensional arrays (constant size)</li>
     <li>Syntax errors</li>
     <li>Typing errors</li>
-    <li>Pruning after 'return'</li>
     <li>%, +=, -=, *=, /=, <=, >=, != (fully implemented)</li>
     <li>Conversions in assignments, parameter passing, expressions, etc (automatic + casts) (fully implemented)</li>
     <li>Bool type, 'not', 'and', 'or', 'true', 'false' keywords (in grammar)(fully implemented).</li>
@@ -33,9 +32,10 @@ Compiles C code to either LLVM or MIPS.
     <li>Constant folding</li>
     <li>Constant propagation</li>
     <li>Null sequences</li>
-    <li>Unreachable code and dead code</li>
+    <li>Unreachable code and dead code:</li>
         <ul>
             <li>Do not generate code for statements that appear after a return in a function</li>
+            <li>Do not generate code for variables that are not used. This includes arrays and functions.</li>
         </ul>
     <li>Pruning of dead code for 'continue', 'return', 'break'</li>
 </ul>

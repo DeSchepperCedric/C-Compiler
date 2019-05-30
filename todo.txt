@@ -1,9 +1,7 @@
  - int -> ptr, ptr -> int assignment
- - logic ops: &&, ||, not
- - unary +,- (DONE)
+ - logic ops: &&, ||, not (LLVM)
  - break, continue
  - no return warnings*
- - forloop* (DONE)
 
 
 => moet allemaal nog in LLVM

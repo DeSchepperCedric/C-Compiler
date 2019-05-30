@@ -134,15 +134,24 @@ class ASTNode:
 
         return current_node_nr, dotdata
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
         return self, constants
+
+    def removeUnusedVariables(self, variables):
+        """
+            Removes unused variables
+            Returns updated node (when possible) and dict with used/unused variables
+        """
+        return self, variables
 
 
 class ASTTestTermNode(ASTNode):
@@ -236,16 +245,26 @@ class ProgramNode(ASTNode):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
-            Doesn't return since it's the program node.
+            Does not return since it's the program node
         """
         for tln in self.children:
-            tln, constants = tln.constantFolding(constants, while_body)
+            tln, constants = tln.optimiseNodes(constants, while_body)
+
+        new_children = []
+        for tln in self.children:
+            new_tln, constants = tln.removeUnusedVariables(constants)
+            if new_tln:
+                new_children.append(new_tln)
+
+        self.children = new_children
 
 
 class TopLevelNode(ASTNode):
@@ -362,6 +381,26 @@ class ArrayDecl(SymbolDecl):
 
         symbol_table.insert(self.symbol_id, ArrayType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)))
 
+    def optimiseNodes(self, constants, while_body=False):
+        self.size_expr, constants = self.size_expr.optimiseNodes(constants, while_body)
+
+        if not isinstance(self.size_expr, IntegerConstantExpr):
+            Logger.error("Array size must be specified by integer constant")
+            raise AstCreationException()
+
+        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, own_scope_only=True)
+        full_id = scope_name + "." + self.symbol_id + "." + "used"
+        constants[full_id] = False
+        return self, constants
+
+    def removeUnusedVariables(self, variables):
+        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, own_scope_only=True)
+        full_id = scope_name + "." + self.symbol_id + "." + "used"
+        if not variables[full_id]:
+            return None, variables
+
+        return self, variables
+
 
 class VarDeclDefault(SymbolDecl):
     """
@@ -393,6 +432,32 @@ class VarDeclDefault(SymbolDecl):
 
         self.setSymbolTable(symbol_table)
         symbol_table.insert(self.symbol_id, VariableType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)))
+
+    def optimiseNodes(self, constants, while_body=False):
+        """
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        self.init_expr, constants = self.init_expr.optimiseNodes(constants, while_body)
+
+        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, own_scope_only=True)
+        full_id = scope_name + "." + self.symbol_id + "." + "used"
+        constants[full_id] = False
+
+        return self, constants
+
+    def removeUnusedVariables(self, variables):
+        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, own_scope_only=True)
+        full_id = scope_name + "." + self.symbol_id + "." + "used"
+        if not variables[full_id]:
+            return None, variables
+
+        return self, variables
 
 
 class VarDeclWithInit(SymbolDecl):
@@ -451,15 +516,21 @@ class VarDeclWithInit(SymbolDecl):
                     .format(expr_type.toString(), symbol_type.toString(), self.init_expr.getLineNr()))
             # no exception here, compilation may continue.
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.init_expr, constants = self.init_expr.constantFolding(constants, while_body)
+        self.init_expr, constants = self.init_expr.optimiseNodes(constants, while_body)
+
+        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, own_scope_only=True)
+        full_id = scope_name + "." + self.symbol_id + "." + "used"
+        constants[full_id] = False
 
         if isinstance(self.init_expr, ConstantExpr):
             t, table = self.getSymbolTable().lookup(self.symbol_id)
@@ -467,6 +538,14 @@ class VarDeclWithInit(SymbolDecl):
             constants[identifier] = self.init_expr
 
         return self, constants
+
+    def removeUnusedVariables(self, variables):
+        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, own_scope_only=True)
+        full_id = scope_name + "." + self.symbol_id + "." + "used"
+        if not variables[full_id]:
+            return None, variables
+
+        return self, variables
 
 
 class FuncDecl(SymbolDecl):
@@ -646,17 +725,39 @@ class FuncDef(TopLevelNode):
         # pass to body
         return self.body.pruneDeadCode()
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.body, constants = self.body.constantFolding(constants, while_body)
+        self.body, constants = self.body.optimiseNodes(constants, while_body)
+
+        constants[self.func_id] = False
 
         return self, constants
+
+    def removeUnusedVariables(self, variables):
+        """
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant profpagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
+            at compile time
+            Returns updated node (when possible) and dict with constant values
+        """
+        full_id = self.func_id
+        if not variables[full_id] and full_id != "main":
+            return None, variables
+
+        self.body, variables = self.body.removeUnusedVariables(variables)
+
+        return self, variables
 
 
 class StatementContainer:
@@ -947,22 +1048,38 @@ class StatementContainer:
 
         self.parent_function_type = func_type
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
         new_child_list = []
         for child in self.child_list:
-            new_child, constants = child.constantFolding(constants, while_body)
+            new_child, constants = child.optimiseNodes(constants, while_body)
             if new_child:
                 new_child_list.append(child)
 
         self.child_list = new_child_list
         return self, constants
+
+    def removeUnusedVariables(self, variables):
+        """
+            Removes unused variables
+            Returns updated node (when possible) and dict with used/unused variables
+        """
+        new_child_list = []
+        for child in self.child_list:
+            new_child, variables = child.removeUnusedVariables(variables)
+            if new_child:
+                new_child_list.append(child)
+
+        self.child_list = new_child_list
+        return self, variables
 
 
 class Body(ASTNode, StatementContainer):
@@ -980,15 +1097,24 @@ class Body(ASTNode, StatementContainer):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        return StatementContainer.constantFolding(self, constants, while_body)
+        return StatementContainer.optimiseNodes(self, constants, while_body)
+
+    def removeUnusedVariables(self, variables):
+        """
+            Removes unused variables
+            Returns updated node (when possible) and dict with used/unused variables
+        """
+        return StatementContainer.removeUnusedVariables(self, variables)
 
 
 class FuncParam(ASTNode):
@@ -1062,20 +1188,28 @@ class CompoundStmt(Statement, StatementContainer):
                                        add_open_close=add_open_close)
 
     def setSymbolTable(self, symbol_table):
-
         self.symbol_table = symbol_table
         for child in self.child_list:
             child.setSymbolTable(symbol_table)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        return StatementContainer.constantFolding(self, constants, while_body)
+        return StatementContainer.optimiseNodes(self, constants, while_body)
+
+    def removeUnusedVariables(self, variables):
+        """
+            Removes unused variables
+            Returns updated node (when possible) and dict with used/unused variables
+        """
+        return StatementContainer.removeUnusedVariables(self, variables)
 
 
 class WhileStmt(Statement):
@@ -1104,16 +1238,23 @@ class WhileStmt(Statement):
         self.body.pruneDeadCode(in_loop=True)
         return False  # no guarantees that the while loop will always be exectued, so no prune propagation
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.cond_expr, constants = self.cond_expr.constantFolding(constants, True)
-        self.body, constants = self.body.constantFolding(constants, True)
+        self.cond_expr, constants = self.cond_expr.optimiseNodes(constants, True)
+        self.body, constants = self.body.optimiseNodes(constants, True)
+
+        # check if variable is used
+        if isinstance(self.cond_expr, IdentifierExpr):
+            add_to_used_variables(constants, self.cond_expr)
+
         return self, constants
 
 
@@ -1159,17 +1300,24 @@ class ForStmt(Statement):
             in_loop=True)  # set in_loop to true so that children know that "break" and "continue" are valid
         return False  # no guarantees that the while loop will always be exectued, so no prune propagation
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.init_list, constants = self.init_list.constantFolding(constants, while_body)
-        self.cond_expr, constants = self.cond_expr.constantFolding(constants, while_body)
-        self.body, constants = self.body.constantFolding(constants, while_body)
+        self.init_list, constants = self.init_list.optimiseNodes(constants, while_body)
+        self.cond_expr, constants = self.cond_expr.optimiseNodes(constants, while_body)
+        self.body, constants = self.body.optimiseNodes(constants, while_body)
+
+        # check if variable is used
+        if isinstance(self.cond_expr, IdentifierExpr):
+            add_to_used_variables(constants, self.cond_expr)
+
         return self, constants
 
 
@@ -1209,17 +1357,22 @@ class BranchStmt(Statement):
         else:
             return False
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.cond_expr, constants = self.cond_expr.constantFolding(constants, while_body)
-        self.if_body, constants = self.if_body.constantFolding(constants, while_body)
-        self.else_body, constants = self.else_body.constantFolding(constants, while_body)
+        self.cond_expr, constants = self.cond_expr.optimiseNodes(constants, while_body)
+        self.if_body, constants = self.if_body.optimiseNodes(constants, while_body)
+        self.else_body, constants = self.else_body.optimiseNodes(constants, while_body)
+
+        if isinstance(self.cond_expr, IdentifierExpr):
+            add_to_used_variables(constants, self.cond_expr)
 
         # Prune if or else body when dealing with constant expression
         """
@@ -1302,15 +1455,21 @@ class ReturnWithExprStatement(JumpStatement):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.expression, constants = self.expression.constantFolding(constants, while_body)
+        self.expression, constants = self.expression.optimiseNodes(constants, while_body)
+
+        if isinstance(self.expression, IdentifierExpr):
+            add_to_used_variables(constants, self.expression)
+
         return self, constants
 
 
@@ -1363,19 +1522,25 @@ class ExpressionStatement(Statement):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.expression, constants = self.expression.constantFolding(constants, while_body)
+        self.expression, constants = self.expression.optimiseNodes(constants, while_body)
+
+        if isinstance(self.expression, IdentifierExpr):
+            add_to_used_variables(constants, self.expression)
+
         # statement with no effect => delete
         if isinstance(self.expression, Expression) \
-                and not isinstance(self.expression, AssignmentExpr)\
-                and not isinstance(self.expression, FuncCallExpr)\
+                and not isinstance(self.expression, AssignmentExpr) \
+                and not isinstance(self.expression, FuncCallExpr) \
                 and not isinstance(self.expression, PrefixIncExpr) \
                 and not isinstance(self.expression, PrefixDecExpr) \
                 and not isinstance(self.expression, PostfixIncExpr) \
@@ -1383,6 +1548,12 @@ class ExpressionStatement(Statement):
             return None, constants
 
         return self, constants
+
+    def removeUnusedVariables(self, variables):
+        self.expression, variables = self.expression.removeUnusedVariables(variables)
+        if not self.expression:
+            return None, variables
+        return self, variables
 
 
 class Expression(ASTNode):
@@ -1480,17 +1651,31 @@ class AssignmentExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.right, constants = self.right.constantFolding(constants, while_body)
 
-        if not isinstance(self.left, IdentifierExpr):
+        if not isinstance(self.left, ArrayAccessExpr):
+            self.left, constants = self.left.optimiseNodes(constants, while_body)
+        # manually optimise array since we can't add the array to used variable
+        # array gets assigned an element but doesn't get "used"
+        else:
+            self.left.index_expr, constants = self.left.index_expr.optimiseNodes(constants, while_body)
+            if isinstance(self.left.index_expr, IdentifierExpr):
+                constants = add_to_used_variables(constants, self.left.index_expr)
+
+        self.right, constants = self.right.optimiseNodes(constants, while_body)
+        if isinstance(self.right, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.right)
+
+        if isinstance(self.left, ArrayAccessExpr):
             return self, constants
 
         t, table = self.getSymbolTable().lookup(self.left.getIdentifierName())
@@ -1504,6 +1689,18 @@ class AssignmentExpr(Expression):
             except KeyError:
                 pass
         return self, constants
+
+    def removeUnusedVariables(self, variables):
+        if not isinstance(self.left, ArrayAccessExpr):
+            return self, variables
+
+        target = self.left.getTargetArray()
+        symbol_type, scope_name = target.getSymbolTable().lookup(target.identifier, own_scope_only=True)
+        full_id = scope_name + "." + target.identifier + "." + "used"
+        if not variables[full_id]:
+            return None, variables
+
+        return self, variables
 
 
 class LogicOrExpr(Expression):
@@ -1552,16 +1749,23 @@ class LogicOrExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.left, constants = self.left.constantFolding(constants, while_body)
-        self.right, constants = self.right.constantFolding(constants, while_body)
+        self.left, constants = self.left.optimiseNodes(constants, while_body)
+        self.right, constants = self.right.optimiseNodes(constants, while_body)
+
+        if isinstance(self.left, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.left)
+        if isinstance(self.right, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.right)
 
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
@@ -1641,16 +1845,23 @@ class LogicAndExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.left, constants = self.left.constantFolding(constants, while_body)
-        self.right, constants = self.right.constantFolding(constants, while_body)
+        self.left, constants = self.left.optimiseNodes(constants, while_body)
+        self.right, constants = self.right.optimiseNodes(constants, while_body)
+
+        if isinstance(self.left, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.left)
+        if isinstance(self.right, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.right)
 
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
@@ -1730,16 +1941,23 @@ class EqualityExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.left, constants = self.left.constantFolding(constants, while_body)
-        self.right, constants = self.right.constantFolding(constants, while_body)
+        self.left, constants = self.left.optimiseNodes(constants, while_body)
+        self.right, constants = self.right.optimiseNodes(constants, while_body)
+
+        if isinstance(self.left, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.left)
+        if isinstance(self.right, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.right)
 
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
@@ -1799,16 +2017,23 @@ class InequalityExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.left, constants = self.left.constantFolding(constants, while_body)
-        self.right, constants = self.right.constantFolding(constants, while_body)
+        self.left, constants = self.left.optimiseNodes(constants, while_body)
+        self.right, constants = self.right.optimiseNodes(constants, while_body)
+
+        if isinstance(self.left, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.left)
+        if isinstance(self.right, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.right)
 
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
@@ -1868,16 +2093,23 @@ class CompGreater(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.left, constants = self.left.constantFolding(constants, while_body)
-        self.right, constants = self.right.constantFolding(constants, while_body)
+        self.left, constants = self.left.optimiseNodes(constants, while_body)
+        self.right, constants = self.right.optimiseNodes(constants, while_body)
+
+        if isinstance(self.left, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.left)
+        if isinstance(self.right, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.right)
 
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
@@ -1937,16 +2169,23 @@ class CompLess(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.left, constants = self.left.constantFolding(constants, while_body)
-        self.right, constants = self.right.constantFolding(constants, while_body)
+        self.left, constants = self.left.optimiseNodes(constants, while_body)
+        self.right, constants = self.right.optimiseNodes(constants, while_body)
+
+        if isinstance(self.left, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.left)
+        if isinstance(self.right, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.right)
 
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
@@ -2006,16 +2245,23 @@ class CompGreaterEqual(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.left, constants = self.left.constantFolding(constants, while_body)
-        self.right, constants = self.right.constantFolding(constants, while_body)
+        self.left, constants = self.left.optimiseNodes(constants, while_body)
+        self.right, constants = self.right.optimiseNodes(constants, while_body)
+
+        if isinstance(self.left, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.left)
+        if isinstance(self.right, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.right)
 
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
@@ -2075,16 +2321,23 @@ class CompLessEqual(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.left, constants = self.left.constantFolding(constants, while_body)
-        self.right, constants = self.right.constantFolding(constants, while_body)
+        self.left, constants = self.left.optimiseNodes(constants, while_body)
+        self.right, constants = self.right.optimiseNodes(constants, while_body)
+
+        if isinstance(self.left, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.left)
+        if isinstance(self.right, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.right)
 
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
@@ -2144,16 +2397,32 @@ class AddExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.left, constants = self.left.constantFolding(constants, while_body)
-        self.right, constants = self.right.constantFolding(constants, while_body)
+        self.left, constants = self.left.optimiseNodes(constants, while_body)
+        self.right, constants = self.right.optimiseNodes(constants, while_body)
+
+        # check if variable is used
+        if isinstance(self.left, IdentifierExpr):
+            identifier = self.left.getIdentifierName()
+            symbol_type, scope_name = self.getSymbolTable().lookup(identifier)
+            full_id = scope_name + "." + identifier + "." + "used"
+            constants[full_id] = True
+        # check if variable is used
+        if isinstance(self.right, IdentifierExpr):
+            identifier = self.right.getIdentifierName()
+            symbol_type, scope_name = self.getSymbolTable().lookup(identifier)
+            full_id = scope_name + "." + identifier + "." + "used"
+            constants[full_id] = True
+
         # constant folding
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
@@ -2221,16 +2490,24 @@ class SubExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.left, constants = self.left.constantFolding(constants, while_body)
-        self.right, constants = self.right.constantFolding(constants, while_body)
+        self.left, constants = self.left.optimiseNodes(constants, while_body)
+        self.right, constants = self.right.optimiseNodes(constants, while_body)
+
+        # check if variable is used
+        if isinstance(self.left, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.left)
+        if isinstance(self.right, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.right)
 
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
@@ -2294,16 +2571,24 @@ class MulExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.left, constants = self.left.constantFolding(constants, while_body)
-        self.right, constants = self.right.constantFolding(constants, while_body)
+        self.left, constants = self.left.optimiseNodes(constants, while_body)
+        self.right, constants = self.right.optimiseNodes(constants, while_body)
+
+        # check if variable is used
+        if isinstance(self.left, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.left)
+        if isinstance(self.right, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.right)
 
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
@@ -2370,16 +2655,24 @@ class DivExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.left, constants = self.left.constantFolding(constants, while_body)
-        self.right, constants = self.right.constantFolding(constants, while_body)
+        self.left, constants = self.left.optimiseNodes(constants, while_body)
+        self.right, constants = self.right.optimiseNodes(constants, while_body)
+
+        # check if variable is used
+        if isinstance(self.left, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.left)
+        if isinstance(self.right, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.right)
 
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
@@ -2453,17 +2746,26 @@ class ModExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.left, constants = self.left.constantFolding(constants, while_body)
-        self.right, constants = self.right.constantFolding(constants, while_body)
+        self.left, constants = self.left.optimiseNodes(constants, while_body)
+        self.right, constants = self.right.optimiseNodes(constants, while_body)
 
+        # check if variable is used
+        if isinstance(self.left, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.left)
+        if isinstance(self.right, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.right)
+
+        # Constant folding + propagation
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
@@ -2525,15 +2827,22 @@ class CastExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.expression, constants = self.expression.constantFolding(constants, while_body)
+        self.expression, constants = self.expression.optimiseNodes(constants, while_body)
+
+        # check if variable is used
+        if isinstance(self.expression, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.expression)
+
         return self, constants
 
 
@@ -2569,7 +2878,9 @@ class LogicNotExpr(Expression):
         # self.expression_type = target_type
 
         if target_type.toString() != "bool":
-            Logger.warning("Using expression of type '{}' in not-expression will result in narrowing on line {}.".format(target_type.toString(), self.getLineNr()))
+            Logger.warning(
+                "Using expression of type '{}' in not-expression will result in narrowing on line {}.".format(
+                    target_type.toString(), self.getLineNr()))
 
         return self.expression_type
 
@@ -2579,15 +2890,21 @@ class LogicNotExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.expression, constants = self.expression.constantFolding(constants, while_body)
+        self.expression, constants = self.expression.optimiseNodes(constants, while_body)
+
+        # check if variable is used
+        if isinstance(self.expression, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.expression)
 
         # !0 => 1
         # !1 => 0
@@ -2646,15 +2963,22 @@ class PrefixIncExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.expression, constants = self.expression.constantFolding(constants, while_body)
+        self.expression, constants = self.expression.optimiseNodes(constants, while_body)
+
+        # check if variable is used
+        if isinstance(self.expression, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.expression)
+
         return self, constants
 
 
@@ -2698,15 +3022,22 @@ class PrefixDecExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.expression, constants = self.expression.constantFolding(constants, while_body)
+        self.expression, constants = self.expression.optimiseNodes(constants, while_body)
+
+        # check if variable is used
+        if isinstance(self.expression, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.expression)
+
         return self
 
 
@@ -2750,15 +3081,22 @@ class PostfixIncExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.expression, constants = self.expression.constantFolding(constants, while_body)
+        self.expression, constants = self.expression.optimiseNodes(constants, while_body)
+
+        # check if variable is used
+        if isinstance(self.expression, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.expression)
+
         return self, constants
 
 
@@ -2802,15 +3140,22 @@ class PostfixDecExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.expression, constants = self.expression.constantFolding(constants, while_body)
+        self.expression, constants = self.expression.optimiseNodes(constants, while_body)
+
+        # check if variable is used
+        if isinstance(self.expression, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.expression)
+
         return self, constants
 
 
@@ -2854,16 +3199,21 @@ class PlusPrefixExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.expression, constants = self.expression.constantFolding(constants, while_body)
+        self.expression, constants = self.expression.optimiseNodes(constants, while_body)
 
+        # check if variable is used
+        if isinstance(self.expression, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.expression)
 
         return self, constants
 
@@ -2908,15 +3258,22 @@ class MinPrefixExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
-        self.expression, constants = self.expression.constantFolding(constants, while_body)
+        self.expression, constants = self.expression.optimiseNodes(constants, while_body)
+
+        # check if variable is used
+        if isinstance(self.expression, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.expression)
+
         return self, constants
 
 
@@ -2984,6 +3341,15 @@ class ArrayAccessExpr(Expression):
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
 
+    def optimiseNodes(self, constants, while_body=False):
+        self.index_expr, constants = self.index_expr.optimiseNodes(constants, while_body)
+
+        if isinstance(self.index_expr, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.index_expr)
+
+        constants = add_to_used_variables(constants, self.target_array)
+        return self, constants
+
 
 class PointerDerefExpr(Expression):
     """
@@ -3023,6 +3389,15 @@ class PointerDerefExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def optimiseNodes(self, constants, while_body=False):
+        self.target_ptr, constants = self.target_ptr.optimiseNodes(constants, while_body)
+
+        # check if variable is used
+        if isinstance(self.target_ptr, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.target_ptr)
+
+        return self, constants
 
 
 class AddressExpr(Expression):
@@ -3064,6 +3439,15 @@ class AddressExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def optimiseNodes(self, constants, while_body=False):
+        self.target_expr, constants = self.target_expr.optimiseNodes(constants, while_body)
+
+        # check if variable is used
+        if isinstance(self.target_expr, IdentifierExpr):
+            constants = add_to_used_variables(constants, self.target_expr)
+
+        return self, constants
 
 
 class FuncCallExpr(Expression):
@@ -3131,7 +3515,7 @@ class FuncCallExpr(Expression):
             if not arg_0_typename == "char*":
                 Logger.error(
                     "The first argument of '{}' needs to be of type 'char*' while argument of type '{}' was given. Error on line {}."
-                    .format(function_name, arg_0_typename, self.getLineNr()))
+                        .format(function_name, arg_0_typename, self.getLineNr()))
                 raise AstTypingException()
 
         else:
@@ -3177,6 +3561,20 @@ class FuncCallExpr(Expression):
                                        parent_nr=parent_nr,
                                        begin_nr=begin_nr,
                                        add_open_close=add_open_close)
+
+    def optimiseNodes(self, constants, while_body=False):
+
+        # add function to used variables
+        constants[self.getFunctionID().getIdentifierName()] = True
+
+        for i in range(0, len(self.argument_list)):
+            self.argument_list[i], constants = self.argument_list[i].optimiseNodes(constants, while_body)
+
+            # check if variable is used
+            if isinstance(self.argument_list[i], IdentifierExpr):
+                add_to_used_variables(constants, self.argument_list[i])
+
+        return self, constants
 
 
 class IdentifierExpr(Expression):
@@ -3224,11 +3622,13 @@ class IdentifierExpr(Expression):
             # returned type can be of function, array or variable
             return self.expression_type
 
-    def constantFolding(self, constants, while_body=False):
+    def optimiseNodes(self, constants, while_body=False):
         """
-            Recursive constant folding with constant propagation.
-            Constant folding: Evaluate constant expressions at compile time.
-            Constant propagation: Substitute the values of known constants in expressions
+            Optimises nodes :
+            - Removes null sequences
+            - Constant folding: Evaluate constant expressions at compile time.
+            - Constant propagation: Substitute the values of known constants in expressions
+            - Remove variables that are not used
             at compile time
             Returns updated node (when possible) and dict with constant values
         """
@@ -3535,3 +3935,11 @@ def get_strongest_type(a, b):
         return "bool"
     else:
         raise Exception("Invalid call to ge_strongest_type for '{}' and '{}'".format(a, b))
+
+
+def add_to_used_variables(variables, identifier_expr: IdentifierExpr):
+    identifier = identifier_expr.getIdentifierName()
+    symbol_type, scope_name = identifier_expr.getSymbolTable().lookup(identifier)
+    full_id = scope_name + "." + identifier + "." + "used"
+    variables[full_id] = True
+    return variables
