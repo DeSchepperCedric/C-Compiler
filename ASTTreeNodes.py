@@ -3460,7 +3460,7 @@ class AddressExpr(Expression):
         # check if variable is used
         if isinstance(self.target_expr, IdentifierExpr):
             variables = add_to_used_variables(variables, self.target_expr)
-
+        print(variables)
         return self, variables
 
 
@@ -3588,12 +3588,26 @@ class FuncCallExpr(Expression):
         # add function to used variables
         variables[self.getFunctionID().getIdentifierName()] = True
 
-        for i in range(0, len(self.argument_list)):
-            self.argument_list[i], variables = self.argument_list[i].optimiseNodes(variables, while_body)
+        if self.getFunctionID().getIdentifierName() == "scanf":
+            for i in range(0, len(self.argument_list)):
 
-            # check if variable is used
-            if isinstance(self.argument_list[i], IdentifierExpr):
-                add_to_used_variables(variables, self.argument_list[i])
+                if isinstance(self.argument_list[i], AddressExpr):
+                    identifier = self.argument_list[i].getTargetExpr().getIdentifierName()
+                    t, table = self.getSymbolTable().lookup(identifier)
+                    identifier = table + "." + identifier
+                    try:
+                        del variables[identifier]
+                    except KeyError:
+                        pass
+
+        else:
+            for i in range(0, len(self.argument_list)):
+
+                self.argument_list[i], variables = self.argument_list[i].optimiseNodes(variables, while_body)
+
+                # check if variable is used
+                if isinstance(self.argument_list[i], IdentifierExpr):
+                    add_to_used_variables(variables, self.argument_list[i])
 
         return self, variables
 
