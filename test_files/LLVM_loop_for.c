@@ -20,19 +20,8 @@ int main(int argc, char** argv)
 		f -= 0.5;
 		k = i;
 	}
+
 	printf("k=%d, this is k-5=%d iterations.\n", k, k-5);
-
-	// test break
-	for(int i = 0; i < 50; i++)
-	{
-		printf("i=%d\n", i);
-
-		if (i % 2 == 0)
-			continue;
-
-		if(i >= 20)
-			break;
-	}
 
 	return 0;
 }
