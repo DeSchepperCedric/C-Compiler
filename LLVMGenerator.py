@@ -84,6 +84,13 @@ class LLVMGenerator:
         elif isinstance(node, PostfixDecExpr):
             return self.postfixArithmetics(node, "sub")
 
+        elif isinstance(node, LogicAndExpr):
+            return self.logicBinopExpr(node, op="and")
+        elif isinstance(node, LogicOrExpr):
+            return self.logicBinopExpr(node, op="or")
+        elif isinstance(node, LogicNotExpr):
+            return self.logicNotExpr(node)
+
         # format here is (node, int-op, float-op)
         elif isinstance(node, EqualityExpr):
             return self.comparisonExpr(node, "eq", "oeq")
@@ -647,6 +654,146 @@ class LLVMGenerator:
 
         return code, self.cur_reg - 1
 
+    def logicBinopExpr(self, node, op):
+        """
+            Process a binary logical operation.
+        :param node:
+        :param op: Can be "and", "or".
+        :return:
+        """
+        code = ""
+
+        type_left = self.getLLVMType(node.getLeft().getExpressionType())
+        type_right = self.getLLVMType(node.getRight().getExpressionType())
+
+        code_left, reg_left = self.astNodeToLLVM(node.getLeft())
+
+        # extra load not necessary when dealing with Identifiers
+        if not isinstance(node.getLeft(), IdentifierExpr):
+            load, reg_left = self.loadVariable(reg_left, type_left, False)
+            code_left += load
+
+        code_right, reg_right = self.astNodeToLLVM(node.getRight())
+
+        if not isinstance(node.getRight(), IdentifierExpr):
+            load, reg_right = self.loadVariable(reg_right, type_right, False)
+
+            code_right += load
+
+        code += code_left
+        code += code_right
+
+        strongest_type = self.getStrongestType(type_left, type_right)
+        llvm_type = ""
+        if strongest_type == "float":
+            code_left, reg_left = self.convertToFloat(reg_left, type_left)
+            code_right, reg_right = self.convertToFloat(reg_right, type_right)
+
+            code += code_left
+            code += code_right
+            code += "%{} = {} float %{}, %{}\n".format(self.cur_reg, op, reg_left, reg_right)
+            llvm_type = "float"
+
+        elif strongest_type == "int":
+            code_left, reg_left = self.convertToInt(reg_left, type_left)
+            code_right, reg_right = self.convertToInt(reg_right, type_right)
+
+            code += code_left
+            code += code_right
+            code += "%{} = {} i32 %{}, %{}\n".format(self.cur_reg, op, reg_left, reg_right)
+            llvm_type = "i32"
+
+        elif strongest_type == "char":
+            code_left, reg_left = self.convertToChar(reg_left, type_left)
+            code_right, reg_right = self.convertToChar(reg_right, type_right)
+
+            code += code_left
+            code += code_right
+            code += "%{} = {} i8 %{}, %{}\n".format(self.cur_reg, op, reg_left, reg_right)
+            llvm_type = "i8"
+        elif strongest_type == "bool":
+            code_left, reg_left = self.convertToBool(reg_left, type_left)
+            code_right, reg_right = self.convertToBool(reg_right, type_right)
+
+            code += code_left
+            code += code_right
+            code += "%{} = {} i1 %{}, %{}\n".format(self.cur_reg, op, reg_left, reg_right)
+            llvm_type = "i1"
+        else:
+            raise Exception("Invalid return type from getStrongestType '{}'".format(strongest_type))
+
+        self.cur_reg += 1
+        code += self.allocate(self.cur_reg, llvm_type, False)
+        code += self.storeVariable(self.cur_reg, self.cur_reg - 1, llvm_type, False)
+
+        self.cur_reg += 1
+
+        return code, self.cur_reg - 1
+
+    def logicNotExpr(self, node: LogicNotExpr):
+        """
+            Process a binary logical operation.
+        :param node:
+        :param operation: Can be "and", "or".
+        :return:
+        """
+        code = ""
+
+        target_expr = node.getExpr()
+
+        target_type = self.getLLVMType(target_expr.getExpressionType())
+
+        code_target, reg_target = self.astNodeToLLVM(target_expr)
+
+        # extra load not necessary when dealing with Identifiers
+        if not isinstance(target_expr, IdentifierExpr):
+            load, reg_target = self.loadVariable(reg_target, target_type, False)
+            code_target += load
+
+        code += code_target
+
+        # convert back to C-type?
+        strongest_type = self.getStrongestType(target_type, target_type)
+
+        llvm_type = ""
+        if strongest_type == "float":
+            code_target, reg_target = self.convertToFloat(reg_target, target_type)
+
+            code += code_target
+            code += "%{} = fcmp oeq float %{}, 0.0\n".format(self.cur_reg, reg_target)
+            llvm_type = "i1"
+
+        elif strongest_type == "int":
+            code_target, reg_target = self.convertToInt(reg_target, target_type)
+
+            code += code_target
+            code += "%{} = icmp eq i32 %{}, 0\n".format(self.cur_reg, reg_target)
+            llvm_type = "i1"
+
+        elif strongest_type == "char":
+            code_target, reg_target = self.convertToInt(reg_target, target_type)
+
+            code += code_target
+            code += "%{} = icmp eq i8 %{}, 0\n".format(self.cur_reg, reg_target)
+            llvm_type = "i1"
+        elif strongest_type == "bool":
+            code_target, reg_target = self.convertToBool(reg_target, target_type)
+
+            code += code_target
+            code += "%{} = icmp eq i1 %{}, 0\n".format(self.cur_reg, reg_target)
+            llvm_type = "i1"
+        else:
+            raise Exception("Invalid return type from getStrongestType '{}'".format(strongest_type))
+
+        self.cur_reg += 1
+
+        code += self.allocate(self.cur_reg, llvm_type, False)
+        code += self.storeVariable(self.cur_reg, self.cur_reg - 1, llvm_type, False)
+
+        self.cur_reg += 1
+
+        return code, self.cur_reg - 1
+
     def getStrongestType(self, a, b):
         INTREP = ["int", "i32"]
         CHARREP = ["char", "i8"]
@@ -784,10 +931,15 @@ class LLVMGenerator:
             value = float(value)
 
         if old_type == "i1" and new_type != old_type:
-            value = False if value == "false" else value
-            value = True if value == "true" else value
+            #value = False if value == "false" else value
+            #value = True if value == "true" else value
+            value = 0 if (value == "false" or value == False) else value
+            value = 1 if (value == "true" or value == True) else value
 
         if new_type == old_type:
+            # convert True to 1, False to 0, etc.
+            value = 0 if (value == "false" or value == False) else value
+            value = 1 if (value == "true" or value == True) else value
             return value
 
         elif new_type == "i1":
