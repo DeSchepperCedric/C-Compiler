@@ -49,7 +49,6 @@ class MipsGenerator:
             Returns a tuple (code, reg) with code being the MIPS code and reg
             being the register that contains the result.
         """
-        print(type(node))
         if isinstance(node, IncludeNode):
             return "", -1
 
