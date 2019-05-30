@@ -49,6 +49,7 @@ class MipsGenerator:
             Returns a tuple (code, reg) with code being the MIPS code and reg
             being the register that contains the result.
         """
+        print(type(node))
         if isinstance(node, IncludeNode):
             return "", -1
 
@@ -66,7 +67,7 @@ class MipsGenerator:
             return self.stringConstantExpr(node)
 
         elif isinstance(node, VarDeclDefault):
-            return "", -1
+            return self.varDeclDefault(node)
         elif isinstance(node, VarDeclWithInit):
             return self.varDeclWithInit(node)
         elif isinstance(node, ArrayDecl):
@@ -513,6 +514,18 @@ class MipsGenerator:
         # newline after data segment for clarity
         code = self.data_string + "\n" + code
         return code
+
+    def varDeclDefault(self, node):
+        # make room on stack and save offset
+
+        # get scopename
+        type, scopename = node.getSymbolTable().lookup(node.getID(), False)
+
+        # get full var id
+        full_id = scopename + "." + node.getID()
+        offset = self.incrementSpOffset()
+        self.var_offset_dict[full_id] = ("$sp", offset)
+        return "", -1
 
     def varDeclWithInit(self, node):
         expr_type = self.getMipsType(node.getInitExpr().getExpressionType())
@@ -1360,14 +1373,11 @@ class MipsGenerator:
 
         # don't do anything when assigning between bool and int
         if right_type == "byte" and left_type == "word":
-            print("no conversion")
             pass
         elif right_type == "word" and left_type == "byte":
-            print("no conversion")
             pass
         # type conversion
         elif right_type != left_type:
-            print("convert between {} and {}\n".format(right_type, left_type))
             convert, register = self.convertToType(register, right_type, left_type)
             code += convert
         else:
@@ -1394,7 +1404,6 @@ class MipsGenerator:
             varname = target.getIdentifierName()
             vartype, varscope = node.getSymbolTable().lookup(varname)
             full_id = varscope + "." + varname
-
             if not full_id in self.var_offset_dict:
                 raise Exception("Variable with name '{}' is not present in offset list.".format(varname))
 
