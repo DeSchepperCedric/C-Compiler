@@ -1802,7 +1802,10 @@ class MipsGenerator:
             return "", reg
 
     def convertConstant(self, new_type, old_type, value):
-        if old_type == "character":
+        if old_type == "byte":
+            value = 1 if value else 0
+
+        elif old_type == "character":
             value = value[1:-1]
             value = ord(value)
 

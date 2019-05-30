@@ -534,7 +534,8 @@ class VarDeclWithInit(SymbolDecl):
         full_id = scope_name + "." + self.symbol_id + "." + "used"
         variables[full_id] = False
 
-        if isinstance(self.init_expr, ConstantExpr):
+        # ignore globals
+        if isinstance(self.init_expr, ConstantExpr) and not self.getSymbolTable().isGlobal(self.symbol_id):
             t, table = self.getSymbolTable().lookup(self.symbol_id)
             identifier = table + "." + self.symbol_id
             variables[identifier] = self.init_expr
@@ -1546,13 +1547,17 @@ class AssignmentExpr(Expression):
             self.left.index_expr, variables = self.left.index_expr.optimiseNodes(variables, while_body)
             if isinstance(self.left.index_expr, IdentifierExpr):
                 variables = add_to_used_variables(variables, self.left.index_expr)
-
         self.right, variables = self.right.optimiseNodes(variables, while_body)
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
 
         if isinstance(self.left, ArrayAccessExpr):
             return self, variables
+
+        # ignore globals
+        if self.getSymbolTable().isGlobal(self.left.getIdentifierName()):
+            return self, variables
+
         t, table = self.getSymbolTable().lookup(self.left.getIdentifierName())
         identifier = table + "." + self.left.getIdentifierName()
 
