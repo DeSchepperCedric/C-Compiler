@@ -1540,11 +1540,9 @@ class AssignmentExpr(Expression):
             - Remove variables that are not used
             Returns updated node (when possible) and dict with constant values
         """
-        if not isinstance(self.left, ArrayAccessExpr):
-            self.left, variables = self.left.optimiseNodes(variables, while_body)
-        # manually optimise array since we can't add the array to used variable
-        # array gets assigned an element but doesn't get "used"
-        else:
+        if isinstance(self.left, ArrayAccessExpr):
+            # manually optimise array since we can't add the array to used variable
+            # array gets assigned an element but doesn't get "used"
             self.left.index_expr, variables = self.left.index_expr.optimiseNodes(variables, while_body)
             if isinstance(self.left.index_expr, IdentifierExpr):
                 variables = add_to_used_variables(variables, self.left.index_expr)
@@ -1555,7 +1553,6 @@ class AssignmentExpr(Expression):
 
         if isinstance(self.left, ArrayAccessExpr):
             return self, variables
-
         t, table = self.getSymbolTable().lookup(self.left.getIdentifierName())
         identifier = table + "." + self.left.getIdentifierName()
 
