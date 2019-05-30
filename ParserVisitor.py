@@ -559,7 +559,6 @@ class ParserVisitor(CVisitor):
         type_list = [self.manuallyVisitChild(ctx) for ctx in type_spec]
 
         typename = "".join(type_list)
-        print(typename)
         return CastExpr(VariableType(typename), expr).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#unaryAsPostfix.
