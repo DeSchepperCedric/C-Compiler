@@ -3564,6 +3564,10 @@ class IntegerConstantExpr(ConstantExpr):
     """
 
     def __init__(self, integer_value):
+        try:
+            integer_value = int(integer_value)
+        except Exception:
+            raise Exception("IntegerConstantExpr must receive a integer value and not {}.".format(integer_value))
         super().__init__(constant_expr_type="IntConstant", value=integer_value)
 
     def resolveExpressionType(self, symbol_table):
@@ -3578,6 +3582,10 @@ class FloatConstantExpr(ConstantExpr):
     """
 
     def __init__(self, float_value):
+        try:
+            float_value = float(float_value)
+        except Exception:
+            raise Exception("FloatConstantExpr must receive a float value and not {}.".format(float_value))
         super().__init__(constant_expr_type="FloatConstant", value=float_value)
 
     def resolveExpressionType(self, symbol_table):
@@ -3592,6 +3600,10 @@ class StringConstantExpr(ConstantExpr):
     """
 
     def __init__(self, str_value):
+        try:
+            str_value = str(str_value)
+        except Exception:
+            raise Exception("StringCosntantExpr must receive a string value and not {}.".format(str_value))
         super().__init__(constant_expr_type="StrConstant", value=str_value)
 
     def resolveExpressionType(self, symbol_table):
@@ -3621,6 +3633,10 @@ class BoolConstantExpr(ConstantExpr):
     """
 
     def __init__(self, bool_value):
+        try:
+            bool_value = bool(bool_value)
+        except Exception:
+            raise Exception("BoolConstantExpr must receive a bool value and not {}.".format(bool_value))
         super().__init__(constant_expr_type="BoolConstant", value=bool_value)
 
     def resolveExpressionType(self, symbol_table):

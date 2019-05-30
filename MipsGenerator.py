@@ -623,7 +623,7 @@ class MipsGenerator:
             code += "bc1t endwhile_{}\n".format(endwhile_label_id)
         else:
             # if the result is false => go to endwhile
-            code += "beq {} $0 endwhile_{}:\n".format(cond_reg, endwhile_label_id)
+            code += "beq {}, $0, endwhile_{}\n".format(cond_reg, endwhile_label_id)
 
         self.releaseReg(cond_reg)
 
@@ -1606,7 +1606,7 @@ class MipsGenerator:
 
         constant = FloatConstantExpr(1.0) if expr_type == "float" else IntegerConstantExpr(1)
 
-        constant_code, reg = self.astNodeToMIPS(IntegerConstantExpr(1.0))
+        constant_code, reg = self.astNodeToMIPS(constant)
         code += constant_code
         code += "{} {}, {}, {}\n".format(operation, register, register, reg)
         self.releaseReg(reg)
@@ -1635,7 +1635,7 @@ class MipsGenerator:
 
         constant = FloatConstantExpr(1.0) if expr_type == "float" else IntegerConstantExpr(1)
         new_register = self.getFreeFloatReg() if expr_type == "float" else self.getFreeReg()
-        constant_code, reg = self.astNodeToMIPS(IntegerConstantExpr(1.0))
+        constant_code, reg = self.astNodeToMIPS(constant)
         code += constant_code
         code += "{} {}, {}, {}\n".format(operation, new_register, register, reg)
         self.releaseReg(reg)
