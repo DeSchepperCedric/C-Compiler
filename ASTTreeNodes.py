@@ -460,7 +460,6 @@ class VarDeclDefault(SymbolDecl):
         full_id = scope_name + "." + self.symbol_id + "." + "used"
         if not variables[full_id]:
             return None, variables
-
         return self, variables
 
 
