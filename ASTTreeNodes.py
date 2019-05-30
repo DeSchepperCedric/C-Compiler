@@ -3461,7 +3461,6 @@ class AddressExpr(Expression):
         # check if variable is used
         if isinstance(self.target_expr, IdentifierExpr):
             variables = add_to_used_variables(variables, self.target_expr)
-        print(variables)
         return self, variables
 
 
