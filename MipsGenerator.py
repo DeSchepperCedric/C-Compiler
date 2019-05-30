@@ -49,6 +49,7 @@ class MipsGenerator:
             Returns a tuple (code, reg) with code being the MIPS code and reg
             being the register that contains the result.
         """
+        print(type(node))
         if isinstance(node, IncludeNode):
             return "", -1
 
@@ -1610,7 +1611,7 @@ class MipsGenerator:
         expr_type = self.getMipsType(target.getExpressionType())
         code, register = self.astNodeToMIPS(target)
 
-        operation = "{}.s" if expr_type == "float" else operation
+        operation = "{}.s".format(operation) if expr_type == "float" else operation
 
         constant = FloatConstantExpr(1.0) if expr_type == "float" else IntegerConstantExpr(1)
 
@@ -1639,7 +1640,7 @@ class MipsGenerator:
         expr_type = self.getMipsType(target.getExpressionType())
         code, register = self.astNodeToMIPS(target)
 
-        operation = "{}.s" if expr_type == "float" else operation
+        operation = "{}.s".format(operation) if expr_type == "float" else operation
 
         constant = FloatConstantExpr(1.0) if expr_type == "float" else IntegerConstantExpr(1)
         new_register = self.getFreeFloatReg() if expr_type == "float" else self.getFreeReg()

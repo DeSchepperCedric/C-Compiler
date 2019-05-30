@@ -1547,6 +1547,7 @@ class AssignmentExpr(Expression):
             self.left.index_expr, variables = self.left.index_expr.optimiseNodes(variables, while_body)
             if isinstance(self.left.index_expr, IdentifierExpr):
                 variables = add_to_used_variables(variables, self.left.index_expr)
+
         self.right, variables = self.right.optimiseNodes(variables, while_body)
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
@@ -2837,13 +2838,42 @@ class PrefixIncExpr(Expression):
             - Remove variables that are not used
             Returns updated node (when possible) and dict with constant values
         """
+        old_expression = self.expression
+
+        # ignore arrays
+        if isinstance(self.expression, ArrayAccessExpr):
+            return self, variables
+
+        # ignore globals
+        if isinstance(self.expression, IdentifierExpr) and self.getSymbolTable().isGlobal(
+                self.expression.getIdentifierName()):
+            return self, variables
+
         self.expression, variables = self.expression.optimiseNodes(variables, while_body)
 
         # check if variable is used
         if isinstance(self.expression, IdentifierExpr):
             variables = add_to_used_variables(variables, self.expression)
 
-        return self, variables
+        if isinstance(self.expression, ConstantExpr) and isinstance(old_expression, IdentifierExpr):
+            expr_type = get_constant_type(self.expression)
+            a = self.expression.getValue()
+            b = change_constant_type(1, "int", expr_type)
+
+            result = a + b
+            node = create_constant_node(result, expr_type)
+            node.resolveExpressionType(node.getSymbolTable())
+
+            t, table = self.getSymbolTable().lookup(old_expression.getIdentifierName())
+            identifier = table + "." + old_expression.getIdentifierName()
+
+            # update variable
+            variables[identifier] = node
+
+            return node, variables
+
+        else:
+            return self, variables
 
 
 class PrefixDecExpr(Expression):
@@ -2895,13 +2925,42 @@ class PrefixDecExpr(Expression):
             - Remove variables that are not used
             Returns updated node (when possible) and dict with constant values
         """
+        old_expression = self.expression
+
+        # ignore arrays
+        if isinstance(self.expression, ArrayAccessExpr):
+            return self, variables
+
+        # ignore globals
+        if isinstance(self.expression, IdentifierExpr) and self.getSymbolTable().isGlobal(
+                self.expression.getIdentifierName()):
+            return self, variables
+
         self.expression, variables = self.expression.optimiseNodes(variables, while_body)
 
         # check if variable is used
         if isinstance(self.expression, IdentifierExpr):
             variables = add_to_used_variables(variables, self.expression)
 
-        return self
+        if isinstance(self.expression, ConstantExpr) and isinstance(old_expression, IdentifierExpr):
+            expr_type = get_constant_type(self.expression)
+            a = self.expression.getValue()
+            b = change_constant_type(1, "int", expr_type)
+
+            result = a - b
+            node = create_constant_node(result, expr_type)
+            node.resolveExpressionType(node.getSymbolTable())
+
+            t, table = self.getSymbolTable().lookup(old_expression.getIdentifierName())
+            identifier = table + "." + old_expression.getIdentifierName()
+
+            # update variable
+            variables[identifier] = node
+
+            return node, variables
+
+        else:
+            return self, variables
 
 
 class PostfixIncExpr(Expression):
@@ -2953,13 +3012,42 @@ class PostfixIncExpr(Expression):
             - Remove variables that are not used
             Returns updated node (when possible) and dict with constant values
         """
+        old_expression = self.expression
+
+        # ignore arrays
+        if isinstance(self.expression, ArrayAccessExpr):
+            return self, variables
+
+        # ignore globals
+        if isinstance(self.expression, IdentifierExpr) and self.getSymbolTable().isGlobal(
+                self.expression.getIdentifierName()):
+            return self, variables
+
         self.expression, variables = self.expression.optimiseNodes(variables, while_body)
 
         # check if variable is used
         if isinstance(self.expression, IdentifierExpr):
             variables = add_to_used_variables(variables, self.expression)
 
-        return self, variables
+        if isinstance(self.expression, ConstantExpr) and isinstance(old_expression, IdentifierExpr):
+            expr_type = get_constant_type(self.expression)
+            a = self.expression.getValue()
+            b = change_constant_type(1, "int", expr_type)
+            result = a + b
+            node = create_constant_node(result, expr_type)
+            node.resolveExpressionType(node.getSymbolTable())
+
+            t, table = self.getSymbolTable().lookup(old_expression.getIdentifierName())
+            identifier = table + "." + old_expression.getIdentifierName()
+
+            # update variable
+            variables[identifier] = node
+
+            # return result before substraction
+            return self.expression, variables
+
+        else:
+            return self, variables
 
 
 class PostfixDecExpr(Expression):
@@ -3011,13 +3099,42 @@ class PostfixDecExpr(Expression):
             - Remove variables that are not used
             Returns updated node (when possible) and dict with constant values
         """
+        old_expression = self.expression
+
+        # ignore arrays
+        if isinstance(self.expression, ArrayAccessExpr):
+            return self, variables
+
+        # ignore globals
+        if isinstance(self.expression, IdentifierExpr) and self.getSymbolTable().isGlobal(
+                self.expression.getIdentifierName()):
+            return self, variables
+
         self.expression, variables = self.expression.optimiseNodes(variables, while_body)
 
         # check if variable is used
         if isinstance(self.expression, IdentifierExpr):
             variables = add_to_used_variables(variables, self.expression)
 
-        return self, variables
+        if isinstance(self.expression, ConstantExpr) and isinstance(old_expression, IdentifierExpr):
+            expr_type = get_constant_type(self.expression)
+            a = self.expression.getValue()
+            b = change_constant_type(1, "int", expr_type)
+            result = a - b
+            node = create_constant_node(result, expr_type)
+            node.resolveExpressionType(node.getSymbolTable())
+
+            t, table = self.getSymbolTable().lookup(old_expression.getIdentifierName())
+            identifier = table + "." + old_expression.getIdentifierName()
+
+            # update variable
+            variables[identifier] = node
+
+            # return result before substraction
+            return self.expression, variables
+
+        else:
+            return self, variables
 
 
 class PlusPrefixExpr(Expression):
@@ -3528,6 +3645,7 @@ class IdentifierExpr(Expression):
         t, table = self.getSymbolTable().lookup(self.identifier)
         identifier = table + "." + self.identifier
 
+        # return constant
         if identifier in variables:
             return variables[identifier], variables
 
