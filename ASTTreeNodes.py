@@ -3457,8 +3457,6 @@ class AddressExpr(Expression):
             - Remove variables that are not used
             Returns updated node (when possible) and dict with constant values
         """
-        self.target_expr, variables = self.target_expr.optimiseNodes(variables, while_body)
-
         # check if variable is used
         if isinstance(self.target_expr, IdentifierExpr):
             variables = add_to_used_variables(variables, self.target_expr)
