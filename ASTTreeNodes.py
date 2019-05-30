@@ -2400,6 +2400,7 @@ class SubExpr(Expression):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
             new_type = get_strongest_type(left_type, right_type)
+
             a = change_constant_type(self.left.getValue(), left_type, new_type)
             b = change_constant_type(self.right.getValue(), right_type, new_type)
 
