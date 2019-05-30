@@ -9,7 +9,7 @@ int main(int argc, char** argv)
     //// +,-,*,/
     char a = 5;
     char b = 20;
-    char c = 0-20;
+    char c = -20;
     char d = 20;
     char e = 5;
 
