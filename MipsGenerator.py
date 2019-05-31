@@ -849,7 +849,6 @@ class MipsGenerator:
 
             code += "# process param {}\n".format(param_name)
             arg = node.getArguments()[i]
-            print(type(arg))
             arg_code, arg_reg = self.astNodeToMIPS(arg)
             code += arg_code
 
@@ -1126,10 +1125,7 @@ class MipsGenerator:
 
         type_left = self.getMipsType(node.getLeft().getExpressionType())
         type_right = self.getMipsType(node.getRight().getExpressionType())
-        print("-----S------")
-        print(type(node.getLeft()))
-        print(type(node.getRight()))
-        print("-----E------")
+
         code_left, reg_left = self.astNodeToMIPS(node.getLeft())
         code_right, reg_right = self.astNodeToMIPS(node.getRight())
 
