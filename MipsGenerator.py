@@ -24,9 +24,9 @@ class MipsGenerator:
         self.label_counter = 0
 
         # NOTE: $v0, $f0 and $f12 are reserved.
-        # NOTE: $f31 and $v1 also cannot be used for temp regs since they
-        # are used for returns
+        # NOTE: $f31 and $v1 also cannot be used for temp regs since they are used for returns
         # NOTE: $f30 is the float register that is always zero just like $0
+        # NOTE: $s0 is also used to temporarily store the $fp, so it is also reserved
 
         self.float_return_reg = "$f31"
         self.return_reg = "$v1"
