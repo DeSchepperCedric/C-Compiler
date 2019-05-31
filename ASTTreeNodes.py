@@ -1086,7 +1086,11 @@ class FuncParam(ASTNode):
         self.param_id = param_id
         self.ptr_count = ptr_count
 
-    def getParamType(self):
+    def getParamType(self) -> str:
+        """
+        Returns a string that represents the parameter type. E.g. "int", "int*", "float***", etc.
+        :return:
+        """
         return self.param_type
 
     def getParamID(self):

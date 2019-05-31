@@ -65,7 +65,11 @@ int main(int argc, char** argv)
 	printf("bool = 0.000 => bool = %d\n", b_5);
 
 	// char to bool
-	bool b_6 = 'a' - 'a';
+
+	char test_char = 'a' - 'a';
+	printf("test_char: %d\n", test_char);
+
+	bool b_6 = (bool) test_char;
 	bool b_7 = 'b';
 
 	printf("bool = '\\0' => bool = %d\n", b_6);
@@ -75,8 +79,8 @@ int main(int argc, char** argv)
 	float x = 563.454 + 20;
 	printf("float = 563.454 + 20 => float = %f\n", x);
 
-	func_with_int_param(645.3); 	// function call: narrowed
-	func_with_float_param(6942); 	// function call: integer -> float
+	func_with_int_param((int)645.3); 	// function call: narrowed
+	func_with_float_param((float)6942); 	// function call: integer -> float
 
 	// return value
 	int retval = func_with_int_return();
