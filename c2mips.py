@@ -74,4 +74,7 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    if len(sys.argv) == 1 or sys.argv[1] == "--help":
+        print("usage: <exec> <c_file> <mips_file>")
+    else:
+        main(sys.argv)
