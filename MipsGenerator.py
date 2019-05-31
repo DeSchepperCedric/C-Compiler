@@ -36,9 +36,7 @@ class MipsGenerator:
         self.all_temp_regs = {"$t0", "$t1", "$t2", "$t3"}
         self.all_float_regs = {"$f1", "$f2", "$f3", "$f4"}
 
-        # TODO make copy to init these regs, also add "resetUsedRegs()" and call
-        # TODO that function when processing a FuncDef so that memleaks don't propagate
-
+        # initialise registers
         self.resetRegs()
 
     def astNodeToMIPS(self, node):
@@ -836,9 +834,11 @@ class MipsGenerator:
         temp_offset -= 4
         code += self.storeRegister("$sp", "$sp", temp_offset)
 
-        # count params
-        # adjust $fp: $fp = $sp + temp_offset(neg) - len(args) * 4
-        code += "addi $fp, $sp, {}\n".format(temp_offset - len(node.getArguments()) * 4)
+        # calculate the new $fp:
+        # fp_new = $sp + temp_offset - len(args)*4
+        # this will accomodate the saving of $ra,$fp,$sp and the temp regs
+        # we temporarily save it to $s0, so that parameter evaluation can still use the old $fp!
+        code += "addi $s0, $sp, {}\n".format(temp_offset - len(node.getArguments()) * 4)
 
         fp_arg_offset = 0
 
@@ -852,13 +852,18 @@ class MipsGenerator:
             arg_code, arg_reg = self.astNodeToMIPS(arg)
             code += arg_code
 
+            # store param value relative to the new fp
+            # this is temporarily $s0
             is_arg_float = arg.getExpressionType().toString() == "float"
-            code += self.storeRegister(arg_reg, "$fp", fp_arg_offset, is_float=is_arg_float)
+            code += self.storeRegister(arg_reg, "$s0", fp_arg_offset, is_float=is_arg_float)
 
             fp_arg_offset += 4  # do this after since the $fp points to the a free stack place
 
             # here we don't add variables to the var offset dict, since they are not used within
             # the current function definition!
+
+        # adjust $fp
+        code += "move $fp, $s0\n"
 
         # note do this AFTER param evaluation, since the param eval still needs a working $sp!
         code += "move $sp, $fp\n"
