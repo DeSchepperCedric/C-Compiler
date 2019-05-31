@@ -51,11 +51,11 @@ int val_m()
 
 int main(int argc, char** argv)
 {
-    printf("a=%d\n", val_a());
-    printf("b=%d\n", val_b());
-    printf("c=%d\n", val_c());
-    printf("d=%d\n", val_d());
-    printf("e=%d\n", val_e());
+    printf("a=%d. Expected: 5\n",   val_a());
+    printf("b=%d. Expected: 20\n",  val_b());
+    printf("c=%d. Expected: -20\n", val_c());
+    printf("d=%d. Expected: 20\n",  val_d());
+    printf("e=%d. Expected: 5\n",   val_e());
 
     //// +,-,*,/
     printf("### Binary +,-,*,/\n");
