@@ -449,7 +449,7 @@ class VarDeclDefault(SymbolDecl):
             - Remove variables that are not used
             Returns updated node (when possible) and dict with constant values
         """
-        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, own_scope_only=True)
+        symbol_type, scope_name = ().lookup(self.symbol_id, own_scope_only=True)
         full_id = scope_name + "." + self.symbol_id + "." + "used"
         variables[full_id] = False
 
@@ -1553,6 +1553,12 @@ class AssignmentExpr(Expression):
             - Remove variables that are not used
             Returns updated node (when possible) and dict with constant values
         """
+
+        self.right, variables = self.right.optimiseNodes(variables, while_body)
+
+        if isinstance(self.right, IdentifierExpr):
+            variables = add_to_used_variables(variables, self.right)
+
         if isinstance(self.left, ArrayAccessExpr):
             # manually optimise array since we can't add the array to used variable
             # array gets assigned an element but doesn't get "used"
@@ -1560,11 +1566,6 @@ class AssignmentExpr(Expression):
             if isinstance(self.left.index_expr, IdentifierExpr):
                 variables = add_to_used_variables(variables, self.left.index_expr)
 
-        self.right, variables = self.right.optimiseNodes(variables, while_body)
-        if isinstance(self.right, IdentifierExpr):
-            variables = add_to_used_variables(variables, self.right)
-
-        if isinstance(self.left, ArrayAccessExpr):
             return self, variables
 
         # ignore globals
@@ -1592,12 +1593,22 @@ class AssignmentExpr(Expression):
         return self, variables
 
     def removeUnusedVariables(self, variables):
-        if not isinstance(self.left, ArrayAccessExpr):
-            return self, variables
 
-        target = self.left.getTargetArray()
-        symbol_type, scope_name = target.getSymbolTable().lookup(target.identifier, own_scope_only=True)
-        full_id = scope_name + "." + target.identifier + "." + "used"
+        if isinstance(self.left, ArrayAccessExpr):
+            # array
+            target = self.left.getTargetArray()
+            identifier = target.identifier
+            symbol_type, scope_name = target.getSymbolTable().lookup(identifier, own_scope_only=False)
+
+        elif isinstance(self.left, IdentifierExpr):
+            # identifierExpr
+            identifier = self.left.getIdentifierName()
+            symbol_type, scope_name = self.left.getSymbolTable().lookup(identifier, own_scope_only=False)
+
+        else:
+            raise Exception("Assignment only possible to ArrayAccessExpr or IdentifierExpr, not {}".format(type(self.left)))
+
+        full_id = scope_name + "." + identifier + "." + "used"
         if not variables[full_id]:
             return None, variables
 
@@ -1662,11 +1673,12 @@ class LogicOrExpr(Expression):
         self.left, variables = self.left.optimiseNodes(variables, while_body)
         self.right, variables = self.right.optimiseNodes(variables, while_body)
 
+        # check if variable is used
         if isinstance(self.left, IdentifierExpr):
             variables = add_to_used_variables(variables, self.left)
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
-
+        # constant folding
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
@@ -1757,11 +1769,13 @@ class LogicAndExpr(Expression):
         self.left, variables = self.left.optimiseNodes(variables, while_body)
         self.right, variables = self.right.optimiseNodes(variables, while_body)
 
+        # check if variable is used
         if isinstance(self.left, IdentifierExpr):
             variables = add_to_used_variables(variables, self.left)
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
 
+        # constant folding
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
@@ -1852,11 +1866,13 @@ class EqualityExpr(Expression):
         self.left, variables = self.left.optimiseNodes(variables, while_body)
         self.right, variables = self.right.optimiseNodes(variables, while_body)
 
+        # check if variable is used
         if isinstance(self.left, IdentifierExpr):
             variables = add_to_used_variables(variables, self.left)
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
 
+        # constant folding
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
@@ -1927,11 +1943,12 @@ class InequalityExpr(Expression):
         self.left, variables = self.left.optimiseNodes(variables, while_body)
         self.right, variables = self.right.optimiseNodes(variables, while_body)
 
+        # check if variable is used
         if isinstance(self.left, IdentifierExpr):
             variables = add_to_used_variables(variables, self.left)
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
-
+        # constant folding
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
@@ -2002,11 +2019,12 @@ class CompGreater(Expression):
         self.left, variables = self.left.optimiseNodes(variables, while_body)
         self.right, variables = self.right.optimiseNodes(variables, while_body)
 
+        # check if variable is used
         if isinstance(self.left, IdentifierExpr):
             variables = add_to_used_variables(variables, self.left)
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
-
+        # constant folding
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
@@ -2077,11 +2095,12 @@ class CompLess(Expression):
         self.left, variables = self.left.optimiseNodes(variables, while_body)
         self.right, variables = self.right.optimiseNodes(variables, while_body)
 
+        # check if variable is used
         if isinstance(self.left, IdentifierExpr):
             variables = add_to_used_variables(variables, self.left)
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
-
+        # constant folding
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
@@ -2152,11 +2171,12 @@ class CompGreaterEqual(Expression):
         self.left, variables = self.left.optimiseNodes(variables, while_body)
         self.right, variables = self.right.optimiseNodes(variables, while_body)
 
+        # check if variable is used
         if isinstance(self.left, IdentifierExpr):
             variables = add_to_used_variables(variables, self.left)
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
-
+        # constant folding
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
@@ -2227,11 +2247,12 @@ class CompLessEqual(Expression):
         self.left, variables = self.left.optimiseNodes(variables, while_body)
         self.right, variables = self.right.optimiseNodes(variables, while_body)
 
+        # check if variable is used
         if isinstance(self.left, IdentifierExpr):
             variables = add_to_used_variables(variables, self.left)
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
-
+        # constant folding
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
@@ -2304,16 +2325,9 @@ class AddExpr(Expression):
 
         # check if variable is used
         if isinstance(self.left, IdentifierExpr):
-            identifier = self.left.getIdentifierName()
-            symbol_type, scope_name = self.getSymbolTable().lookup(identifier)
-            full_id = scope_name + "." + identifier + "." + "used"
-            variables[full_id] = True
-        # check if variable is used
+            variables = add_to_used_variables(variables, self.left)
         if isinstance(self.right, IdentifierExpr):
-            identifier = self.right.getIdentifierName()
-            symbol_type, scope_name = self.getSymbolTable().lookup(identifier)
-            full_id = scope_name + "." + identifier + "." + "used"
-            variables[full_id] = True
+            variables = add_to_used_variables(variables, self.right)
 
         # constant folding
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
@@ -2399,7 +2413,7 @@ class SubExpr(Expression):
             variables = add_to_used_variables(variables, self.left)
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
-
+        # constant folding
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
@@ -2480,7 +2494,7 @@ class MulExpr(Expression):
             variables = add_to_used_variables(variables, self.left)
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
-
+        # constant folding
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
@@ -2654,7 +2668,7 @@ class ModExpr(Expression):
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
 
-        # Constant folding + propagation
+        # Constant folding
         if isinstance(self.left, ConstantExpr) and isinstance(self.right, ConstantExpr):
             left_type = get_constant_type(self.left)
             right_type = get_constant_type(self.right)
@@ -2793,6 +2807,7 @@ class LogicNotExpr(Expression):
         if isinstance(self.expression, IdentifierExpr):
             variables = add_to_used_variables(variables, self.expression)
 
+        # constant folding
         # !0 => 1
         # !1 => 0
         if isinstance(self.expression, ConstantExpr):
@@ -2876,6 +2891,7 @@ class PrefixIncExpr(Expression):
         if isinstance(self.expression, IdentifierExpr):
             variables = add_to_used_variables(variables, self.expression)
 
+        # constant folding
         if isinstance(self.expression, ConstantExpr) and isinstance(old_expression, IdentifierExpr):
             expr_type = get_constant_type(self.expression)
             a = self.expression.getValue()
@@ -2963,6 +2979,7 @@ class PrefixDecExpr(Expression):
         if isinstance(self.expression, IdentifierExpr):
             variables = add_to_used_variables(variables, self.expression)
 
+        # constant folding
         if isinstance(self.expression, ConstantExpr) and isinstance(old_expression, IdentifierExpr):
             expr_type = get_constant_type(self.expression)
             a = self.expression.getValue()
@@ -3050,6 +3067,7 @@ class PostfixIncExpr(Expression):
         if isinstance(self.expression, IdentifierExpr):
             variables = add_to_used_variables(variables, self.expression)
 
+        # constant folding
         if isinstance(self.expression, ConstantExpr) and isinstance(old_expression, IdentifierExpr):
             expr_type = get_constant_type(self.expression)
             a = self.expression.getValue()
@@ -3137,6 +3155,7 @@ class PostfixDecExpr(Expression):
         if isinstance(self.expression, IdentifierExpr):
             variables = add_to_used_variables(variables, self.expression)
 
+        # constant folding
         if isinstance(self.expression, ConstantExpr) and isinstance(old_expression, IdentifierExpr):
             expr_type = get_constant_type(self.expression)
             a = self.expression.getValue()
