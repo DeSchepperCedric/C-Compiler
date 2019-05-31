@@ -457,7 +457,7 @@ class VarDeclDefault(SymbolDecl):
             - Remove variables that are not used
             Returns updated node (when possible) and dict with constant values
         """
-        symbol_type, scope_name = ().lookup(self.symbol_id, self.node_cnt, own_scope_only=True)
+        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, self.node_cnt, own_scope_only=True)
         full_id = scope_name + "." + self.symbol_id + "." + "used"
         variables[full_id] = False
 

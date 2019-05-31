@@ -249,16 +249,11 @@ class LLVMGenerator:
         if node.getSymbolTable().isGlobal(var_id):
 
             code += "@{} = global {} {}".format(var_id, var_type, value)
-
-            # code += "@{} = alloca {}\n".format(var_id, var_type)
-            # code += "store {} {}, {}* {}\n".format(var_type, value, var_id, var_type)
         else:
 
-            t, table = node.getSymbolTable().lookup(var_id, node.getNodecounter)
+            t, table = node.getSymbolTable().lookup(var_id, node.getNodecounter())
             reg_name = table + "." + var_id
             code += "%{} = alloca {}\n".format(reg_name, var_type)
-            # LLVM seems to initialize to 0 automatically
-            # code += "store {} {}, {}* %{}\n".format(var_type, value, var_type, reg_name)
 
         code += "\n"
         return code, -1
