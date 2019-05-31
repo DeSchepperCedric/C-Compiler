@@ -41,8 +41,6 @@ class MipsGenerator:
 
         self.resetRegs()
 
-
-
     def astNodeToMIPS(self, node):
         """
             Returns a tuple (code, reg) with code being the MIPS code and reg
@@ -212,7 +210,7 @@ class MipsGenerator:
         """
             Free all used registers.
         """
-        self.free_regs       = list(self.all_temp_regs)
+        self.free_regs = list(self.all_temp_regs)
         self.free_float_regs = list(self.all_float_regs)
 
     def getSpOffset(self):
@@ -395,11 +393,13 @@ class MipsGenerator:
         else:
             # get scopename
             type, scopename = id_node.getSymbolTable().lookup(varname, False)
-
             # get full var id
             full_id = scopename + "." + varname
 
             # determine if the variable already is stored on the stack
+            print("--------")
+            print(full_id)
+            print(self.var_offset_dict)
             if full_id in self.var_offset_dict:
                 # retrieve offset and store
 
@@ -536,7 +536,7 @@ class MipsGenerator:
         var_type = self.getMipsType(var_type)
         code = ""
         is_global = node.getSymbolTable().isGlobal(var_id)
-
+        print(var_id)
         if is_global and isinstance(node.getInitExpr(), ConstantExpr):
             value = self.convertConstant(var_type, expr_type, node.getInitExpr().getValue())
             self.data_string += "{}: .{} {}\n".format(var_id, var_type, value)
@@ -656,13 +656,13 @@ class MipsGenerator:
 
         return code, -1
 
-    def breakStatement(self, node:BreakStatement):
+    def breakStatement(self, node: BreakStatement):
 
         code = "j {}\n".format(self.most_recent_endwhile)
 
         return code, -1
 
-    def continueStatement(self, node:ContinueStatement):
+    def continueStatement(self, node: ContinueStatement):
         code = "j {}\n".format(self.most_recent_whilecond)
 
         return code, -1
@@ -858,7 +858,7 @@ class MipsGenerator:
         # save params on the stack relative to the $fp
         for i in range(0, len(node.getArguments())):
             funcdef_node = self.function_defs[node.getFunctionID().getIdentifierName()]
-            param:FuncParam = funcdef_node.getParamList()[i]
+            param: FuncParam = funcdef_node.getParamList()[i]
             param_name = param.getParamID()
 
             code += "# process param {}\n".format(param_name)
@@ -974,7 +974,7 @@ class MipsGenerator:
 
         temp_offset = 0
 
-        used_temp_regs  = self.all_temp_regs.difference(self.free_regs)
+        used_temp_regs = self.all_temp_regs.difference(self.free_regs)
         used_float_regs = self.all_float_regs.difference(self.free_float_regs)
 
         for used_reg in used_temp_regs:
@@ -1124,7 +1124,6 @@ class MipsGenerator:
 
                 if formatter == "%d":
 
-
                     # place argument
                     code += "move $a0, {}\n".format(arg_reg)
 
@@ -1187,9 +1186,9 @@ class MipsGenerator:
 
         if len(args) != 2:
             raise Exception("Invalid number of arguments for scanf. Expected 2, got {}.".format(len(args)))
-        
+
         formatter_expr = args[0]
-        target_expr    = args[1]
+        target_expr = args[1]
 
         if not isinstance(formatter_expr, StringConstantExpr):
             raise Exception("First argument to scanf must be string constant.")
@@ -1530,7 +1529,7 @@ class MipsGenerator:
             code, target_reg = self.astNodeToMIPS(target)
             load, register = self.loadRegister(target_reg, 0, is_float)
             code += load
-            self.releaseReg(target_reg) # no longer needed, and loadRegister
+            self.releaseReg(target_reg)  # no longer needed, and loadRegister
             # does not free the reg.
             return code, register
 
@@ -1642,8 +1641,8 @@ class MipsGenerator:
         """
         code, expr_reg = self.astNodeToMIPS(node.getExpr())  # convert expression to MIPS code
 
-        #source_type = self.getMipsType(node.getExpr().getExpressionType())  # get type of expression
-        #target_type = self.getMipsType(node.getTargetType())  # get target type
+        # source_type = self.getMipsType(node.getExpr().getExpressionType())  # get type of expression
+        # target_type = self.getMipsType(node.getTargetType())  # get target type
 
         source_type = node.getExpr().getExpressionType()  # get type of expression
         target_type = node.getTargetType()  # get target type
@@ -1664,10 +1663,8 @@ class MipsGenerator:
             convert = ""
             convert_reg = expr_reg
 
-
-        #else:
+        # else:
         #    convert, convert_reg = self.convertToType(expr_reg, source_type, target_type)  # perform conversion
-
 
         code += convert
         return code, convert_reg  # return code, and the location of the conversion
@@ -1743,7 +1740,7 @@ class MipsGenerator:
         # process left and right, and convert to bool
         code_left, reg_left = self.astNodeToMIPS(node.getLeft())
         code += code_left
-        conv_left,  left_bool_reg  = self.convertToBool(reg_left)
+        conv_left, left_bool_reg = self.convertToBool(reg_left)
         code += conv_left
         self.releaseReg(reg_left)
 
@@ -1818,7 +1815,7 @@ class MipsGenerator:
         self.releaseReg(float_reg)
         return code, int_reg
 
-    def convertToBool(self, source_reg:str) -> (str, str):
+    def convertToBool(self, source_reg: str) -> (str, str):
         """
             Convert to value in the specified register to a boolean.
 
@@ -1854,7 +1851,7 @@ class MipsGenerator:
         # no branch, so non-zero -> return true
         code += "li {}, 1\n".format(result_reg)
         code += "j end_comp_{}\n".format(label_id)
-        code += "comp_iszero_{}:\n".format(label_id) # label for when the reg is zero.
+        code += "comp_iszero_{}:\n".format(label_id)  # label for when the reg is zero.
         code += "li {}, 0\n".format(result_reg)
         code += "end_comp_{}:\n".format(label_id)
 

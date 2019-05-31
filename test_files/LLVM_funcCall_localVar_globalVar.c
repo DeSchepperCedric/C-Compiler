@@ -71,7 +71,6 @@ int main(int argc, char** argv)
 
 	printf("Entering compound statement.\n");
 	{
-		printf("i=%d\n", i);
 
 		printf("Declaring variable i with initialiser '20'\n");
 		int i = 20;
