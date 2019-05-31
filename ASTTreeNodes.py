@@ -300,7 +300,7 @@ class SymbolDecl(TopLevelNode):
         Base class for variable declaration nodes.
     """
 
-    def __init__(self, symbol_class: str, symbol_type: str, symbol_id: str, symbol_ptr_cnt: int):
+    def __init__(self, symbol_class: str, symbol_type: str, symbol_id: str, symbol_ptr_cnt: int, counter: int):
         """
         Params:
             'symbol_class': Whether the symbol is an array, variable, function, etc.
@@ -315,6 +315,10 @@ class SymbolDecl(TopLevelNode):
         self.symbol_type = symbol_type
         self.symbol_id = symbol_id
         self.symbol_ptr_cnt = symbol_ptr_cnt
+        self.node_cnt = counter
+
+    def getNodecounter(self):
+        return self.node_cnt
 
     def getType(self):
         """
@@ -347,11 +351,12 @@ class ArrayDecl(SymbolDecl):
         Node that represents an array declaration: "type id[size_expr];"
     """
 
-    def __init__(self, array_type: str, array_id: str, ptr_count: int, size_expr):
+    def __init__(self, array_type: str, array_id: str, ptr_count: int, size_expr, counter=0):
         super().__init__(symbol_class="Array",
                          symbol_type=array_type,
                          symbol_id=array_id,
-                         symbol_ptr_cnt=ptr_count)
+                         symbol_ptr_cnt=ptr_count,
+                         counter=counter)
         self.size_expr = size_expr
 
     def getSizeExpr(self):
@@ -366,7 +371,7 @@ class ArrayDecl(SymbolDecl):
     def addToSymbolTable(self, symbol_table):
         # determine whether or not the symbol already exists to prevent redeclaration
         # only look in the current scope
-        symbol_type, scope_name = symbol_table.lookup(self.symbol_id, own_scope_only=True)
+        symbol_type, scope_name = symbol_table.lookup(self.symbol_id, self.node_cnt, own_scope_only=True)
 
         if symbol_type != 0:
             Logger.error(
@@ -378,7 +383,8 @@ class ArrayDecl(SymbolDecl):
         self.size_expr.setExprTreeSymbolTable(symbol_table)
         self.size_expr.resolveExpressionType(symbol_table)
 
-        symbol_table.insert(self.symbol_id, ArrayType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)))
+        symbol_table.insert(self.symbol_id, ArrayType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)),
+                            self.node_cnt)
 
     def optimiseNodes(self, variables, while_body=False):
         """
@@ -395,13 +401,13 @@ class ArrayDecl(SymbolDecl):
             Logger.error("Array size must be specified by integer constant")
             raise AstCreationException()
 
-        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, own_scope_only=True)
+        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, self.node_cnt, own_scope_only=True)
         full_id = scope_name + "." + self.symbol_id + "." + "used"
         variables[full_id] = False
         return self, variables
 
     def removeUnusedVariables(self, variables):
-        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, own_scope_only=True)
+        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, self.node_cnt, own_scope_only=True)
         full_id = scope_name + "." + self.symbol_id + "." + "used"
         if not variables[full_id]:
             return None, variables
@@ -414,11 +420,12 @@ class VarDeclDefault(SymbolDecl):
         Node that represents a variable declaration without initializer: "type id;"
     """
 
-    def __init__(self, var_type: str, var_id: str, ptr_count: int):
+    def __init__(self, var_type: str, var_id: str, ptr_count: int, counter=0):
         super().__init__(symbol_class="VarDefault",
                          symbol_type=var_type,
                          symbol_id=var_id,
-                         symbol_ptr_cnt=ptr_count)
+                         symbol_ptr_cnt=ptr_count,
+                         counter=counter)
 
     def toDot(self, parent_nr, begin_nr, add_open_close=False):
         return self.M_defaultToDotImpl(children=[],
@@ -429,7 +436,7 @@ class VarDeclDefault(SymbolDecl):
     def addToSymbolTable(self, symbol_table):
         # determine whether or not the symbol already exists to prevent redeclaration
         # only look in the current scope
-        symbol_type, scope_name = symbol_table.lookup(self.symbol_id, own_scope_only=True)
+        symbol_type, scope_name = symbol_table.lookup(self.symbol_id, self.node_cnt, own_scope_only=True)
 
         if symbol_type != 0:
             Logger.error(
@@ -438,7 +445,8 @@ class VarDeclDefault(SymbolDecl):
             raise AstTypingException()
 
         self.setSymbolTable(symbol_table)
-        symbol_table.insert(self.symbol_id, VariableType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)))
+        symbol_table.insert(self.symbol_id, VariableType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)),
+                            self.node_cnt)
 
     def optimiseNodes(self, variables, while_body=False):
         """
@@ -449,14 +457,14 @@ class VarDeclDefault(SymbolDecl):
             - Remove variables that are not used
             Returns updated node (when possible) and dict with constant values
         """
-        symbol_type, scope_name = ().lookup(self.symbol_id, own_scope_only=True)
+        symbol_type, scope_name = ().lookup(self.symbol_id, self.node_cnt, own_scope_only=True)
         full_id = scope_name + "." + self.symbol_id + "." + "used"
         variables[full_id] = False
 
         return self, variables
 
     def removeUnusedVariables(self, variables):
-        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, own_scope_only=True)
+        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, self.node_cnt, own_scope_only=True)
         full_id = scope_name + "." + self.symbol_id + "." + "used"
         if not variables[full_id]:
             return None, variables
@@ -468,11 +476,12 @@ class VarDeclWithInit(SymbolDecl):
         Node that represents a variabele declaration with initializer: "type id = init_expr;"
     """
 
-    def __init__(self, var_type: str, var_id: str, ptr_count: int, init_expr):
+    def __init__(self, var_type: str, var_id: str, ptr_count: int, init_expr, counter=0):
         super().__init__(symbol_class="VarWithInit",
                          symbol_type=var_type,
                          symbol_id=var_id,
-                         symbol_ptr_cnt=ptr_count)
+                         symbol_ptr_cnt=ptr_count,
+                         counter=counter)
         self.init_expr = init_expr
 
     def getInitExpr(self):
@@ -487,7 +496,7 @@ class VarDeclWithInit(SymbolDecl):
     def addToSymbolTable(self, symbol_table):
         # determine whether or not the symbol already exists to prevent redeclaration
         # only look in the current scope
-        symbol_type, scope_name = symbol_table.lookup(self.symbol_id, own_scope_only=True)
+        symbol_type, scope_name = symbol_table.lookup(self.symbol_id, self.node_cnt, own_scope_only=True)
 
         if symbol_type != 0:
             Logger.error(
@@ -499,7 +508,8 @@ class VarDeclWithInit(SymbolDecl):
         self.setSymbolTable(symbol_table)
         self.init_expr.setExprTreeSymbolTable(symbol_table)
         self.init_expr.resolveExpressionType(symbol_table)
-        symbol_table.insert(self.symbol_id, VariableType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)))
+        symbol_table.insert(self.symbol_id, VariableType(type_to_string(self.symbol_type, self.symbol_ptr_cnt)),
+                            self.node_cnt)
 
         # retrieve expression types
         symbol_type = VariableType(type_to_string(self.symbol_type, self.symbol_ptr_cnt))
@@ -530,13 +540,13 @@ class VarDeclWithInit(SymbolDecl):
         """
         self.init_expr, variables = self.init_expr.optimiseNodes(variables, while_body)
 
-        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, own_scope_only=True)
+        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, self.node_cnt, own_scope_only=True)
         full_id = scope_name + "." + self.symbol_id + "." + "used"
         variables[full_id] = False
         # ignore globals
         if isinstance(self.init_expr, ConstantExpr) and not self.getSymbolTable().isGlobal(self.symbol_id):
 
-            variable_type, table = self.getSymbolTable().lookup(self.symbol_id)
+            variable_type, table = self.getSymbolTable().lookup(self.symbol_id, self.node_cnt)
             constant_type = get_constant_type(self.init_expr)
             variable_type = variable_type.toString()
             # convert to variable type
@@ -551,7 +561,7 @@ class VarDeclWithInit(SymbolDecl):
         return self, variables
 
     def removeUnusedVariables(self, variables):
-        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, own_scope_only=True)
+        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, self.node_cnt, own_scope_only=True)
         full_id = scope_name + "." + self.symbol_id + "." + "used"
         if not variables[full_id]:
             return None, variables
@@ -564,11 +574,12 @@ class FuncDecl(SymbolDecl):
         Node that represents a function declaration: "type func(type param);"
     """
 
-    def __init__(self, return_type: str, func_id: str, ptr_count: int, param_list):
+    def __init__(self, return_type: str, func_id: str, ptr_count: int, param_list, counter=0):
         super().__init__(symbol_class="FuncDecl",
                          symbol_type=return_type,
                          symbol_id=func_id,
-                         symbol_ptr_cnt=ptr_count)
+                         symbol_ptr_cnt=ptr_count,
+                         counter=counter)
         self.param_list = param_list
 
     def getParams(self):
@@ -588,9 +599,9 @@ class FuncDecl(SymbolDecl):
                                       self.param_list])
 
         # symbol lookups
-        local_type, local_scope = symbol_table.lookup(self.symbol_id, own_scope_only=True)
-        tree_wide_type, tree_wide_scope = symbol_table.lookup(self.symbol_id, own_scope_only=False)
-        global_type, glob_scope = glob_sym_tbl.lookup(self.symbol_id)
+        local_type, local_scope = symbol_table.lookup(self.symbol_id, self.node_cnt, own_scope_only=True)
+        tree_wide_type, tree_wide_scope = symbol_table.lookup(self.symbol_id, self.node_cnt, own_scope_only=False)
+        global_type, glob_scope = glob_sym_tbl.lookup(self.symbol_id, self.node_cnt)
 
         # check if symbol is already taken up by a variable, or an array; since other function declarations don't matter
         if local_type != 0 and (local_type.isVar() or local_type.isArray()):
@@ -617,11 +628,11 @@ class FuncDecl(SymbolDecl):
 
         # if not present in local scope => add to local scope
         if local_type == 0:
-            symbol_table.insert(self.symbol_id, new_func_type)
+            symbol_table.insert(self.symbol_id, new_func_type, self.node_cnt)
 
         # check if not present in global scope => add to global scope
         if global_type == 0:
-            glob_sym_tbl.insert(self.symbol_id, new_func_type)
+            glob_sym_tbl.insert(self.symbol_id, new_func_type, self.node_cnt)
 
 
 class FuncDef(TopLevelNode):
@@ -668,7 +679,7 @@ class FuncDef(TopLevelNode):
         """
 
         # functions can only be defined in global scope, so own_scope is set to false
-        symbol_type, scope_name = symbol_table.lookup(self.func_id)
+        symbol_type, scope_name = symbol_table.lookup(self.func_id, 0)
 
         if symbol_type != 0:  # there exists a symbol with the same name as the function
 
@@ -1572,7 +1583,7 @@ class AssignmentExpr(Expression):
         if self.getSymbolTable().isGlobal(self.left.getIdentifierName()):
             return self, variables
 
-        variable_type, table = self.getSymbolTable().lookup(self.left.getIdentifierName())
+        variable_type, table = self.getSymbolTable().lookup(self.left.getIdentifierName(), self.left.getNodecounter())
         identifier = table + "." + self.left.getIdentifierName()
 
         if isinstance(self.right, ConstantExpr):
@@ -1603,10 +1614,12 @@ class AssignmentExpr(Expression):
         elif isinstance(self.left, IdentifierExpr):
             # identifierExpr
             identifier = self.left.getIdentifierName()
-            symbol_type, scope_name = self.left.getSymbolTable().lookup(identifier, own_scope_only=False)
+            symbol_type, scope_name = self.left.getSymbolTable().lookup(identifier, self.left.getNodecounter(),
+                                                                        own_scope_only=False)
 
         else:
-            raise Exception("Assignment only possible to ArrayAccessExpr or IdentifierExpr, not {}".format(type(self.left)))
+            raise Exception(
+                "Assignment only possible to ArrayAccessExpr or IdentifierExpr, not {}".format(type(self.left)))
 
         full_id = scope_name + "." + identifier + "." + "used"
         if not variables[full_id]:
@@ -2901,7 +2914,7 @@ class PrefixIncExpr(Expression):
             node = create_constant_node(result, expr_type)
             node.resolveExpressionType(node.getSymbolTable())
 
-            t, table = self.getSymbolTable().lookup(old_expression.getIdentifierName())
+            t, table = self.getSymbolTable().lookup(old_expression.getIdentifierName(), old_expression.getNodecounter())
             identifier = table + "." + old_expression.getIdentifierName()
 
             # update variable
@@ -2989,7 +3002,7 @@ class PrefixDecExpr(Expression):
             node = create_constant_node(result, expr_type)
             node.resolveExpressionType(node.getSymbolTable())
 
-            t, table = self.getSymbolTable().lookup(old_expression.getIdentifierName())
+            t, table = self.getSymbolTable().lookup(old_expression.getIdentifierName(), old_expression.getNodecounter())
             identifier = table + "." + old_expression.getIdentifierName()
 
             # update variable
@@ -3076,7 +3089,7 @@ class PostfixIncExpr(Expression):
             node = create_constant_node(result, expr_type)
             node.resolveExpressionType(node.getSymbolTable())
 
-            t, table = self.getSymbolTable().lookup(old_expression.getIdentifierName())
+            t, table = self.getSymbolTable().lookup(old_expression.getIdentifierName(), old_expression.getNodecounter())
             identifier = table + "." + old_expression.getIdentifierName()
 
             # update variable
@@ -3164,7 +3177,7 @@ class PostfixDecExpr(Expression):
             node = create_constant_node(result, expr_type)
             node.resolveExpressionType(node.getSymbolTable())
 
-            t, table = self.getSymbolTable().lookup(old_expression.getIdentifierName())
+            t, table = self.getSymbolTable().lookup(old_expression.getIdentifierName(), old_expression.getNodecounter())
             identifier = table + "." + old_expression.getIdentifierName()
 
             # update variable
@@ -3616,7 +3629,8 @@ class FuncCallExpr(Expression):
 
                 if isinstance(self.argument_list[i], AddressExpr):
                     identifier = self.argument_list[i].getTargetExpr().getIdentifierName()
-                    t, table = self.getSymbolTable().lookup(identifier)
+                    counter = self.argument_list[i].getTargetExpr().getNodecounter()
+                    t, table = self.getSymbolTable().lookup(identifier, counter)
                     identifier = table + "." + identifier
                     try:
                         del variables[identifier]
@@ -3640,7 +3654,7 @@ class IdentifierExpr(Expression):
         Node that represents an identifier expression (different from the idenfier itself!)
     """
 
-    def __init__(self, identifier: str):
+    def __init__(self, identifier: str, counter):
         """
             Constructor.
             Param:
@@ -3648,6 +3662,10 @@ class IdentifierExpr(Expression):
         """
         super().__init__(expression_type="IdentifierExpr\\n'" + identifier + "'")
         self.identifier = identifier
+        self.node_cnt = counter
+
+    def getNodecounter(self):
+        return self.node_cnt
 
     def getIdentifierName(self) -> str:
         """
@@ -3666,7 +3684,7 @@ class IdentifierExpr(Expression):
 
     def resolveExpressionType(self, symbol_table):
         # extract from table
-        symbol_type, scope_name = symbol_table.lookup(self.identifier)
+        symbol_type, scope_name = symbol_table.lookup(self.identifier, self.node_cnt)
 
         # determine if symbol exists in table
         if symbol_type == 0:
@@ -3693,7 +3711,7 @@ class IdentifierExpr(Expression):
         if while_body:
             return self, variables
 
-        t, table = self.getSymbolTable().lookup(self.identifier)
+        t, table = self.getSymbolTable().lookup(self.identifier, self.node_cnt)
         identifier = table + "." + self.identifier
 
         # return constant
@@ -4021,7 +4039,7 @@ def get_strongest_type(a, b):
 
 def add_to_used_variables(variables, identifier_expr: IdentifierExpr):
     identifier = identifier_expr.getIdentifierName()
-    symbol_type, scope_name = identifier_expr.getSymbolTable().lookup(identifier)
+    symbol_type, scope_name = identifier_expr.getSymbolTable().lookup(identifier, identifier_expr.getNodecounter())
     full_id = scope_name + "." + identifier + "." + "used"
     variables[full_id] = True
     return variables

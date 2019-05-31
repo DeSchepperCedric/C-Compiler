@@ -238,7 +238,7 @@ class LLVMGenerator:
 
         # default initialization to 0. Might be improved later
         var_id = node.getID()
-        var_type, t = node.getSymbolTable().lookup(var_id)
+        var_type, t = node.getSymbolTable().lookup(var_id, node.getNodecounter())
         var_type = self.getLLVMType(var_type)
         value = 0 if "float" not in var_type else self.floatToHex(0.0)
 
@@ -254,7 +254,7 @@ class LLVMGenerator:
             # code += "store {} {}, {}* {}\n".format(var_type, value, var_id, var_type)
         else:
 
-            t, table = node.getSymbolTable().lookup(var_id)
+            t, table = node.getSymbolTable().lookup(var_id, node.getNodecounter)
             reg_name = table + "." + var_id
             code += "%{} = alloca {}\n".format(reg_name, var_type)
             # LLVM seems to initialize to 0 automatically
@@ -266,7 +266,8 @@ class LLVMGenerator:
     def varDeclWithInit(self, node):
         expr_type = self.getLLVMType(node.getInitExpr().getExpressionType())
         var_id = node.getID()
-        var_type, table = node.getSymbolTable().lookup(var_id)
+
+        var_type, table = node.getSymbolTable().lookup(var_id, node.getNodecounter())
         var_type = self.getLLVMType(var_type)
         code = ""
         is_global = node.getSymbolTable().isGlobal(var_id)
@@ -383,10 +384,10 @@ class LLVMGenerator:
 
         return code, -1
 
-    def breakStatement(self, node:BreakStatement):
+    def breakStatement(self, node: BreakStatement):
         raise Exception("Break statements are not available in LLVM.")
 
-    def continueStatement(self, node:ContinueStatement):
+    def continueStatement(self, node: ContinueStatement):
         raise Exception("Break statements are not available in LLVM.")
 
     def programNode(self, node):
@@ -485,7 +486,7 @@ class LLVMGenerator:
         function_id = node.getFunctionID().getIdentifierName()
 
         code += "; FUNC CALL TO '{}' ON LINE '{}'\n".format(function_id, node.getLineNr())
-        needed_param_types, t = node.getSymbolTable().lookup(function_id)
+        needed_param_types, t = node.getSymbolTable().lookup(function_id, node.getFunctionID().getNodecounter())
         needed_param_types = needed_param_types.getParamTypes()
         load_groups = list()
         for arg, needed_param_type in zip_longest(node.getArguments(), needed_param_types):
@@ -519,7 +520,6 @@ class LLVMGenerator:
 
             # vararg functions do not take floats, all floats are converted to double
             if function_id == "printf" and arg_type == "float":
-
                 convert, arg_reg = self.convertToType(arg_reg, arg_type, "double")
                 arg_type = "double"
                 arg_code += convert
@@ -527,7 +527,7 @@ class LLVMGenerator:
             if isinstance(arg, AddressExpr) and function_id == "scanf":
                 arg_id = arg.getTargetExpr().getIdentifierName()
                 is_global = node.getSymbolTable().isGlobal(arg_id)
-                var_type, t = node.getSymbolTable().lookup(arg_id)
+                var_type, t = node.getSymbolTable().lookup(arg_id, arg.getTargetExpr().getNodecounter())
 
                 reg = (t + "." + arg_id) if not is_global else arg_id
 
@@ -597,7 +597,7 @@ class LLVMGenerator:
         if node.getSymbolTable().isGlobal(identifier):
             return self.loadVariable(identifier, var_type, True)
         else:
-            t, table = node.getSymbolTable().lookup(identifier)
+            t, table = node.getSymbolTable().lookup(identifier, node.getNodecounter())
             var_name = table + "." + identifier
             return self.loadVariable(var_name, var_type, False)
 
@@ -758,8 +758,6 @@ class LLVMGenerator:
 
         self.cur_reg += 1
 
-
-
         return code, self.cur_reg - 1
 
     def logicNotExpr(self, node: LogicNotExpr):
@@ -804,8 +802,6 @@ class LLVMGenerator:
 
         elif strongest_type == "char":
             code_target, reg_target = self.convertToChar(reg_target, target_type)
-
-            print("conv to char")
 
             code += "; CONVERT TO CHAR\n"
 
@@ -975,8 +971,8 @@ class LLVMGenerator:
             value = float(value)
 
         if old_type == "i1" and new_type != old_type:
-            #value = False if value == "false" else value
-            #value = True if value == "true" else value
+            # value = False if value == "false" else value
+            # value = True if value == "true" else value
             value = 0 if (value == "false" or value == False) else value
             value = 1 if (value == "true" or value == True) else value
 
@@ -1129,7 +1125,7 @@ class LLVMGenerator:
 
         is_global = node.getSymbolTable().isGlobal(identifier)
         if not is_global:
-            t, table = node.getSymbolTable().lookup(identifier)
+            t, table = node.getSymbolTable().lookup(identifier, node.getLeft().getNodecounter())
             identifier = table + "." + identifier
 
         code += self.storeVariable(identifier, register, left_type, is_global)
@@ -1233,7 +1229,7 @@ class LLVMGenerator:
         array_size = node.getSizeExpr().getValue()
 
         array_id = node.getID()
-        array_type, table = node.getSymbolTable().lookup(array_id)
+        array_type, table = node.getSymbolTable().lookup(array_id, node.getNodecounter())
         array_type = self.getLLVMType(array_type)
         code = ""
         is_global = node.getSymbolTable().isGlobal(array_id)
@@ -1285,7 +1281,7 @@ class LLVMGenerator:
 
         is_global = node.getSymbolTable().isGlobal(identifier)
         if not is_global:
-            t, table = node.getSymbolTable().lookup(identifier)
+            t, table = node.getSymbolTable().lookup(identifier, node.getLeft().getTargetArray().getNodecounter())
             identifier = table + "." + identifier
 
         element_reg = self.cur_reg
@@ -1331,7 +1327,7 @@ class LLVMGenerator:
 
         is_global = node.getSymbolTable().isGlobal(identifier)
         if not is_global:
-            t, table = node.getSymbolTable().lookup(identifier)
+            t, table = node.getSymbolTable().lookup(identifier, node.getTargetArray().getNodecounter())
             identifier = table + "." + identifier
 
         if isinstance(node.getIndexArray(), IntegerConstantExpr):
@@ -1408,7 +1404,7 @@ class LLVMGenerator:
             identifier = target.getIdentifierName()
             is_global = node.getSymbolTable().isGlobal(identifier)
             if not is_global:
-                t, table = node.getSymbolTable().lookup(identifier)
+                t, table = node.getSymbolTable().lookup(identifier, target.getNodecounter())
                 identifier = table + "." + identifier
 
             code += "%{} = {} {} %{}, {}\n".format(self.cur_reg, operation, expr_type, register, value)
@@ -1421,7 +1417,7 @@ class LLVMGenerator:
             identifier = target.getTargetArray().getIdentifierName()
             is_global = node.getSymbolTable().isGlobal(identifier)
             if not is_global:
-                t, table = node.getSymbolTable().lookup(identifier)
+                t, table = node.getSymbolTable().lookup(identifier, target.getTargetArray().getNodecounter())
                 identifier = table + "." + identifier
             index_code, index_reg = self.astNodeToLLVM(target.getIndexArray())
             code += index_code
@@ -1466,7 +1462,7 @@ class LLVMGenerator:
             identifier = target.getIdentifierName()
             is_global = node.getSymbolTable().isGlobal(identifier)
             if not is_global:
-                t, table = node.getSymbolTable().lookup(identifier)
+                t, table = node.getSymbolTable().lookup(identifier, target.getNodecounter())
                 identifier = table + "." + identifier
 
             code += "%{} = {} {} %{}, {}\n".format(self.cur_reg, operation, expr_type, register, value)
@@ -1485,7 +1481,7 @@ class LLVMGenerator:
             identifier = target.getTargetArray().getIdentifierName()
             is_global = node.getSymbolTable().isGlobal(identifier)
             if not is_global:
-                t, table = node.getSymbolTable().lookup(identifier)
+                t, table = node.getSymbolTable().lookup(identifier, target.getTargetArray().getNodecounter())
                 identifier = table + "." + identifier
             index_code, index_reg = self.astNodeToLLVM(target.getIndexArray())
             code += index_code
@@ -1519,7 +1515,8 @@ class LLVMGenerator:
         else:
             raise Exception("Prefix arithmetics aren't supported for type {}".format(type(target)))
 
-def codeEndsWithBr(code:str) -> bool:
+
+def codeEndsWithBr(code: str) -> bool:
     split = list(filter(len, code.split("\n")))
 
     return split[-1].startswith("br")
