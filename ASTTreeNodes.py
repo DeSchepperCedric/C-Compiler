@@ -3473,7 +3473,6 @@ class AddressExpr(Expression):
             Logger.error("Error at line {}. Cannot take address of function.".format(self.getLineNr()))
             raise AstTypingException()
         elif target_type.isVar():
-            target_type_name = target_type.toString()
             # add ptr level
             self.expression_type = target_type.addPointerLayer()
 
@@ -3495,6 +3494,7 @@ class AddressExpr(Expression):
             Returns updated node (when possible) and dict with constant values
         """
         # check if variable is used
+        print("here")
         if isinstance(self.target_expr, IdentifierExpr):
             variables = add_to_used_variables(variables, self.target_expr)
         return self, variables
@@ -3626,16 +3626,22 @@ class FuncCallExpr(Expression):
 
         if self.getFunctionID().getIdentifierName() == "scanf":
             for i in range(0, len(self.argument_list)):
-
+                # Arguments are address expressions or strings.
                 if isinstance(self.argument_list[i], AddressExpr):
                     identifier = self.argument_list[i].getTargetExpr().getIdentifierName()
                     counter = self.argument_list[i].getTargetExpr().getNodecounter()
                     t, table = self.getSymbolTable().lookup(identifier, counter)
                     identifier = table + "." + identifier
+
+                    # variable isn't a constant anymore after scanf
                     try:
                         del variables[identifier]
                     except KeyError:
                         pass
+                    identifier = identifier + ".used"
+                    # add that identifier is used (we don't wanna delete scanf's
+                    # even if they are redundant since they alter program code experience)
+                    variables[identifier] = True
 
         else:
             for i in range(0, len(self.argument_list)):
@@ -4040,6 +4046,6 @@ def get_strongest_type(a, b):
 def add_to_used_variables(variables, identifier_expr: IdentifierExpr):
     identifier = identifier_expr.getIdentifierName()
     symbol_type, scope_name = identifier_expr.getSymbolTable().lookup(identifier, identifier_expr.getNodecounter())
-    full_id = scope_name + "." + identifier + "." + "used"
+    full_id = scope_name + "." + identifier + ".used"
     variables[full_id] = True
     return variables

@@ -8,7 +8,7 @@ Compiles C code to either LLVM or MIPS.
 <ul>
     <li>Types: pointer, void, char, int, float</li>
     <li>Import, printf, scanf</li>
-    <li>If, else, return, while</li>
+    <li>If/else statement</li>
     <li>Local variables</li>
     <li>Global variables</li>
     <li>Comments</li>
@@ -17,13 +17,14 @@ Compiles C code to either LLVM or MIPS.
     <li>1-dimensional arrays (constant size)</li>
     <li>Syntax errors</li>
     <li>Typing errors</li>
-    <li>%, +=, -=, *=, /=, <=, >=, != (fully implemented)</li>
-    <li>Conversions in assignments, parameter passing, expressions, etc (automatic + casts) (fully implemented)</li>
-    <li>Bool type, 'not', 'and', 'or', 'true', 'false' keywords (in grammar)(fully implemented).</li>
-    <li>Bool type used as result of boolean expressions: comparisons, logic, etc (fully implemented).</li>
-    <li>++, --, prefix and postfix (fully implemented)</li>
+    <li>%, +=, -=, *=, /=, <=, >=, !=</li>
+    <li>Conversions in assignments, parameter passing, expressions, etc</li>
+    <li>Type casting</li>
+    <li>Bool type, 'not', 'and', 'or', 'true', 'false' keywords (in grammar).</li>
+    <li>Bool type used as result of boolean expressions: comparisons, logic, etc.</li>
+    <li>++, --, prefix and postfix</li>
     <li>Unary +,-</li>
-    <li>for loop</li>
+    <li>while/for loop</li>
     <li>&&, ||, !</li>
 </ul>
 
