@@ -33,7 +33,7 @@ def run_compiler(source_file_path, output_name, target_language):
     ast_tree = visitor.visitProgram(parse_tree)  # create AST
 
     ast_tree.genSymbolTable()               # annotate AST with types and symbol table
-    #ast_tree.optimiseNodes(dict())          # optimisations (constant folding/propagation, null sequences,...)
+    ast_tree.optimiseNodes(dict())          # optimisations (constant folding/propagation, null sequences,...)
     ast_tree.pruneDeadCode()                # prune after continue, return and break
 
     symbol_table = ast_tree.getSymbolTable()

@@ -194,33 +194,33 @@ int main()
 
 
     // !, &&, ||
-    printf("j=%f\n", val_j());
+    printf("j=%f. Expected 50.0.\n", val_j());
     printf("!j = !%f = %f. Expected 0\n", val_j(), !val_j());
 
-    printf("k=%f\n", val_k());
+    printf("k=%f. Expected 50.0.\n", val_k());
 
-    printf("l=%f\n", val_l());
+    printf("l=%f. Expected 0.0.\n", val_l());
     printf("!l = !%f = %f. Expected 1\n", val_l(), !val_l());
 
-    printf("m=%f\n", val_m());
+    printf("m=%f. Expected 0.0.\n", val_m());
 
-    float j_and_k = val_j() && val_k(); // 1
-    printf("j && k = %d && %d = %d. Expected 1\n", val_j(), val_k(), j_and_k);
-    float j_and_l = val_j() && val_l(); // 0
-    printf("j && l = %d && %d = %d. Expected 0\n", val_j(), val_l(), j_and_l);
-    float l_and_j = val_l() && val_j(); // 0
-    printf("l && j = %d && %d = %d. Expected 0\n", val_l(), val_j(), l_and_j);
-    float l_and_m = val_j() && val_m(); // 0
-    printf("l && m = %d && %d = %d. Expected 0\n", val_l(), val_m(), l_and_m);
+    bool j_and_k = val_j() && val_k(); // 1
+    printf("j && k = %f && %f = %d. Expected 1\n", val_j(), val_k(), j_and_k);
+    bool j_and_l = val_j() && val_l(); // 0
+    printf("j && l = %f && %f = %d. Expected 0\n", val_j(), val_l(), j_and_l);
+    bool l_and_j = val_l() && val_j(); // 0
+    printf("l && j = %f && %f = %d. Expected 0\n", val_l(), val_j(), l_and_j);
+    bool l_and_m = val_j() && val_m(); // 0
+    printf("l && m = %f && %f = %d. Expected 0\n", val_l(), val_m(), l_and_m);
 
-    float j_or_k = val_j() || val_k(); // 1
-    printf("j || k = %d && %d = %d. Expected 1\n", val_j(), val_k(), j_or_k);
-    float j_or_l = val_j() || val_l(); // 1
-    printf("j || l = %d && %d = %d. Expected 1\n", val_j(), val_l(), j_or_l);
-    float l_or_j = val_l() || val_j(); // 1
-    printf("l || j = %d && %d = %d. Expected 1\n", val_l(), val_j(), l_or_j);
-    float l_or_m = val_l() || val_m(); // 0
-    printf("l || m = %d && %d = %d. Expected 0\n", val_l(), val_m(), l_or_m);
+    bool j_or_k = val_j() || val_k(); // 1
+    printf("j || k = %f || %f = %d. Expected 1\n", val_j(), val_k(), j_or_k);
+    bool j_or_l = val_j() || val_l(); // 1
+    printf("j || l = %f || %f = %d. Expected 1\n", val_j(), val_l(), j_or_l);
+    bool l_or_j = val_l() || val_j(); // 1
+    printf("l || j = %f || %f = %d. Expected 1\n", val_l(), val_j(), l_or_j);
+    bool l_or_m = val_l() || val_m(); // 0
+    printf("l || m = %f || %f = %d. Expected 0\n", val_l(), val_m(), l_or_m);
 
     return 0;
 }
