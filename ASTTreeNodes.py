@@ -3626,13 +3626,14 @@ class FuncCallExpr(Expression):
 
         if self.getFunctionID().getIdentifierName() == "scanf":
             for i in range(0, len(self.argument_list)):
-
+                # Arguments are address expressions or strings.
                 if isinstance(self.argument_list[i], AddressExpr):
                     identifier = self.argument_list[i].getTargetExpr().getIdentifierName()
                     counter = self.argument_list[i].getTargetExpr().getNodecounter()
                     t, table = self.getSymbolTable().lookup(identifier, counter)
                     identifier = table + "." + identifier
 
+                    # variable isn't a constant anymore after scanf
                     try:
                         del variables[identifier]
                     except KeyError:
