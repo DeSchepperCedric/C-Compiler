@@ -306,7 +306,7 @@ class MipsGenerator:
         var_type = node.getExpressionType().toString() if isinstance(node, IdentifierExpr) else node.getType()
         # determine if the variable is a float
         is_float = var_type == "float"
-
+        var_count = node.getNodecounter() if isinstance(node, IdentifierExpr) else 0
         # get varname
         varname = node.getIdentifierName() if isinstance(node, IdentifierExpr) else node.getID()
 
@@ -331,7 +331,7 @@ class MipsGenerator:
             # there is a 100% guarantee that the variable exists in the table
 
             # get scopename
-            type, scopename = node.getSymbolTable().lookup(varname, False)
+            type, scopename = node.getSymbolTable().lookup(varname, var_count, False)
 
             # get full var id
             full_id = scopename + "." + varname
@@ -392,7 +392,8 @@ class MipsGenerator:
 
         else:
             # get scopename
-            type, scopename = id_node.getSymbolTable().lookup(varname, False)
+
+            type, scopename = id_node.getSymbolTable().lookup(varname, id_node.getNodecounter(), False)
             # get full var id
             full_id = scopename + "." + varname
 
@@ -518,7 +519,7 @@ class MipsGenerator:
         # make room on stack and save offset
 
         # get scopename
-        type, scopename = node.getSymbolTable().lookup(node.getID(), False)
+        type, scopename = node.getSymbolTable().lookup(node.getID(), 0, False)
 
         # get full var id
         full_id = scopename + "." + node.getID()
@@ -1309,7 +1310,7 @@ class MipsGenerator:
             # get variable from offset dict
             # retrieve information about the variable
             varname = target.getIdentifierName()
-            vartype, varscope = node.getSymbolTable().lookup(varname)
+            vartype, varscope = node.getSymbolTable().lookup(varname, target.getNodecounter())
             full_id = varscope + "." + varname
             if not full_id in self.var_offset_dict:
                 raise Exception("Variable with name '{}' is not present in offset list.".format(varname))
@@ -1428,7 +1429,7 @@ class MipsGenerator:
             code += convert
 
         identifier = node.getTargetArray().getIdentifierName()
-        array_type, scopename = node.getSymbolTable().lookup(identifier)
+        array_type, scopename = node.getSymbolTable().lookup(identifier, node.getTargetArray().getNodecounter())
         is_global = node.getSymbolTable().isGlobal(identifier)
 
         address_reg = self.getFreeReg()

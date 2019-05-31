@@ -16,8 +16,6 @@ int main(int argc, char** argv)
 	printf("i=%d\n", i);
 
 	int* i_ptr = &i;
-	// int i_addr = i_ptr;
-	// printf("addr of i=%d", i_addr);
 
 	int j = *i_ptr;
 

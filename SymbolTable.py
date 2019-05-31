@@ -1,7 +1,4 @@
 class SymbolType:
-    def __init__(self):
-        pass
-
     def isFunction(self):
         return False
 
@@ -125,6 +122,8 @@ class SymbolTable:
         self.parent = parent
         self.children = list()
         self.symbols = dict()
+        self.counters = dict()
+        self.max_counter = 0
 
     def getName(self):
         """
@@ -132,33 +131,40 @@ class SymbolTable:
         """
         return self.name
 
-    def lookup(self, symbol: str, own_scope_only=False) -> (SymbolType, str):
+    def lookup(self, symbol: str, counter=0, own_scope_only=False) -> (SymbolType, str):
         """
         Lookup a symbol in the symbol table
         :param symbol: The symbol to be found
+        :param counter: Counter of the node that calls lookup
         :param own_scope_only: only check own scope or also parents
         :return: (0, None) when not found, (type, scope_name) when found.
         """
+        if counter == 0:
+            counter = self.max_counter + 1
+
         # symbol found in current scope
-        if symbol in self.symbols:
+        if symbol in self.symbols and self.counters[symbol] <= counter:
             return self.symbols[symbol], self.name
 
         # look for symbol in parent symbol table
         elif self.parent is not None and not own_scope_only:
-            return self.parent.lookup(symbol, own_scope_only)
+            return self.parent.lookup(symbol, counter, own_scope_only)
 
         # symbol isn't found
         else:
             return 0, None
 
-    def insert(self, symbol: str, sym_type):
+    def insert(self, symbol: str, sym_type, counter=0):
         """
         Insert a symbol in the symbol table
         :param symbol: symbol name
         :param sym_type: symbol type
+        :param counter: Counter of the node that calls insert
         :return: None
         """
         self.symbols[symbol] = sym_type
+        self.counters[symbol] = counter
+        self.max_counter = max(counter, self.max_counter)
 
     def allocate(self):
         """
@@ -169,23 +175,28 @@ class SymbolTable:
         self.children.append(child)
         return child
 
-    def isGlobal(self, symbol: str) -> bool:
+    def isGlobal(self, symbol: str, counter=0) -> bool:
         """
                 Lookup a symbol in the symbol table
                 :param symbol: The symbol to be found
+                :param counter: Counter of the node that calls isGlobal
                 :return: True if the symbol is global, False if the symbol is not global
                 """
+
+        if counter == 0:
+            counter = self.max_counter + 1
+
         # symbol found in current scope, and is global
         if symbol in self.symbols and self.parent is None:
             return True
 
         # symbol found in current scope, isn't global
-        elif symbol in self.symbols:
+        elif symbol in self.symbols and self.counters[symbol] <= counter:
             return False
 
         # look for symbol in parent symbol table
         elif self.parent is not None:
-            return self.parent.isGlobal(symbol)
+            return self.parent.isGlobal(symbol, counter)
 
         # symbol isn't found
         else:

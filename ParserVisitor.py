@@ -7,6 +7,12 @@ from CompilerException import AstCreationException
 
 
 class ParserVisitor(CVisitor):
+    def __init__(self):
+        self.counter = 0
+
+    def getCounter(self):
+        self.counter += 1
+        return self.counter - 1
 
     def manuallyVisitChild(self, child_node):
         return child_node.accept(self)
@@ -101,7 +107,7 @@ class ParserVisitor(CVisitor):
             raise AstCreationException()
 
         # temporarily set type to None
-        return VarDeclDefault(ctx.temp_typeName, var_id, ptr_count).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+        return VarDeclDefault(ctx.temp_typeName, var_id, ptr_count, self.getCounter()).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # ENDCLASS
 
@@ -137,7 +143,7 @@ class ParserVisitor(CVisitor):
             raise AstCreationException()
 
         # temporarily set type to None
-        return VarDeclWithInit(ctx.temp_typeName, var_id, ptr_count, init_expr).setLineNr(ctx.start.line).setColNr(
+        return VarDeclWithInit(ctx.temp_typeName, var_id, ptr_count, init_expr, self.getCounter()).setLineNr(ctx.start.line).setColNr(
             ctx.start.column)
 
     # Visit a parse tree produced by CParser#param.
@@ -616,7 +622,7 @@ class ParserVisitor(CVisitor):
     def visitArrayAccesExpr(self, ctx: CParser.ArrayAccesExprContext):
         # child #0 the array identifier
         target_array_id = self.manuallyVisitChild(ctx.getChild(0))
-        target_array = IdentifierExpr(target_array_id).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+        target_array = IdentifierExpr(target_array_id, self.getCounter()).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         # child #1 is '['
         index_expr = self.manuallyVisitChild(ctx.getChild(2))
@@ -643,7 +649,7 @@ class ParserVisitor(CVisitor):
     def visitFuncCall(self, ctx: CParser.FuncCallContext):
         # function id is a IdentifierExpression
         function_id_str = self.manuallyVisitChild(ctx.getChild(0))
-        function_id = IdentifierExpr(function_id_str).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+        function_id = IdentifierExpr(function_id_str, self.getCounter()).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
         arg_ctx_list = [node for node in list(ctx.getChildren())[1:] if not node.getText() in [',', '(', ')']]
 
@@ -682,7 +688,7 @@ class ParserVisitor(CVisitor):
 
         id_str = self.manuallyVisitChild(ctx.getChild(0))
 
-        return IdentifierExpr(id_str).setLineNr(ctx.start.line).setColNr(ctx.start.column)
+        return IdentifierExpr(id_str, self.getCounter()).setLineNr(ctx.start.line).setColNr(ctx.start.column)
 
     # Visit a parse tree produced by CParser#constantExpr.
     def visitConstantExpr(self, ctx: CParser.ConstantExprContext):
