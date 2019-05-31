@@ -64,13 +64,13 @@ def main(argv):
         c_file += ".c"
     if not llvm_file.endswith(".ll"):
         llvm_file += ".ll"
-    try:
-        run_compiler(c_file, llvm_file, output_name)
-    except CompilerException:
-        Logger.error("Compiler was terminated due to errors in the specified C source file.")
-    except Exception as e:
-        Logger.error("Compiler was terminated due to errors in the specified C source file.")
-        Logger.error("Error of type '{}': {}".format(type(e), str(e)))
+#    try:
+    run_compiler(c_file, llvm_file, output_name)
+#    except CompilerException:
+#        Logger.error("Compiler was terminated due to errors in the specified C source file.")
+#    except Exception as e:
+#        Logger.error("Compiler was terminated due to errors in the specified C source file.")
+#        Logger.error("Error of type '{}': {}".format(type(e), str(e)))
 
 
 if __name__ == "__main__":
