@@ -858,14 +858,27 @@ class MipsGenerator:
         # save params on the stack relative to the $fp
         for i in range(0, len(node.getArguments())):
             funcdef_node = self.function_defs[node.getFunctionID().getIdentifierName()]
-            param_name = funcdef_node.getParamList()[i].getParamID()
+            param:FuncParam = funcdef_node.getParamList()[i]
+            param_name = param.getParamID()
 
             code += "# process param {}\n".format(param_name)
             arg = node.getArguments()[i]
             arg_code, arg_reg = self.astNodeToMIPS(arg)
             code += arg_code
 
+            # determine whether or not the argument needs to be converted
             is_arg_float = arg.getExpressionType().toString() == "float"
+
+            is_param_float = param.getParamType() == "float"
+
+            if is_arg_float and not is_param_float:
+                conv_code, arg_reg = self.convertFloatToInteger(arg_reg)
+                code += conv_code
+
+            elif is_param_float and not is_arg_float:
+                conv_code, arg_reg = self.convertIntegerToFloat((arg_reg))
+                code += conv_code
+
             code += self.storeRegister(arg_reg, "$fp", fp_arg_offset, is_float=is_arg_float)
 
             fp_arg_offset += 4  # do this after since the $fp points to the a free stack place

@@ -1086,7 +1086,11 @@ class FuncParam(ASTNode):
         self.param_id = param_id
         self.ptr_count = ptr_count
 
-    def getParamType(self):
+    def getParamType(self) -> str:
+        """
+        Returns a string that represents the parameter type. E.g. "int", "int*", "float***", etc.
+        :return:
+        """
         return self.param_type
 
     def getParamID(self):
@@ -1555,8 +1559,7 @@ class AssignmentExpr(Expression):
             self.left.index_expr, variables = self.left.index_expr.optimiseNodes(variables, while_body)
             if isinstance(self.left.index_expr, IdentifierExpr):
                 variables = add_to_used_variables(variables, self.left.index_expr)
-        print(variables)
-        print("------")
+
         self.right, variables = self.right.optimiseNodes(variables, while_body)
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
@@ -3469,7 +3472,6 @@ class AddressExpr(Expression):
         # check if variable is used
         if isinstance(self.target_expr, IdentifierExpr):
             variables = add_to_used_variables(variables, self.target_expr)
-        print(variables)
         return self, variables
 
 

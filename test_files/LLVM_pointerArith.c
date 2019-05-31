@@ -7,7 +7,7 @@
 void funcWithPtrParam(int* param_ptr)
 {
 	printf("param ptr addr = %d\n", param_ptr);
-	printf("param ptr value = %d\n", *param_ptr);
+	printf("param ptr value (=i) = %d\n", *param_ptr);
 }
 
 int main(int argc, char** argv)

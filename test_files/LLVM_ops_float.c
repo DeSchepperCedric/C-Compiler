@@ -44,16 +44,16 @@ int main()
     float div_3 = c / a; // -4
     printf("c / a = %f / %f = %f. Expected: -4.0\n", b, a, div_3);
 
-    //// +, -
-    // printf("### Unary +,-\n");
-    // float plus_1 = +a; // 5
-    // printf("+a = +%f = %f. Expected 5\n", a, plus_1);
-    // float plus_2 = +c; // -20
-    // printf("+c = +%f = %f. Expected -20\n", c, plus_2);
-    // float min_1 = -a; // -5
-    // printf("-a = -%f = %f. Expected -5\n", a, min_1);
-    // float min_2 = -c; // 20
-    // printf("-c = -%f = %f. Expected 20\n", c, min_2);
+    // +, -
+    printf("### Unary +,-\n");
+    float plus_1 = +a; // 5
+    printf("+a = +%f = %f. Expected 5\n", a, plus_1);
+    float plus_2 = +c; // -20
+    printf("+c = +%f = %f. Expected -20\n", c, plus_2);
+    float min_1 = -a; // -5
+    printf("-a = -%f = %f. Expected -5\n", a, min_1);
+    float min_2 = -c; // 20
+    printf("-c = -%f = %f. Expected 20\n", c, min_2);
 
 
     //// ==, !=, >, <, >=, <=
@@ -130,62 +130,62 @@ int main()
     printf("g /= 3 = %f. Expected: -20.0\n", g);
 
 
-    //// ++, --
-    // printf("### Prefix ++, --\n");
-    // float h = 50;
-    // printf("h=%f\n", h);
-    // float h_pp_ret = ++h; // 51
-    // printf("h after ++h = %f. Expected 51\n", h);
-    // printf("return value of ++h = %f. Expected 51\n", h_pp_ret);
-    // float h_mm_ret = --h; // 50
-    // printf("h after --h = %f. Expected 50\n", h);
-    // printf("return value of --h = %f. Expected 50\n", h_mm_ret);
+    // ++, --
+    printf("### Prefix ++, --\n");
+    float h = 50;
+    printf("h=%f\n", h);
+    float h_pp_ret = ++h; // 51
+    printf("h after ++h = %f. Expected 51\n", h);
+    printf("return value of ++h = %f. Expected 51\n", h_pp_ret);
+    float h_mm_ret = --h; // 50
+    printf("h after --h = %f. Expected 50\n", h);
+    printf("return value of --h = %f. Expected 50\n", h_mm_ret);
 
-    // printf("### Postfix ++, --\n");
-    // float i = 23;
-    // printf("h=%f\n", i);
-    // float i_pp_retval = i++; // 24
-    // printf("i after i++ = %f. Expected 24\n", i);
-    // printf("return value of i++ = %f. Expected 23\n", i_pp_retval);
-    // float i_mm_retval = i--; // 23
-    // printf("i after i-- = %f. Expected 23\n", i);
-    // printf("return value of i-- = %f. Expected 24\n", i_mm_retval);
+    printf("### Postfix ++, --\n");
+    float i = 23;
+    printf("h=%f\n", i);
+    float i_pp_retval = i++; // 24
+    printf("i after i++ = %f. Expected 24\n", i);
+    printf("return value of i++ = %f. Expected 23\n", i_pp_retval);
+    float i_mm_retval = i--; // 23
+    printf("i after i-- = %f. Expected 23\n", i);
+    printf("return value of i-- = %f. Expected 24\n", i_mm_retval);
 
 
-    //// !, &&, ||
-    // float j = 50;
-    // print("j=%f\n", j);
-    // float j_not = !j; // 0
-    // printf("!j = !%f = %f. Expected 0\n", j, j_not);
+    // !, &&, ||
+    float j = 50;
+    printf("j=%f\n", j);
+    float j_not = !j; // 0
+    printf("!j = !%f = %f. Expected 0\n", j, j_not);
 
-    // float k = 50;
-    // print("k=%f\n", k);
+    float k = 50;
+    printf("k=%f\n", k);
 
-    // float l = 0;
-    // print("l=%f\n", l);
-    // float l_not = !k; // 1
-    // printf("!l = !%f = %f. Expected 1\n", l, l_not);
+    float l = 0;
+    printf("l=%f\n", l);
+    float l_not = !l; // 1
+    printf("!l = !%f = %f. Expected 1\n", l, l_not);
 
-    // float m = 0;
-    // print("m=%f\n", m);
+    float m = 0;
+    printf("m=%f\n", m);
 
-    // float j_and_k = j && k; // 1
-    // printf("j && k = %f && %f = %f. Expected 1\n", j, k, j_and_k);
-    // float j_and_l = j && l; // 0
-    // printf("j && l = %f && %f = %f. Expected 0\n", j, l, j_and_l);
-    // float l_and_j = l && j; // 0
-    // printf("l && j = %f && %f = %f. Expected 0\n", l, j, l_and_j);
-    // float l_and_m = j && m; // 0
-    // printf("l && m = %f && %f = %f. Expected 0\n", l, m, l_and_m);
+    float j_and_k = j && k; // 1
+    printf("j && k = %f && %f = %f. Expected 1\n", j, k, j_and_k);
+    float j_and_l = j && l; // 0
+    printf("j && l = %f && %f = %f. Expected 0\n", j, l, j_and_l);
+    float l_and_j = l && j; // 0
+    printf("l && j = %f && %f = %f. Expected 0\n", l, j, l_and_j);
+    float l_and_m = j && m; // 0
+    printf("l && m = %f && %f = %f. Expected 0\n", l, m, l_and_m);
 
-    // float j_or_k = j || k; // 1
-    // printf("j || k = %f && %f = %f. Expected 1\n", j, k, j_or_k);
-    // float j_or_l = j || l; // 1
-    // printf("j || l = %f && %f = %f. Expected 1\n", j, l, j_or_l);
-    // float l_or_j = l || j; // 1
-    // printf("l || j = %f && %f = %f. Expected 1\n", l, j, l_or_j);
-    // float l_or_m = l || m; // 0
-    // printf("l || m = %f && %f = %f. Expected 0\n", l, m, l_or_m);
+    float j_or_k = j || k; // 1
+    printf("j || k = %f && %f = %f. Expected 1\n", j, k, j_or_k);
+    float j_or_l = j || l; // 1
+    printf("j || l = %f && %f = %f. Expected 1\n", j, l, j_or_l);
+    float l_or_j = l || j; // 1
+    printf("l || j = %f && %f = %f. Expected 1\n", l, j, l_or_j);
+    float l_or_m = l || m; // 0
+    printf("l || m = %f && %f = %f. Expected 0\n", l, m, l_or_m);
 
     return 0;
 }
