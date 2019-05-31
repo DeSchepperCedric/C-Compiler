@@ -8,7 +8,6 @@ bool global_predicate = false;
 
 void funcA()
 {
-	printf("ok123\n");
 	printf("Called funcA\n");
 }
 

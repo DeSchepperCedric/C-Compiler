@@ -537,6 +537,10 @@ class MipsGenerator:
 
         if is_global and isinstance(node.getInitExpr(), ConstantExpr):
             value = self.convertConstant(var_type, expr_type, node.getInitExpr().getValue())
+
+            if var_type == "byte" or var_type == "character":
+                var_type = "word"
+
             self.data_string += "{}: .{} {}\n".format(var_id, var_type, value)
         elif is_global and isinstance(node.getInitExpr(), AddressExpr):
             addr_expr: AddressExpr = node.getInitExpr()

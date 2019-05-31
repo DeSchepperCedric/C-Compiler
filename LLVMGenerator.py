@@ -711,17 +711,21 @@ class LLVMGenerator:
         strongest_type = self.getStrongestType(type_left, type_right)
         llvm_type = ""
         if strongest_type == "float":
-            code += "; LOGIC FLOAT\n"
             code_left, reg_left = self.convertToFloat(reg_left, type_left)
             code_right, reg_right = self.convertToFloat(reg_right, type_right)
-
             code += code_left
             code += code_right
-            code += "%{} = {} float %{}, %{}\n".format(self.cur_reg, op, reg_left, reg_right)
-            llvm_type = "float"
+
+            # convert back to integer i32
+            code_left, reg_left = self.convertToInt(reg_left, type_left)
+            code_right, reg_right = self.convertToInt(reg_right, type_right)
+            code += code_left
+            code += code_right
+
+            code += "%{} = {} i32 %{}, %{}\n".format(self.cur_reg, op, reg_left, reg_right)
+            llvm_type = "i32"
 
         elif strongest_type == "int":
-            code += "; LOGIC INT\n"
             code_left, reg_left = self.convertToInt(reg_left, type_left)
             code_right, reg_right = self.convertToInt(reg_right, type_right)
 
@@ -731,7 +735,6 @@ class LLVMGenerator:
             llvm_type = "i32"
 
         elif strongest_type == "char":
-            code += "; LOGIC CHAR\n"
             code_left, reg_left = self.convertToChar(reg_left, type_left)
             code_right, reg_right = self.convertToChar(reg_right, type_right)
 
@@ -740,7 +743,6 @@ class LLVMGenerator:
             code += "%{} = {} i8 %{}, %{}\n".format(self.cur_reg, op, reg_left, reg_right)
             llvm_type = "i8"
         elif strongest_type == "bool":
-            code += "; LOGIC BOOL\n"
             code_left, reg_left = self.convertToBool(reg_left, type_left)
             code_right, reg_right = self.convertToBool(reg_right, type_right)
 
@@ -796,8 +798,9 @@ class LLVMGenerator:
         llvm_type = ""
         if strongest_type == "float":
             code_target, reg_target = self.convertToFloat(reg_target, target_type)
-
             code += code_target
+
+
             code += "%{} = fcmp oeq float %{}, 0.0\n".format(self.cur_reg, reg_target)
             llvm_type = "i1"
 

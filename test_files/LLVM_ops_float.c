@@ -34,22 +34,22 @@ float val_e()
     return 5.0;
 }
 
-int val_j()
+float val_j()
 {
     return 50.0;
 }
 
-int val_k()
+float val_k()
 {
     return 50.0;
 }
 
-int val_l()
+float val_l()
 {
     return 0.0;
 }
 
-int val_m()
+float val_m()
 {
     return 0.0;
 }
@@ -192,15 +192,14 @@ int main()
     printf("i after i-- = %f. Expected 23\n", i);
     printf("return value of i-- = %f. Expected 24\n", i_mm_retval);
 
-
     // !, &&, ||
     printf("j=%f. Expected 50.0.\n", val_j());
-    printf("!j = !%f = %f. Expected 0\n", val_j(), !val_j());
+    printf("!j = !%f = %d. Expected 0\n", val_j(), !val_j());
 
     printf("k=%f. Expected 50.0.\n", val_k());
 
     printf("l=%f. Expected 0.0.\n", val_l());
-    printf("!l = !%f = %f. Expected 1\n", val_l(), !val_l());
+    printf("!l = !%f = %d. Expected 1\n", val_l(), !val_l());
 
     printf("m=%f. Expected 0.0.\n", val_m());
 
