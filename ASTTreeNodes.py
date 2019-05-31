@@ -449,7 +449,7 @@ class VarDeclDefault(SymbolDecl):
             - Remove variables that are not used
             Returns updated node (when possible) and dict with constant values
         """
-        symbol_type, scope_name = self.getSymbolTable().lookup(self.symbol_id, own_scope_only=True)
+        symbol_type, scope_name = ().lookup(self.symbol_id, own_scope_only=True)
         full_id = scope_name + "." + self.symbol_id + "." + "used"
         variables[full_id] = False
 
@@ -1555,7 +1555,8 @@ class AssignmentExpr(Expression):
             self.left.index_expr, variables = self.left.index_expr.optimiseNodes(variables, while_body)
             if isinstance(self.left.index_expr, IdentifierExpr):
                 variables = add_to_used_variables(variables, self.left.index_expr)
-
+        print(variables)
+        print("------")
         self.right, variables = self.right.optimiseNodes(variables, while_body)
         if isinstance(self.right, IdentifierExpr):
             variables = add_to_used_variables(variables, self.right)
@@ -1588,16 +1589,23 @@ class AssignmentExpr(Expression):
         return self, variables
 
     def removeUnusedVariables(self, variables):
-        if not isinstance(self.left, ArrayAccessExpr):
-            return self, variables
+        if isinstance(self.left, ArrayAccessExpr):
+            # array
+            target = self.left.getTargetArray()
+            identifier = target.identifier
+            symbol_type, scope_name = target.getSymbolTable().lookup(identifier, own_scope_only=False)
 
-        target = self.left.getTargetArray()
-        symbol_type, scope_name = target.getSymbolTable().lookup(target.identifier, own_scope_only=True)
-        full_id = scope_name + "." + target.identifier + "." + "used"
+        else:
+            # identifierExpr
+            identifier = self.left.getIdentifierName()
+            symbol_type, scope_name = self.left.getSymbolTable().lookup(identifier, own_scope_only=False)
+
+        full_id = scope_name + "." + identifier + "." + "used"
         if not variables[full_id]:
             return None, variables
 
         return self, variables
+
 
 
 class LogicOrExpr(Expression):

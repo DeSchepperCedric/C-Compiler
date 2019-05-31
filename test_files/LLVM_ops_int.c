@@ -42,9 +42,9 @@ int main(int argc, char** argv)
     printf("c / a = %d / %d = %d. Expected: -4\n", b, a, div_3);
 
     int mod_1 = a % b; // 5
-    printf("a %% b = %d % %d = %d. Expected 5\n", a, b, mod_1);
+    printf("a %% b = %d %% %d = %d. Expected 5\n", a, b, mod_1);
     int mod_2 = b % a; // 0
-    printf("b %% a = %d % %d = %d. Expected 0\n", b, a, mod_2);
+    printf("b %% a = %d %% %d = %d. Expected 0\n", b, a, mod_2);
 
     //// +, -
     // printf("### Unary +,-\n");
@@ -128,63 +128,6 @@ int main(int argc, char** argv)
     g /= 3; // -20
     printf("g /= 3 = %d. Expected: -20\n", g);
 
-
-    //// ++, --
-    // printf("### Prefix ++, --\n");
-    // int h = 50;
-    // printf("h=%d\n", h);
-    // int h_pp_ret = ++h; // 51
-    // printf("h after ++h = %d. Expected 51\n", h);
-    // printf("return value of ++h = %d. Expected 51\n", h_pp_ret);
-    // int h_mm_ret = --h; // 50
-    // printf("h after --h = %d. Expected 50\n", h);
-    // printf("return value of --h = %d. Expected 50\n", h_mm_ret);
-
-    // printf("### Postfix ++, --\n");
-    // int i = 23;
-    // printf("i=%d\n", i);
-    // int i_pp_retval = i++; // 24
-    // printf("i after i++ = %d. Expected 24\n", i);
-    // printf("return value of i++ = %d. Expected 23\n", i_pp_retval);
-    // int i_mm_retval = i--; // 23
-    // printf("i after i-- = %d. Expected 23\n", i);
-    // printf("return value of i-- = %d. Expected 24\n", i_mm_retval);
-
-
-    //// !, &&, ||
-    // int j = 50;
-    // print("j=%d\n", j);
-    // int j_not = !j; // 0
-    // printf("!j = !%d = %d. Expected 0\n", j, j_not);
-
-    // int k = 50;
-    // print("k=%d\n", k);
-
-    // int l = 0;
-    // print("l=%d\n", l);
-    // int l_not = !k; // 1
-    // printf("!l = !%d = %d. Expected 1\n", l, l_not);
-
-    // int m = 0;
-    // print("m=%d\n", m);
-
-    // int j_and_k = j && k; // 1
-    // printf("j && k = %d && %d = %d. Expected 1\n", j, k, j_and_k);
-    // int j_and_l = j && l; // 0
-    // printf("j && l = %d && %d = %d. Expected 0\n", j, l, j_and_l);
-    // int l_and_j = l && j; // 0
-    // printf("l && j = %d && %d = %d. Expected 0\n", l, j, l_and_j);
-    // int l_and_m = j && m; // 0
-    // printf("l && m = %d && %d = %d. Expected 0\n", l, m, l_and_m);
-
-    // int j_or_k = j || k; // 1
-    // printf("j || k = %d && %d = %d. Expected 1\n", j, k, j_or_k);
-    // int j_or_l = j || l; // 1
-    // printf("j || l = %d && %d = %d. Expected 1\n", j, l, j_or_l);
-    // int l_or_j = l || j; // 1
-    // printf("l || j = %d && %d = %d. Expected 1\n", l, j, l_or_j);
-    // int l_or_m = l || m; // 0
-    // printf("l || m = %d && %d = %d. Expected 0\n", l, m, l_or_m);
 
     return 0;
 }
