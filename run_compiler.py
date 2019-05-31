@@ -72,8 +72,9 @@ def main(argv):
         run_compiler(source_file_path=argv[2], output_name=output_name, target_language=target_language)
     except CompilerException as e:
         Logger.error("Compiler was terminated due to errors in the specified C source file.")
-    # except Exception as e:
-    #   Logger.error("Unexpected error of type '{}': {}".format(type(e), str(e)))
+    except Exception as e:
+        Logger.error("Compiler was terminated due to errors in the specified C source file.")
+        Logger.error("Error of type '{}': {}".format(type(e), str(e)))
 
 
 if __name__ == "__main__":
