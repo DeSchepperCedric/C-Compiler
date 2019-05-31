@@ -272,7 +272,8 @@ class LLVMGenerator:
         code = ""
         is_global = node.getSymbolTable().isGlobal(var_id)
 
-        if is_global and isinstance(node.getInitExpr(), ConstantExpr):
+        if is_global and isinstance(node.getInitExpr(), ConstantExpr) and \
+                not isinstance(node.getInitExpr(), StringConstantExpr):
             value = self.convertConstant(var_type, expr_type, node.getInitExpr().getValue())
             code += "@{} = global {} {}".format(var_id, var_type, value)
 
@@ -280,6 +281,8 @@ class LLVMGenerator:
             target_reg = "@" + node.getInitExpr().getTargetExpr().getIdentifierName()
             code += "@{} = global {} {}".format(var_id, var_type, target_reg)
 
+        elif is_global:
+            raise Exception("Global string variable is not supported.")
         else:
 
             new_code, register = self.astNodeToLLVM(node.getInitExpr())
@@ -498,9 +501,11 @@ class LLVMGenerator:
             needed_param_type = self.getLLVMType(
                 VariableType(needed_param_type)) if needed_param_type is not None else None
 
-            if isinstance(arg, ConstantExpr) and function_id not in ["scanf", "printf"]:
+            if isinstance(arg, ConstantExpr) and not isinstance(arg, StringConstantExpr) and\
+                    function_id not in ["scanf", "printf"]:
                 constant_type = self.getLLVMType(arg.getExpressionType())
                 value = self.convertConstant(needed_param_type, constant_type, arg.getValue())
+                value = self.floatToHex(value) if needed_param_type == "float" else value
                 arg_list += "{} {}".format(needed_param_type, value)
                 continue
 
@@ -973,13 +978,13 @@ class LLVMGenerator:
         if old_type == "i1" and new_type != old_type:
             # value = False if value == "false" else value
             # value = True if value == "true" else value
-            value = 0 if (value == "false" or value == False) else value
-            value = 1 if (value == "true" or value == True) else value
+            value = 0 if (value == "false" or value is False) else value
+            value = 1 if (value == "true" or value is True) else value
 
         if new_type == old_type:
             # convert True to 1, False to 0, etc.
-            value = 0 if (value == "false" or value == False) else value
-            value = 1 if (value == "true" or value == True) else value
+            value = 0 if (value == "false" or value is False) else value
+            value = 1 if (value == "true" or value is True) else value
             return value
 
         elif new_type == "i1":
@@ -1022,13 +1027,13 @@ class LLVMGenerator:
         return "ret void\n", self.cur_reg - 1
 
     def returnWithExprStatement(self, node):
-
         expr_type = self.getLLVMType(node.getExpression().getExpressionType())
         function_return_type = self.getLLVMType(node.getFunctionType())
 
-        if isinstance(node.getExpression(), ConstantExpr):
+        if isinstance(node.getExpression(), ConstantExpr) and not isinstance(node.getExpression(), StringConstantExpr):
             value = self.convertConstant(function_return_type, expr_type,
                                          node.getExpression().getValue())
+            value = self.floatToHex(value) if function_return_type == "float" else value
             code = "ret {} {}\n".format(function_return_type, value)
             self.cur_reg += 1
             return code, self.cur_reg - 1

@@ -64,11 +64,6 @@ int main(int argc, char** argv)
 
 	printf("Received '%s'\n", retval);
 
-	void func_defined_after_call();
-
-	printf("Calling 'func_defined_after_call'\n");
-	func_defined_after_call();
-
     i = 5;
 
 	printf("Entering compound statement.\n");
@@ -84,9 +79,3 @@ int main(int argc, char** argv)
 }
 
 
-void func_defined_after_call()
-{
-	printf("Called 'func_defined_after_call'\n");
-
-	return;
-}
