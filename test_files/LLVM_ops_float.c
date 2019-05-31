@@ -8,99 +8,140 @@
 
 #include <stdio.h>
 
+
+float val_a()
+{
+    return 5.0;
+}
+
+float val_b()
+{
+    return 20.0;
+}
+
+float val_c()
+{
+    return -20.0;
+}
+
+float val_d()
+{
+    return 20.0;
+}
+
+float val_e()
+{
+    return 5.0;
+}
+
+float val_j()
+{
+    return 50.0;
+}
+
+float val_k()
+{
+    return 50.0;
+}
+
+float val_l()
+{
+    return 0.0;
+}
+
+float val_m()
+{
+    return 0.0;
+}
+
 int main()
 {
+    printf("a=%f. Expected: 5.0\n",   val_a());
+    printf("b=%f. Expected: 20.0\n",  val_b());
+    printf("c=%f. Expected: -20.0\n", val_c());
+    printf("d=%f. Expected: 20.0\n",  val_d());
+    printf("e=%f. Expected: 5.0\n",   val_e());
+    
     //// +,-,*,/
-    float a = 5.0;
-    float b = 20.0;
-    float c = 0.0-20.0;
-    float d = 20.0;
-    float e = 5.0;
-
-    printf("a=%f\n", a);
-    printf("b=%f\n", b);
-    printf("c=%f\n", c);
-    printf("d=%f\n", d);
-    printf("e=%f\n", e);
 
     printf("### Binary +,-,*,/\n");
-    float add_1 = a + b; // 25
-    printf("a+b = %f + %f = %f. Expected: 25.0\n", a, b, add_1);
-    float add_2 = a + c; // -15
-    printf("a+c = %f + %f = %f. Expected: -15.0\n", a, c, add_2);
+    float add_1 = val_a() + val_b(); // 25
+    printf("a+b = %f + %f = %f. Expected: 25.0\n",  val_a(), val_b(), add_1);
+    float add_2 = val_a() + val_c(); // -15
+    printf("a+c = %f + %f = %f. Expected: -15.0\n", val_a(), val_c(), add_2);
 
-    float sub_1 = a - b; // -15
-    printf("a-b = %f - %f = %f. Expected: -15.0\n", a, b, sub_1);
-    float sub_2 = b - a; // 15
-    printf("b-a = %f - %f = %f. Expected: 15.0\n", b, a, sub_2);
+    float sub_1 = val_a() - val_b(); // -15
+    printf("a-b = %f - %f = %f. Expected: -15.0\n", val_a(), val_b(), sub_1);
+    float sub_2 = val_b() - val_a(); // 15
+    printf("b-a = %f - %f = %f. Expected: 15.0\n",  val_b(), val_a(), sub_2);
 
-    float mul = a * b; // 100
-    printf("a * b = %f * %f = %f. Expected: 100.0\n", a, b, mul);
+    float mul = val_a() * val_b(); // 100
+    printf("a * b = %f * %f = %f. Expected: 100.0\n", val_a(), val_b(), mul);
 
-    float div_1 = a / b; // 0
-    printf("a / b = %f / %f = %f. Expected: 0.25\n", a, b, div_1);
-    float div_2 = b / a; // 4
-    printf("b / a = %f / %f = %f. Expected: 4.0\n", b, a, div_2);
-    float div_3 = c / a; // -4
-    printf("c / a = %f / %f = %f. Expected: -4.0\n", b, a, div_3);
+    float div_1 = val_a() / val_b(); // 0
+    printf("a / b = %f / %f = %f. Expected: 0.25\n", val_a(), val_b(), div_1);
+    float div_2 = val_b() / val_a(); // 4
+    printf("b / a = %f / %f = %f. Expected: 4.0\n",  val_b(), val_a(), div_2);
+    float div_3 = val_c() / val_a(); // -4
+    printf("c / a = %f / %f = %f. Expected: -4.0\n", val_c(), val_a(), div_3);
 
     // +, -
     printf("### Unary +,-\n");
-    float plus_1 = +a; // 5
-    printf("+a = +%f = %f. Expected 5\n", a, plus_1);
-    float plus_2 = +c; // -20
-    printf("+c = +%f = %f. Expected -20\n", c, plus_2);
-    float min_1 = -a; // -5
-    printf("-a = -%f = %f. Expected -5\n", a, min_1);
-    float min_2 = -c; // 20
-    printf("-c = -%f = %f. Expected 20\n", c, min_2);
+    float plus_1 = +val_a(); // 5
+    printf("+a = +%f = %f. Expected 5\n",   val_a(), plus_1);
+    float plus_2 = +val_c(); // -20
+    printf("+c = +%f = %f. Expected -20\n", val_c(), plus_2);
+    float min_1 = -val_a(); // -5
+    printf("-a = -%f = %f. Expected -5\n",  val_a(), min_1);
+    float min_2 = -val_c(); // 20
+    printf("-c = -%f = %f. Expected 20\n",  val_c(), min_2);
 
 
     //// ==, !=, >, <, >=, <=
     printf("### Comparison ==, !=\n");
-    bool eq_true = b == d;
-    printf("b == d = %f == %f = %d. Expected: 1\n", b, d, eq_true);
-    bool eq_false = b == a;
-    printf("b == a = %f == %f = %d. Expected: 0\n", b, a, eq_false);
-    bool neq_true = b != a;
-    printf("b != a = %f == %f = %d. Expected: 1\n", b, a, neq_true);
-    bool neq_false = b != d;
-    printf("b != d = %f == %f = %d. Expected: 0\n", b, d, neq_false);
+    bool eq_true = val_b() == val_d();
+    printf("b == d = %f == %f = %d. Expected: 1\n", val_b(), val_d(), eq_true);
+    bool eq_false = val_b() == val_a();
+    printf("b == a = %f == %f = %d. Expected: 0\n", val_b(), val_a(), eq_false);
+    bool neq_true = val_b() != val_a();
+    printf("b != a = %f == %f = %d. Expected: 1\n", val_b(), val_a(), neq_true);
+    bool neq_false = val_b() != val_d();
+    printf("b != d = %f == %f = %d. Expected: 0\n", val_b(), val_d(), neq_false);
 
     printf("### Comparison >\n");
-    bool gt_true = b > a;
-    printf("b > a = %f > %f = %d. Expected: 1\n", b, a, gt_true);
+    bool gt_true = val_b() > val_a();
+    printf("b > a = %f > %f = %d. Expected: 1\n", val_b(), val_a(), gt_true);
 
-    bool gt_false_1 = a > b;
-    printf("a > b = %f > %f = %d. Expected: 0\n", a, b, gt_false_1);
+    bool gt_false_1 = val_a() > val_b();
+    printf("a > b = %f > %f = %d. Expected: 0\n", val_a(), val_b(), gt_false_1);
 
-    bool gt_false_2 = a > e; // a == e
-    printf("a > e = %f > %f = %d. Expected: 0\n", a, e, gt_false_2);
+    bool gt_false_2 = val_a() > val_e(); // a == e
+    printf("a > e = %f > %f = %d. Expected: 0\n", val_a(), val_e(), gt_false_2);
 
 
     printf("### Comparison <\n");
-    bool lt_true = a < b;
-    printf("a < b = %f < %f = %d. Expected: 1\n", a, b, lt_true);
-    bool lt_false_1 = b < a;
-    printf("b < a = %f < %f = %d. Expected: 0\n", b, a, lt_false_1);
-    bool lt_false_2 = e < a; // a == e
-    printf("e < a = %f < %f = %d. Expected: 0\n", e, a, lt_false_2);
+    bool lt_true = val_a() < val_b();
+    printf("a < b = %f < %f = %d. Expected: 1\n", val_a(), val_b(), lt_true);
+    bool lt_false_1 = val_b() < val_a();
+    printf("b < a = %f < %f = %d. Expected: 0\n", val_b(), val_a(), lt_false_1);
+    bool lt_false_2 = val_e() < val_a(); // a == e
+    printf("e < a = %f < %f = %d. Expected: 0\n", val_e(), val_a(), lt_false_2);
 
     printf("### Comparison >=\n");
-    bool geq_true_1 = b >= a; // b > a
-    printf("b >= a = %f < %f = %d. Expected: 1\n", b, a, geq_true_1);
-    bool geq_true_2 = a >= e; // a == e
-    printf("a >= e = %f < %f = %d. Expected: 1\n", a, e, geq_true_2);
-    bool geq_false = a >= b; // b > a
-    printf("a >= b = %f < %f = %d. Expected: 0\n", a, b, geq_false);
+    bool geq_true_1 = val_b() >= val_a(); // b > a
+    printf("b >= a = %f < %f = %d. Expected: 1\n", val_b(), val_a(), geq_true_1);
+    bool geq_true_2 = val_a() >= val_e(); // a == e
+    printf("a >= e = %f < %f = %d. Expected: 1\n", val_a(), val_e(), geq_true_2);
+    bool geq_false = val_a() >= val_b(); // b > a
+    printf("a >= b = %f < %f = %d. Expected: 0\n", val_a(), val_b(), geq_false);
 
     printf("### Comparison <=\n");
-    bool leq_true_1 = a <= b; // b > a
-    printf("a <= b = %f < %f = %d. Expected: 1\n", a, b, leq_true_1);
-    bool leq_true_2 = a <= e; // a == e
-    printf("a <= e = %f < %f = %d. Expected: 1\n", a, e, leq_true_2);
-    bool leq_false = b <= a; // b > a
-    printf("b <= a = %f < %f = %d. Expected: 0\n", b, a, leq_false);
+    bool leq_true_1 = val_a() <= val_b(); // b > a
+    printf("a <= b = %f < %f = %d. Expected: 1\n", val_a(), val_b(), leq_true_1);
+    bool leq_true_2 = val_a() <= val_e(); // a == e
+    printf("a <= e = %f < %f = %d. Expected: 1\n", val_a(), val_e(), leq_true_2);
+    bool leq_false = val_b() <= val_a(); // b > a
+    printf("b <= a = %f < %f = %d. Expected: 0\n", val_b(), val_a(), leq_false);
 
 
     //// +=, -=, *=, /=
@@ -151,41 +192,34 @@ int main()
     printf("i after i-- = %f. Expected 23\n", i);
     printf("return value of i-- = %f. Expected 24\n", i_mm_retval);
 
-
     // !, &&, ||
-    float j = 50;
-    printf("j=%f\n", j);
-    float j_not = !j; // 0
-    printf("!j = !%f = %f. Expected 0\n", j, j_not);
+    printf("j=%f. Expected 50.0.\n", val_j());
+    printf("!j = !%f = %d. Expected 0\n", val_j(), !val_j());
 
-    float k = 50;
-    printf("k=%f\n", k);
+    printf("k=%f. Expected 50.0.\n", val_k());
 
-    float l = 0;
-    printf("l=%f\n", l);
-    float l_not = !l; // 1
-    printf("!l = !%f = %f. Expected 1\n", l, l_not);
+    printf("l=%f. Expected 0.0.\n", val_l());
+    printf("!l = !%f = %d. Expected 1\n", val_l(), !val_l());
 
-    float m = 0;
-    printf("m=%f\n", m);
+    printf("m=%f. Expected 0.0.\n", val_m());
 
-    float j_and_k = j && k; // 1
-    printf("j && k = %f && %f = %f. Expected 1\n", j, k, j_and_k);
-    float j_and_l = j && l; // 0
-    printf("j && l = %f && %f = %f. Expected 0\n", j, l, j_and_l);
-    float l_and_j = l && j; // 0
-    printf("l && j = %f && %f = %f. Expected 0\n", l, j, l_and_j);
-    float l_and_m = j && m; // 0
-    printf("l && m = %f && %f = %f. Expected 0\n", l, m, l_and_m);
+    bool j_and_k = val_j() && val_k(); // 1
+    printf("j && k = %f && %f = %d. Expected 1\n", val_j(), val_k(), j_and_k);
+    bool j_and_l = val_j() && val_l(); // 0
+    printf("j && l = %f && %f = %d. Expected 0\n", val_j(), val_l(), j_and_l);
+    bool l_and_j = val_l() && val_j(); // 0
+    printf("l && j = %f && %f = %d. Expected 0\n", val_l(), val_j(), l_and_j);
+    bool l_and_m = val_j() && val_m(); // 0
+    printf("l && m = %f && %f = %d. Expected 0\n", val_l(), val_m(), l_and_m);
 
-    float j_or_k = j || k; // 1
-    printf("j || k = %f && %f = %f. Expected 1\n", j, k, j_or_k);
-    float j_or_l = j || l; // 1
-    printf("j || l = %f && %f = %f. Expected 1\n", j, l, j_or_l);
-    float l_or_j = l || j; // 1
-    printf("l || j = %f && %f = %f. Expected 1\n", l, j, l_or_j);
-    float l_or_m = l || m; // 0
-    printf("l || m = %f && %f = %f. Expected 0\n", l, m, l_or_m);
+    bool j_or_k = val_j() || val_k(); // 1
+    printf("j || k = %f || %f = %d. Expected 1\n", val_j(), val_k(), j_or_k);
+    bool j_or_l = val_j() || val_l(); // 1
+    printf("j || l = %f || %f = %d. Expected 1\n", val_j(), val_l(), j_or_l);
+    bool l_or_j = val_l() || val_j(); // 1
+    printf("l || j = %f || %f = %d. Expected 1\n", val_l(), val_j(), l_or_j);
+    bool l_or_m = val_l() || val_m(); // 0
+    printf("l || m = %f || %f = %d. Expected 0\n", val_l(), val_m(), l_or_m);
 
     return 0;
 }

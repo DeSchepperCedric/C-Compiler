@@ -488,7 +488,6 @@ class LLVMGenerator:
         arg_list = "("
         function_id = node.getFunctionID().getIdentifierName()
 
-        code += "; FUNC CALL TO '{}' ON LINE '{}'\n".format(function_id, node.getLineNr())
         needed_param_types, t = node.getSymbolTable().lookup(function_id, node.getFunctionID().getNodecounter())
         needed_param_types = needed_param_types.getParamTypes()
         load_groups = list()
@@ -714,11 +713,17 @@ class LLVMGenerator:
         if strongest_type == "float":
             code_left, reg_left = self.convertToFloat(reg_left, type_left)
             code_right, reg_right = self.convertToFloat(reg_right, type_right)
-
             code += code_left
             code += code_right
-            code += "%{} = {} float %{}, %{}\n".format(self.cur_reg, op, reg_left, reg_right)
-            llvm_type = "float"
+
+            # convert back to integer i32
+            code_left, reg_left = self.convertToInt(reg_left, type_left)
+            code_right, reg_right = self.convertToInt(reg_right, type_right)
+            code += code_left
+            code += code_right
+
+            code += "%{} = {} i32 %{}, %{}\n".format(self.cur_reg, op, reg_left, reg_right)
+            llvm_type = "i32"
 
         elif strongest_type == "int":
             code_left, reg_left = self.convertToInt(reg_left, type_left)
@@ -793,8 +798,9 @@ class LLVMGenerator:
         llvm_type = ""
         if strongest_type == "float":
             code_target, reg_target = self.convertToFloat(reg_target, target_type)
-
             code += code_target
+
+
             code += "%{} = fcmp oeq float %{}, 0.0\n".format(self.cur_reg, reg_target)
             llvm_type = "i1"
 
@@ -807,8 +813,6 @@ class LLVMGenerator:
 
         elif strongest_type == "char":
             code_target, reg_target = self.convertToChar(reg_target, target_type)
-
-            code += "; CONVERT TO CHAR\n"
 
             code += code_target
             code += "%{} = icmp eq i8 %{}, 0\n".format(self.cur_reg, reg_target)
@@ -823,8 +827,6 @@ class LLVMGenerator:
             raise Exception("Invalid return type from getStrongestType '{}'".format(strongest_type))
 
         self.cur_reg += 1
-
-        code += "; STORE AS BOOL\n"
 
         code += self.allocate(self.cur_reg, llvm_type, False)
         code += self.storeVariable(self.cur_reg, self.cur_reg - 1, llvm_type, False)
@@ -864,7 +866,7 @@ class LLVMGenerator:
             self.cur_reg += 1
             return code, self.cur_reg - 1
         elif "bool" in type or "i1" in type:
-            code += "%{} = sext i8 %{} to i32\n".format(self.cur_reg, reg)
+            code += "%{} = sext i1 %{} to i32\n".format(self.cur_reg, reg)
             code += "%{} = sitofp i32 %{} to float\n".format(self.cur_reg + 1, self.cur_reg)
             self.cur_reg += 2
             return code, self.cur_reg - 1
