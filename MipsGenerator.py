@@ -1050,6 +1050,14 @@ class MipsGenerator:
 
         formatter_str = formatter_expr.getValue()
 
+        if isinstance(target_expr, AddressExpr):
+            pass
+
+        elif target_expr.getExpressionType().toString().endswith("*"):
+            pass
+        else:
+            raise Exception("Scanf argument must be an address expression or a pointer.")
+
         target_code, target_addr_reg = self.astNodeToMIPS(target_expr)
         # target_addr_reg contains the address where the value needs to be stored.
 
