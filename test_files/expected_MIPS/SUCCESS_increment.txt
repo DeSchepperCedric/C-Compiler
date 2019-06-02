@@ -9,3 +9,4 @@ b++ = 5.500000. Expected: 5.5
 b = 6.500000. Expected: 6.5
 ++b = 7.500000. Expected: 7.5
 b = 9.500000. Expected: 9.5
+

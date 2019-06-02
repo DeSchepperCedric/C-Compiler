@@ -9,3 +9,4 @@ b-- = 5.500000. Expected: 5.5
 b = 4.500000. Expected: 4.5
 --b = 3.500000. Expected: 3.5
 b = 1.500000. Expected: 1.5
+

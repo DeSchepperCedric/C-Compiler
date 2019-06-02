@@ -13,7 +13,6 @@ COMMAND_MIPS     = "python3 c2mips.py"
 COMMAND_LLVM     = "python3 c2llvm.py"
 COMPILER_OUT_DIR = "./output/"
 
-
 def compare_output(expected_file, test_file):
 
     # shallow = False to compare contents.
@@ -42,10 +41,9 @@ def test_mips(c_file, expected_file):
     """
 
     os.system("{} {} test.asm > /dev/null".format(COMMAND_MIPS, c_file))
-    os.system("java -jar Mars4_5.jar {} > {}".format(COMPILER_OUT_DIR + "test.asm", TEMP_DIR + "test.txt"))
+    os.system("java -jar Mars4_5.jar {} > {}".format(COMPILER_OUT_DIR + "test.asm", TEMP_DIR + "test_{}.txt"))
 
-    return compare_output(expected_file, TEMP_DIR + "test.txt")
-
+    return compare_output(expected_file, TEMP_DIR + "test_{}.txt")
 
 def test_llvm(c_file, expected_file):
     """
@@ -82,18 +80,17 @@ def get_test_names():
 
     return llvm_success_tests, mips_success_tests, error_warnings_tests
 
-def test_error_warning_all(test_list):
-    tests = get_test_names()[2]
 
-    print("=== ERROR TESTS ===")
-    run_testlist(tests)
+def test_error_warning_all(test_list):
+
+    print("=== ERROR/WARNING TESTS ===")
+    run_testlist(test_list, test_mips, EXPECTED_MIPS)
 
 
 def test_mips_all(test_list):
-    tests = get_test_names()[1]
 
     print("=== MIPS TESTS ===")
-    run_testlist(tests)
+    run_testlist(test_list, test_mips, EXPECTED_MIPS)
 
 
 def test_llvm_all(test_list):
@@ -102,15 +99,15 @@ def test_llvm_all(test_list):
 
 
     print("=== LLVM TESTS ===")
-    run_testlist(tests)
+    run_testlist(tests, test_llvm, EXPECTED_LLVM)
 
-def run_testlist(test_list):
+
+def run_testlist(test_list, function, expected_dir):
     for test in test_list:
         testname    = test[0]
         c_filename  = test[1]
         ex_filename = test[2]
-
-        result = test_llvm(C_FILE_DIR + c_filename, EXPECTED_DIR + ex_filename)
+        result = function(C_FILE_DIR + c_filename, expected_dir + ex_filename)
 
         result_text = "PASSED" if result else "FAILED"
 
@@ -124,7 +121,7 @@ def main(args):
 
     llvm_success_tests, mips_success_tests, error_warnings_tests = get_test_names()
 
-    test_error_warning_all(error_warnings_tests)
+    #test_error_warning_all(error_warnings_tests)
     test_mips_all(mips_success_tests)
     test_llvm_all(llvm_success_tests)
 

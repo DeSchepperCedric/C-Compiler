@@ -21,3 +21,4 @@ func_with_int_return: returning '66953.453125'.
 func_with_int_return: received '66953'.
 float_value = 43583.164062
 casted_int = 43583
+
