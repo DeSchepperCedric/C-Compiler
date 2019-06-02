@@ -27,7 +27,7 @@ def test_error(c_file, expected_file):
     :return: True if the test succeeded, False if the test failed.
     """
 
-    os.system("{} {} test.asm > /dev/null {}".format(COMMAND_MIPS, c_file, TEMP_DIR + "test.txt"))
+    os.system("{} {} test.asm > {}".format(COMMAND_MIPS, c_file, TEMP_DIR + "test.txt"))
 
     return compare_output(expected_file, TEMP_DIR + "test.txt")
 
@@ -40,7 +40,7 @@ def test_mips(c_file, expected_file):
     :param expected_file: The file that contains the expected output.
     """
 
-    os.system("{} {} test.asm > ".format(COMMAND_MIPS, c_file))
+    os.system("{} {} test.asm > /dev/null".format(COMMAND_MIPS, c_file))
     os.system("java -jar Mars4_5.jar {} > {}".format(COMPILER_OUT_DIR + "test.asm", TEMP_DIR + "test.txt"))
 
     return compare_output(expected_file, TEMP_DIR + "test.txt")
@@ -54,7 +54,7 @@ def test_llvm(c_file, expected_file):
     :param expected_file: The file that contains the expected output.
     """
 
-    os.system("{} {} test.ll".format(COMMAND_LLVM, c_file))
+    os.system("{} {} test.ll > /dev/null".format(COMMAND_LLVM, c_file))
     os.system("lli {} > {}".format(COMPILER_OUT_DIR + "test.ll", TEMP_DIR + "test.txt"))
 
     return compare_output(expected_file, TEMP_DIR + "test.txt")
