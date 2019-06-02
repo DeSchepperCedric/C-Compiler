@@ -8,6 +8,7 @@ from os.path import isfile, join
 C_FILE_DIR       = "./test_files/"
 EXPECTED_MIPS    = "./test_files/expected_MIPS/"
 EXPECTED_LLVM    = "./test_files/expected_LLVM/"
+EXPECTED_ERROR   = "./test_files/expected_ERROR/"
 TEMP_DIR         = "./test_files/temp/"
 COMMAND_MIPS     = "python3 c2mips.py"
 COMMAND_LLVM     = "python3 c2llvm.py"
@@ -84,7 +85,7 @@ def get_test_names():
 def test_error_warning_all(test_list):
 
     print("=== ERROR/WARNING TESTS ===")
-    run_testlist(test_list, test_mips, EXPECTED_MIPS)
+    run_testlist(test_list, test_error, EXPECTED_ERROR)
 
 
 def test_mips_all(test_list):
@@ -95,8 +96,6 @@ def test_mips_all(test_list):
 
 def test_llvm_all(test_list):
     tests = get_test_names()[0]
-
-
 
     print("=== LLVM TESTS ===")
     run_testlist(tests, test_llvm, EXPECTED_LLVM)

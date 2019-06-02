@@ -1,2 +1,0 @@
-[Error] Invalid redefinition of existing function 'func' on line 11.
-[Error] Compiler was terminated due to errors in the specified C source file.
