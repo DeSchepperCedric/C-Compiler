@@ -1,12 +1,13 @@
 
 import filecmp
 import os
+import sys
 
 C_FILE_DIR   = "./test_files/"
 EXPECTED_DIR = "./test_files/expected/"
 TEMP_DIR     = "./test_files/temp/"
-COMMAND_MIPS = "./c2mips"
-COMMAND_LLVM = "./c2llvm"
+COMMAND_MIPS = "python3 c2mips.py"
+COMMAND_LLVM = "python3 c2llvm.py"
 COMPILER_OUT_DIR = "./output/"
 
 
@@ -37,7 +38,10 @@ def test_mips(c_file, expected_file):
     :param expected_file: The file that contains the expected output.
     """
 
-    return True
+    os.system("{} {} test.asm".format(COMMAND_MIPS, c_file))
+    os.system("java -jar Mars4_5.jar {} > {}".format(COMPILER_OUT_DIR + "test.asm", TEMP_DIR + "test.txt"))
+
+    return compare_output(expected_file, TEMP_DIR + "test.txt")
 
 
 def test_llvm(c_file, expected_file):
@@ -48,7 +52,10 @@ def test_llvm(c_file, expected_file):
     :param expected_file: The file that contains the expected output.
     """
 
-    return True
+    os.system("{} {} test.ll".format(COMMAND_LLVM, c_file))
+    os.system("lli {} > {}".format(COMPILER_OUT_DIR + "test.ll", TEMP_DIR + "test.txt"))
+
+    return compare_output(expected_file, TEMP_DIR + "test.txt")
 
 
 def test_error_all():
@@ -57,7 +64,12 @@ def test_error_all():
 
 
 def test_mips_all():
-    pass
+    tests = [
+        ["TEST_MIPS_OPS_BOOL", "SUCCESS_ops_bool.c", "SUCCESS_ops_bool.txt"]
+    ]
+
+    print("=== MIPS TESTS ===")
+    run_testlist(tests)
 
 
 def test_llvm_all():
@@ -81,7 +93,7 @@ def run_testlist(test_list):
         print("[{}] {}".format(result_text, testname))
 
 
-def main():
+def main(args):
 
     # create test dir
     os.makedirs(TEMP_DIR, exist_ok=True)
@@ -92,4 +104,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
