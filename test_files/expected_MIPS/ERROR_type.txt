@@ -1,0 +1,2 @@
+[Error] Assigning expression of type 'char*' to target of incompatible type 'float' is not possible on line 11.
+[Error] Compiler was terminated due to errors in the specified C source file.

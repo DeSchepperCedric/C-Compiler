@@ -5,11 +5,12 @@ import sys
 from os import listdir
 from os.path import isfile, join
 
-C_FILE_DIR   = "./test_files/"
-EXPECTED_DIR = "./test_files/expected/"
-TEMP_DIR     = "./test_files/temp/"
-COMMAND_MIPS = "python3 c2mips.py"
-COMMAND_LLVM = "python3 c2llvm.py"
+C_FILE_DIR       = "./test_files/"
+EXPECTED_MIPS    = "./test_files/expected_MIPS/"
+EXPECTED_LLVM    = "./test_files/expected_LLVM/"
+TEMP_DIR         = "./test_files/temp/"
+COMMAND_MIPS     = "python3 c2mips.py"
+COMMAND_LLVM     = "python3 c2llvm.py"
 COMPILER_OUT_DIR = "./output/"
 
 

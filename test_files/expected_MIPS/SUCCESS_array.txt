@@ -1,0 +1,10 @@
+MARS 4.5  Copyright 2003-2014 Pete Sanderson and Kenneth Vollmar
+
+arr[0] = 0
+arr[1] = 0
+arr[0] = -30. Expected -30
+arr[1] = 697541. Expected 697541
+f_array[0] = 0.000000
+f_array[1] = 0.000000
+f_array[0] = -3.164760. Expected -3.16476
+f_array[1] = 0.612861. Expected 0.612861
