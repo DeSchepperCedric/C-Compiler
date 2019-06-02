@@ -66,8 +66,10 @@ def test_llvm_all():
     ]
 
     print("=== LLVM TESTS ===")
+    run_testlist(tests)
 
-    for test in tests:
+def run_testlist(test_list):
+    for test in test_list:
         testname    = test[0]
         c_filename  = test[1]
         ex_filename = test[2]
@@ -77,8 +79,6 @@ def test_llvm_all():
         result_text = "PASSED" if result else "FAILED"
 
         print("[{}] {}".format(result_text, testname))
-
-    pass
 
 
 def main():
