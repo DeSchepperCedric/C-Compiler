@@ -1,9 +1,22 @@
 <html>
 <h1>Compiler</h1>
 
-Compiles C code to either LLVM or MIPS.
+Compiles a subset of C to either LLVM or MIPS.
 
-<h2> Features</h2>
+<h2>1. Instructions</h2>
+
+The compiler comes in the form of python files: <b>c2mips.py</b> and <b>c2llvm.py</b>. The former script, when invoked
+with "python c2llvm.py c_prog llvm_prog", will compile the C grammar(s) and start
+the compilation of an input C program c_prog into a LLVM code file named llvm_prog. The latter
+script, when invoked with "python c2mips.py c_prog mips_prog", will compile the C grammar(s) and
+start the compilation of an input C program c_prog into a MIPS code file named MIPS_prog.
+<br><br>
+The compiled files will be placed into an <b>output</b> folder that also contains a dot representation of the AST-tree
+and the symbol table.
+<br><br>
+The test files can be executed using "python tester.py" or <b>run_tests.sh</b>.
+
+<h2>2. Features</h2>
 
 <ul>
     <li>Types: pointer, void, char, int, float</li>
@@ -28,7 +41,7 @@ Compiles C code to either LLVM or MIPS.
     <li>&&, ||, !</li>
 </ul>
 
-<h2>Optimisations</h2>
+<h2>3. Optimisations</h2>
 <ul>
     <li>Constant folding</li>
     <li>Constant propagation</li>
@@ -42,7 +55,7 @@ Compiles C code to either LLVM or MIPS.
 </ul>
 
 
-<h2>Constant folding/propagation and Null sequences</h2>
+<h2>4. Constant folding/propagation and Null sequences</h2>
 <ul>
     <li>Constant folding: Evaluate constant expressions at compile time.</li>
     <li>Constant propagation: Substitute the values of known constants in expressions at compile time.
@@ -52,7 +65,18 @@ Compiles C code to either LLVM or MIPS.
 </ul>
 
 More details on what is all implemented:
-<h3>Arithmetics</h3>
+<h4>4.1 Expressions with no effect</h4>
+<ul>
+    <li> Comparisons (ex. 5 > 2;)</li>
+    <li> Identifier (ex. x;)</li>
+    <li> Constants (ex. 5;)</li>
+    <li> Logic operations (ex. &&, ||,...)</li>
+    <li> Arithmetics(ex. 5 + 1:)</li>
+    <li> MinPrefix(ex. -x;)</li>
+    <li> PlusPrefix(ex. +x;)</li>
+</ul>
+
+<h4>4.2 Arithmetics</h4>
 <ul>
     <li> x + 0 => x</li>
     <li> 0 + x => x</li>
@@ -67,18 +91,9 @@ More details on what is all implemented:
     <li> cst % cst => cst</li>
 </ul>
 
-<h3>Expressions with no effect</h3>
-<ul>
-    <li> Comparisons (ex. 5 > 2;)</li>
-    <li> Identifier (ex. x;)</li>
-    <li> Constants (ex. 5;)</li>
-    <li> Logic operations (ex. &&, ||,...)</li>
-    <li> Arithmetics(ex. 5 + 1:)</li>
-    <li> MinPrefix(ex. -x;)</li>
-    <li> PlusPrefix(ex. +x;)</li>
-</ul>
 
-<h3>Logical operations</h3>
+
+<h4>4.3 Logical operations</h4>
 
 Cast operations are sometimes necessary to avoid altering the outcome. For example if func() returns 5:
 int a = func() && 1 != func() but == (bool) func()
@@ -98,14 +113,7 @@ int a = func() && 1 != func() but == (bool) func()
     <li>!!x => x</li>
 </ul>
 
-<h2>Instructions</h2>
 
-The compiler comes in the form of a python 3 file <b>run_compiler.py</b>. It can be used as follows:
-<p style="text-align: center;">python3 run_compiler.py &lt;language&gt; &lt;path_to_c_file&gt;</p>
-
-The language can either be mips or llvm.
-This will create an <b>output</b> folder that contains a dot representation of the AST-tree and the symbol table.
-It will also generate a .ll or .asm file for respectively llvm and mips.
 
 </html> 
 

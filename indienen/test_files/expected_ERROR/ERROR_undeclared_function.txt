@@ -1,2 +1,0 @@
-[Error] Referenced undeclared symbol get at line 11.
-[Error] Compiler was terminated due to errors in the specified C source file.
