@@ -82,23 +82,21 @@ def get_test_names():
     return llvm_success_tests, mips_success_tests, error_warnings_tests
 
 def test_error_warning_all(test_list):
+    tests = get_test_names()[2]
 
-    pass
+    print("=== ERROR TESTS ===")
+    run_testlist(tests)
 
 
 def test_mips_all(test_list):
-    tests = [
-        ["TEST_MIPS_OPS_BOOL", "SUCCESS_ops_bool.c", "SUCCESS_ops_bool.txt"]
-        ]
+    tests = get_test_names()[1]
 
     print("=== MIPS TESTS ===")
     run_testlist(tests)
 
 
 def test_llvm_all(test_list):
-    tests = [
-        ["TEST_LLVM_OPS_BOOL", "SUCCESS_ops_bool.c", "SUCCESS_ops_bool.txt"]
-    ]
+    tests = get_test_names()[0]
 
 
 
