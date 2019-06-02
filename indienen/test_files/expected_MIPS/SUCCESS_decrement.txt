@@ -1,0 +1,12 @@
+MARS 4.5  Copyright 2003-2014 Pete Sanderson and Kenneth Vollmar
+
+a-- = 5. Expected: 5
+a = 4. Expected: 4
+--a = 3. Expected: 3
+a = 1. Expected: 1
+
+b-- = 5.5. Expected: 5.5
+b = 4.5. Expected: 4.5
+--b = 3.5. Expected: 3.5
+b = 1.5. Expected: 1.5
+

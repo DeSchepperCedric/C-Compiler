@@ -1,0 +1,80 @@
+MARS 4.5  Copyright 2003-2014 Pete Sanderson and Kenneth Vollmar
+
+a=5.0. Expected: 5.0
+b=20.0. Expected: 20.0
+c=-20.0. Expected: -20.0
+d=20.0. Expected: 20.0
+e=5.0. Expected: 5.0
+### Binary +,-,*,/
+a+b = 5.0 + 20.0 = 25.0. Expected: 25.0
+a+c = 5.0 + -20.0 = -15.0. Expected: -15.0
+a-b = 5.0 - 20.0 = -15.0. Expected: -15.0
+b-a = 20.0 - 5.0 = 15.0. Expected: 15.0
+a * b = 5.0 * 20.0 = 100.0. Expected: 100.0
+a / b = 5.0 / 20.0 = 0.25. Expected: 0.25
+b / a = 20.0 / 5.0 = 4.0. Expected: 4.0
+c / a = -20.0 / 5.0 = -4.0. Expected: -4.0
+### Unary +,-
++a = +5.0 = 5.0. Expected 5
++c = +-20.0 = -20.0. Expected -20
+-a = -5.0 = -5.0. Expected -5
+-c = --20.0 = 20.0. Expected 20
+### Comparison ==, !=
+b == d = 20.0 == 20.0 = 1. Expected: 1
+b == a = 20.0 == 5.0 = 0. Expected: 0
+b != a = 20.0 == 5.0 = 1. Expected: 1
+b != d = 20.0 == 20.0 = 0. Expected: 0
+### Comparison >
+b > a = 20.0 > 5.0 = 1. Expected: 1
+a > b = 5.0 > 20.0 = 0. Expected: 0
+a > e = 5.0 > 5.0 = 0. Expected: 0
+### Comparison <
+a < b = 5.0 < 20.0 = 1. Expected: 1
+b < a = 20.0 < 5.0 = 0. Expected: 0
+e < a = 5.0 < 5.0 = 0. Expected: 0
+### Comparison >=
+b >= a = 20.0 < 5.0 = 1. Expected: 1
+a >= e = 5.0 < 5.0 = 1. Expected: 1
+a >= b = 5.0 < 20.0 = 0. Expected: 0
+### Comparison <=
+a <= b = 5.0 < 20.0 = 1. Expected: 1
+a <= e = 5.0 < 5.0 = 1. Expected: 1
+b <= a = 20.0 < 5.0 = 0. Expected: 0
+### Assignment +=, -=, *=, /=
+f=5.0
+f += 2 = 7.0. Expected: 7.0
+f -= 3 = 4.0. Expected: 4.0
+f *= 10 = 40.0. Expected: 40.0
+f /= 3 = 13.333333. Expected: 13.333...
+g=-5.0
+g += 2 = -3.0. Expected: -3.0
+g -= 3 = -6.0. Expected: -6.0
+g *= 10 = -60.0. Expected: -60.0
+g /= 3 = -20.0. Expected: -20.0
+### Prefix ++, --
+h=50.0
+h after ++h = 51.0. Expected 51
+return value of ++h = 51.0. Expected 51
+h after --h = 50.0. Expected 50
+return value of --h = 50.0. Expected 50
+### Postfix ++, --
+h=23.0
+i after i++ = 24.0. Expected 24
+return value of i++ = 23.0. Expected 23
+i after i-- = 23.0. Expected 23
+return value of i-- = 24.0. Expected 24
+j=50.0. Expected 50.0.
+!j = !50.0 = 0. Expected 0
+k=50.0. Expected 50.0.
+l=0.0. Expected 0.0.
+!l = !0.0 = 1. Expected 1
+m=0.0. Expected 0.0.
+j && k = 50.0 && 50.0 = 1. Expected 1
+j && l = 50.0 && 0.0 = 0. Expected 0
+l && j = 0.0 && 50.0 = 0. Expected 0
+l && m = 0.0 && 0.0 = 0. Expected 0
+j || k = 50.0 || 50.0 = 1. Expected 1
+j || l = 50.0 || 0.0 = 1. Expected 1
+l || j = 0.0 || 50.0 = 1. Expected 1
+l || m = 0.0 || 0.0 = 0. Expected 0
+

@@ -1,0 +1,21 @@
+int = 0.5   => int = 0
+int = 65.55 => int = 66
+float = 50  => float = 50.000000
+float = 622 => float = 622.000000
+char = 50 => char = '2'
+char = 97 => char = 'a'
+bool = 50 => bool = 1
+bool = 0 =>  bool = 0
+bool = 0.784 => bool = 1
+bool = 1.445 => bool = 1
+bool = 0.000 => bool = 0
+test_char: 0
+bool = '\0' => bool = 0
+bool = 'b'   => bool = 1
+float = 563.454 + 20 => float = 583.453979
+func_with_int_param: param = 645. Original: '645.3'
+func_with_float_param: param = 6942.000000. Original: '6942'
+func_with_int_return: returning '66953.453125'.
+func_with_int_return: received '66953'.
+float_value = 43583.164062
+casted_int = 43583

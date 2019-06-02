@@ -1,0 +1,2 @@
+[Error] Cannot declare variable or pointer with type 'void' at line 14.
+[Error] Compiler was terminated due to errors in the specified C source file.

@@ -1,0 +1,2 @@
+[Error] line 15:1 missing ';' at 'return'
+[Error] Compiler was terminated due to errors in the specified C source file.
