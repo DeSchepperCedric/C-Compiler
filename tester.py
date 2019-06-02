@@ -41,9 +41,9 @@ def test_mips(c_file, expected_file):
     """
 
     os.system("{} {} test.asm > /dev/null".format(COMMAND_MIPS, c_file))
-    os.system("java -jar Mars4_5.jar {} > {}".format(COMPILER_OUT_DIR + "test.asm", TEMP_DIR + "test_{}.txt"))
+    os.system("java -jar Mars4_5.jar {} > {}".format(COMPILER_OUT_DIR + "test.asm", TEMP_DIR + "test.txt"))
 
-    return compare_output(expected_file, TEMP_DIR + "test_{}.txt")
+    return compare_output(expected_file, TEMP_DIR + "test.txt")
 
 def test_llvm(c_file, expected_file):
     """
@@ -103,15 +103,26 @@ def test_llvm_all(test_list):
 
 
 def run_testlist(test_list, function, expected_dir):
+    passed = True
+
     for test in test_list:
         testname    = test[0]
         c_filename  = test[1]
         ex_filename = test[2]
+
+
         result = function(C_FILE_DIR + c_filename, expected_dir + ex_filename)
 
         result_text = "PASSED" if result else "FAILED"
 
+        if not result:
+            passe = False
+
         print("[{}] {}".format(result_text, testname))
+
+    passed_text = "passed" if result else "failed"
+
+    print("[TOTAL] {}.".format(passed_text))
 
 
 def main(args):
@@ -121,7 +132,7 @@ def main(args):
 
     llvm_success_tests, mips_success_tests, error_warnings_tests = get_test_names()
 
-    #test_error_warning_all(error_warnings_tests)
+    test_error_warning_all(error_warnings_tests)
     test_mips_all(mips_success_tests)
     test_llvm_all(llvm_success_tests)
 
