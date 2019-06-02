@@ -1,0 +1,4 @@
+i=5
+j=5
+param ptr addr = -718444972
+param ptr value (=i) = 5
