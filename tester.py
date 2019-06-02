@@ -8,8 +8,8 @@ from os.path import isfile, join
 C_FILE_DIR   = "./test_files/"
 EXPECTED_DIR = "./test_files/expected/"
 TEMP_DIR     = "./test_files/temp/"
-COMMAND_MIPS = "python3 c2mips.py"
-COMMAND_LLVM = "python3 c2llvm.py"
+COMMAND_MIPS = "python c2mips.py"
+COMMAND_LLVM = "python c2llvm.py"
 COMPILER_OUT_DIR = "./output/"
 
 
@@ -81,18 +81,17 @@ def get_test_names():
 
     return llvm_success_tests, mips_success_tests, error_warnings_tests
 
-def test_error_warning_all(test_list):
-    tests = get_test_names()[2]
 
-    print("=== ERROR TESTS ===")
-    run_testlist(tests)
+def test_error_warning_all(test_list):
+
+    print("=== ERROR/WARNING TESTS ===")
+    run_testlist(test_list, test_mips)
 
 
 def test_mips_all(test_list):
-    tests = get_test_names()[1]
 
     print("=== MIPS TESTS ===")
-    run_testlist(tests)
+    run_testlist(test_list, test_mips)
 
 
 def test_llvm_all(test_list):
@@ -101,15 +100,17 @@ def test_llvm_all(test_list):
 
 
     print("=== LLVM TESTS ===")
-    run_testlist(tests)
+    run_testlist(tests, test_llvm)
 
-def run_testlist(test_list):
+def run_testlist(test_list, function):
     for test in test_list:
         testname    = test[0]
         c_filename  = test[1]
         ex_filename = test[2]
-
-        result = test_llvm(C_FILE_DIR + c_filename, EXPECTED_DIR + ex_filename)
+        print(function)
+        print(C_FILE_DIR + c_filename)
+        print(EXPECTED_DIR + ex_filename)
+        result = function(C_FILE_DIR + c_filename, EXPECTED_DIR + ex_filename)
 
         result_text = "PASSED" if result else "FAILED"
 
@@ -124,8 +125,8 @@ def main(args):
     llvm_success_tests, mips_success_tests, error_warnings_tests = get_test_names()
 
     test_error_warning_all(error_warnings_tests)
-    test_mips_all(mips_success_tests)
-    test_llvm_all(llvm_success_tests)
+    #test_mips_all(mips_success_tests)
+    #test_llvm_all(llvm_success_tests)
 
 
 if __name__ == "__main__":
