@@ -2,6 +2,8 @@
 import filecmp
 import os
 import sys
+from os import listdir
+from os.path import isfile, join
 
 C_FILE_DIR   = "./test_files/"
 EXPECTED_DIR = "./test_files/expected/"
@@ -57,25 +59,48 @@ def test_llvm(c_file, expected_file):
 
     return compare_output(expected_file, TEMP_DIR + "test.txt")
 
+def get_test_names():
+    error_warnings_tests = list()
+    llvm_success_tests = list()
+    mips_success_tests = list()
+    files = [f for f in listdir(C_FILE_DIR) if isfile(join(C_FILE_DIR, f))]
+    for file in files:
+        if "SUCCESS" in file:
+            test_name = "TEST_{}_{}".format("LLVM", file[:-2].upper())
+            llvm_success_tests.append([test_name, file, file[:-2] + ".txt"])
 
-def test_error_all():
+            test_name = "TEST_{}_{}".format("MIPS", file[:-2].upper())
+            mips_success_tests.append([test_name, file, file[:-2] + ".txt"])
+
+        elif "WARNING" in file or "ERROR" in file:
+            test_name = "TEST_{}".format(file[:-2].upper())
+            error_warnings_tests.append([test_name, file, file[:-2] + ".txt"])
+        else:
+            # ignore demo files
+            continue
+
+    return llvm_success_tests, mips_success_tests, error_warnings_tests
+
+def test_error_warning_all(test_list):
 
     pass
 
 
-def test_mips_all():
+def test_mips_all(test_list):
     tests = [
         ["TEST_MIPS_OPS_BOOL", "SUCCESS_ops_bool.c", "SUCCESS_ops_bool.txt"]
-    ]
+        ]
 
     print("=== MIPS TESTS ===")
     run_testlist(tests)
 
 
-def test_llvm_all():
+def test_llvm_all(test_list):
     tests = [
         ["TEST_LLVM_OPS_BOOL", "SUCCESS_ops_bool.c", "SUCCESS_ops_bool.txt"]
     ]
+
+
 
     print("=== LLVM TESTS ===")
     run_testlist(tests)
@@ -98,10 +123,15 @@ def main(args):
     # create test dir
     os.makedirs(TEMP_DIR, exist_ok=True)
 
-    test_error_all()
-    test_mips_all()
-    test_llvm_all()
+    llvm_success_tests, mips_success_tests, error_warnings_tests = get_test_names()
+
+    test_error_warning_all(error_warnings_tests)
+    test_mips_all(mips_success_tests)
+    test_llvm_all(llvm_success_tests)
 
 
 if __name__ == "__main__":
     main(sys.argv)
+
+
+
