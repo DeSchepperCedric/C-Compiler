@@ -1,4 +1,0 @@
-Branch taken on 'true':
-If-branch. EXPECTED.
-Branch taken on 'false':
-Else-branch. EXPECTED.

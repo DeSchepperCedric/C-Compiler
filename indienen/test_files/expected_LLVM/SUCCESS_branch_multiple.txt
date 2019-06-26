@@ -1,3 +1,0 @@
-If-branch. EXPECTED.
-Else-if-Branch. EXPECTED.
-Else-branch. EXPECTED.
