@@ -1,6 +1,0 @@
-[Warning] Returning expression of type 'float' in function with return type 'int' will result in narrowing on line 13.
-[Warning] Assigning expression of type 'float' to target of type 'int' will result in narrowing on line 20.
-[Warning] Assigning expression of type 'int' to target of type 'char' will result in narrowing on line 23.
-[Warning] Passing expression of type 'float' as argument #1 for function 'func_a' narrowing on line 27. Expected type is 'int'.
-[Warning] Assigning expression of type 'float' to target of type 'int' will result in narrowing on line 27.
-[Warning] Assigning expression of type 'float' to target of type 'bool' will result in narrowing on line 30.

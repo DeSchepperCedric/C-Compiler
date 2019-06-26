@@ -115,7 +115,7 @@ def run_testlist(test_list, function, expected_dir):
         result_text = "PASSED" if result else "FAILED"
 
         if not result:
-            passe = False
+            passed = False
 
         print("[{}] {}".format(result_text, testname))
 
