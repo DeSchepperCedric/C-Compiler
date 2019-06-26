@@ -37,29 +37,29 @@ int main(int argc, char** argv)
     printf("%dth fibonacci number (calculated using recursion): %d\n", index, **ptr_ptr_fib_result);
 
 
-    // printf("Calculating the first 25 fibonacci numbers.\n");
-    // int fib_nrs[25];
-    // fib_nrs[0] = 0;
-    // fib_nrs[1] = 1;
+    printf("Calculating the first 25 fibonacci numbers.\n");
+    int fib_nrs[25];
+    fib_nrs[0] = 0;
+    fib_nrs[1] = 1;
 
-    // int i = 2;
-    // while(i < 25)
-    // {
-    // 	fib_nrs[i] = fib_nrs[i-1] + fib_nrs[i-2];
+    int i = 2;
+    while(i < 25)
+    {
+    	fib_nrs[i] = fib_nrs[i-1] + fib_nrs[i-2];
 
-    // 	i += 1;
-    // }
+    	i += 1;
+    }
 
-    // // type cast
-    // float temp = 0.3;
-    // int j = (int) temp;
+    // type cast
+    float temp = 0.3;
+    int j = (int) temp;
 
-    // while(j < 25)
-    // {
-    // 	printf("fib[%d] = %d\n", j, fib_nrs[j]);
+    while(j < 25)
+    {
+    	printf("fib[%d] = %d\n", j, fib_nrs[j]);
 
-    // 	j++;
-    // }
+    	j++;
+    }
 
 	return 0;
 }
